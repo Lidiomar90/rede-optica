@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — Rede Óptica MG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0d0f18;--bg2:#151824;--bg3:#1c2030;--bg4:#242840;--bd:#252840;--bd2:#343860;--t:#dde2f0;--t2:#8892b0;--t3:#4a506e;--gr:#3ecf8e;--bl:#4da6ff;--am:#f0a500;--rd:#e84455;--pu:#a855f7;--cy:#22d3ee}
+html,body{min-height:100vh;background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes up{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes blink-rd{0%,100%{background:rgba(232,68,85,.12)}50%{background:rgba(232,68,85,.04)}}
+/* NAV */
+#nav{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 14px;height:50px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:200}
+.nlogo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--bl),var(--pu));display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ntit{font-size:13px;font-weight:700}
+.ntit em{color:var(--gr);font-style:normal}
+.sep{flex:1}
+.nbtn{padding:4px 10px;border-radius:6px;border:1px solid var(--bd2);background:var(--bg3);color:var(--t2);font-size:11px;cursor:pointer;font-family:inherit;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:.12s}
+.nbtn:hover{background:var(--bg4);color:var(--t)}
+.nbtn.g{background:var(--gr);border-color:var(--gr);color:#000;font-weight:700}
+.nbtn.r{background:var(--rd);border-color:var(--rd);color:#fff}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite;flex-shrink:0}
+/* TABS */
+#tabs{background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;overflow-x:auto;scrollbar-width:none;padding:0 14px;gap:2px}
+#tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 13px;font-size:11px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:600;transition:.12s;flex-shrink:0}
+.tab.on{color:var(--gr);border-bottom-color:var(--gr)}
+/* BODY */
+#body{padding:12px;max-width:1400px;margin:0 auto}
+.pg{display:none}.pg.on{display:block}
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(115px,1fr));gap:7px;margin-bottom:14px}
+.sb{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px;text-align:center;transition:.12s}
+.sb:hover{border-color:var(--bd2)}
+.sn{font-size:21px;font-weight:700;color:var(--bl);margin-bottom:1px;line-height:1.2}
+.sl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.3px}
+.sm{font-size:9px;color:var(--t3);margin-top:2px}
+/* ALERTAS */
+#alerta-bar{border-radius:9px;padding:10px 12px;margin-bottom:12px;display:none;animation:blink-rd 2s infinite}
+.alrt{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--rd);padding:3px 0;border-bottom:1px solid rgba(232,68,85,.15)}
+.alrt:last-child{border:none}
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:720px){.g2{grid-template-columns:1fr}}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:1000px){.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.g3{grid-template-columns:1fr}}
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;overflow:hidden;animation:up .18s ease}
+.ch{padding:10px 13px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:7px;flex-shrink:0}
+.ct{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.cb{padding:10px 13px;overflow-y:auto;max-height:320px}
+.cb::-webkit-scrollbar{width:2px}
+.cb::-webkit-scrollbar-thumb{background:var(--bd2)}
+.empty{text-align:center;padding:22px 12px;color:var(--t3);font-size:11px;line-height:1.7}
+.empty span{font-size:24px;display:block;margin-bottom:6px}
+/* ITEMS */
+.item{padding:8px 10px;border:1px solid var(--bd);border-radius:7px;margin-bottom:6px;animation:up .15s ease;transition:.1s;cursor:pointer}
+.item:hover{background:var(--bg3);border-color:var(--bd2)}
+.item:last-child{margin-bottom:0}
+.item-t{font-size:12px;font-weight:600;color:var(--t);margin-bottom:3px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.item-s{font-size:11px;color:var(--t2);line-height:1.5}
+.item-m{font-size:9px;color:var(--t3);margin-top:3px}
+/* TAGS */
+.tag{display:inline-block;padding:2px 7px;border-radius:7px;font-size:9px;font-weight:700;white-space:nowrap}
+.tg{background:rgba(62,207,142,.15);color:var(--gr)}
+.ta{background:rgba(240,165,0,.15);color:var(--am)}
+.tr{background:rgba(232,68,85,.15);color:var(--rd)}
+.tb{background:rgba(77,166,255,.15);color:var(--bl)}
+.tp{background:rgba(168,85,247,.15);color:var(--pu)}
+.tc{background:rgba(34,211,238,.15);color:var(--cy)}
+/* FORMS */
+.fg{margin-bottom:10px}
+.fg label{display:block;font-size:9px;color:var(--t2);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg select,.fg textarea{width:100%;background:var(--bg);border:1px solid var(--bd2);border-radius:7px;padding:8px 10px;font-size:12px;color:var(--t);outline:none;font-family:inherit;-webkit-appearance:none;transition:.12s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--bl)}
+.fg textarea{resize:vertical;min-height:56px;font-size:11px}
+.fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23505570' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+.fgr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fgr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.req{color:var(--rd)}
+.bbs{display:flex;gap:8px;margin-top:6px}
+.btn2{flex:1;padding:10px;border-radius:7px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s}
+.btn2.p{background:var(--gr);color:#000}
+.btn2.s{background:var(--bg3);border:1px solid var(--bd2);color:var(--t2)}
+.btn2.r{background:var(--rd);color:#fff}
+/* BARRA */
+.bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:4px}
+.barf{height:100%;border-radius:3px;transition:.4s}
+/* FIBRA GRID */
+.fibra-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px;padding:4px 0}
+.fc2{height:38px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;cursor:pointer;border:1.5px solid;transition:.12s;flex-direction:column;gap:1px}
+.fc2:hover{transform:scale(1.08);z-index:1}
+.fc2.livre{background:rgba(62,207,142,.1);border-color:var(--gr);color:var(--gr)}
+.fc2.ativa{background:rgba(77,166,255,.2);border-color:var(--bl);color:var(--bl)}
+.fc2.reserva{background:rgba(240,165,0,.1);border-color:var(--am);color:var(--am)}
+.fc2.danificada{background:rgba(232,68,85,.1);border-color:var(--rd);color:var(--rd)}
+/* ORÇAMENTO */
+.orow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:11px}
+.orow:last-child{border:none}
+.olbl{color:var(--t2)}
+.oval{font-weight:600}
+.oval.ok{color:var(--gr)}.oval.wn{color:var(--am)}.oval.er{color:var(--rd)}
+/* FUSAO */
+.frow{display:flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid var(--bd);border-radius:7px;margin-bottom:5px;font-size:11px}
+.fcabo{flex:1;color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ffib{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;border:2px solid}
+/* TABELA */
+.rtab{width:100%;border-collapse:collapse;font-size:11px}
+.rtab th{background:var(--bg4);color:var(--t2);padding:6px 8px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--bd2)}
+.rtab td{padding:5px 8px;border-bottom:1px solid var(--bd);color:var(--t2)}
+.rtab tr:last-child td{border:none}
+.rtab tr:hover td{background:rgba(255,255,255,.02);color:var(--t)}
+/* MODAL */
+#mbg{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+@media(min-width:600px){#mbg{align-items:center}}
+#mbg.show{display:flex}
+#mdl{background:var(--bg2);border:1px solid var(--bd);border-radius:12px 12px 0 0;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.7)}
+@media(min-width:600px){#mdl{border-radius:12px}}
+#mdl::-webkit-scrollbar{width:2px}
+.mh{padding:13px 15px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1}
+.mtt{font-size:14px;font-weight:700}
+.mc{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;line-height:1}
+.mc:hover{color:var(--t)}.mbd{padding:13px 15px}
+/* TOAST */
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bd);border-radius:18px;padding:7px 16px;font-size:12px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:90vw;text-align:center}
+#toast.s{opacity:1}
+#toast.ok{color:var(--gr);border-color:var(--gr)}
+#toast.er{color:var(--rd);border-color:var(--rd)}
+#toast.wn{color:var(--am);border-color:var(--am)}
+#toast.in{color:var(--bl);border-color:var(--bl)}
+/* SCORE RING */
+.score-ring{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;border:3px solid var(--gr);flex-shrink:0}
+.score-n{font-size:26px;font-weight:700}
+/* MAPA CALOR SIMPLES */
+.heatrow{display:flex;gap:2px;margin-bottom:2px}
+.heatcell{flex:1;height:14px;border-radius:2px;transition:.2s}
+/* DOCS ITEM */
+.doc-item{padding:10px 12px;border:1px solid var(--bd);border-radius:8px;margin-bottom:7px;cursor:pointer;transition:.1s;display:flex;align-items:flex-start;gap:10px}
+.doc-item:hover{background:var(--bg3);border-color:var(--bd2)}
+.doc-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.doc-t{font-size:12px;font-weight:600;color:var(--t);margin-bottom:3px}
+.doc-s{font-size:11px;color:var(--t2);line-height:1.5}
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <div class="nlogo">📊</div>
+  <div class="ntit">Dashboard <em>Rede Óptica</em></div>
+  <div class="pdot"></div>
+  <div class="sep"></div>
+  <a href="mapa-rede-optica.html" class="nbtn">🗺 Mapa</a>
+  <button class="nbtn g" onclick="gerarRelatorio()">📋 Relatório</button>
+</div>
+
+<div id="tabs">
+  <div class="tab on"  onclick="goTab('overview',this)">📊 Visão Geral</div>
+  <div class="tab" onclick="goTab('fusoes',this)">🔗 Fusões</div>
+  <div class="tab" onclick="goTab('fibras',this)">🔴 Fibras</div>
+  <div class="tab" onclick="goTab('orcamento',this)">📡 Orçamento</div>
+  <div class="tab" onclick="goTab('viabilidade',this)">📍 Viabilidade</div>
+  <div class="tab" onclick="goTab('inventario',this)">🔧 Inventário</div>
+  <div class="tab" onclick="goTab('manutencao',this)">🛠 Manutenção</div>
+  <div class="tab" onclick="goTab('anomalias',this)">⚠ Anomalias</div>
+  <div class="tab" onclick="goTab('expansao',this)">🚀 Expansão</div>
+  <div class="tab" onclick="goTab('historico',this)">📝 Auditoria</div>
+  <div class="tab" onclick="goTab('docs',this)">📚 Documentação</div>
+  <div class="tab" onclick="goTab('relatorio',this)">📋 Relatórios</div>
+</div>
+
+<div id="body">
+
+<!-- OVERVIEW -->
+<div class="pg on" id="pg-overview">
+  <div class="sg" id="sg"></div>
+  <div id="alerta-bar"></div>
+  <div class="g3">
+    <div class="card">
+      <div class="ch">
+        <div class="ct">❤ Saúde da rede</div>
+        <div class="score-ring" id="score-ring" style="width:56px;height:56px;border-width:2.5px">
+          <div class="score-n" id="score-n" style="font-size:18px">—</div>
+          <div style="font-size:8px;color:var(--t3)">SCORE</div>
+        </div>
+      </div>
+      <div class="cb" id="saude-cb"><div class="empty"><span>⏳</span>Calculando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🔴 Spans críticos >30dB</div><span class="tag tr" id="cnt-crit">0</span></div>
+      <div class="cb" id="spans-crit-cb"><div class="empty"><span>✅</span>Nenhum</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">📊 Sites por camada</div></div>
+      <div class="cb" id="camadas-cb"><div class="empty"><span>⏳</span>Carregando...</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">⚠ Anomalias detectadas</div><button class="nbtn" onclick="goTab('anomalias',document.querySelectorAll('.tab')[7])">Ver todas</button></div>
+      <div class="cb" id="anom-cb"><div class="empty"><span>⏳</span>Carregando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🛠 Manutenções pendentes</div><button class="nbtn" onclick="goTab('manutencao',document.querySelectorAll('.tab')[6])">Ver todas</button></div>
+      <div class="cb" id="manut-cb"><div class="empty"><span>⏳</span>Carregando...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FUSÕES -->
+<div class="pg" id="pg-fusoes">
+  <div class="card" style="margin-bottom:10px">
+    <div class="ch"><div class="ct">🔗 Diagrama de fusão por caixa</div><button class="nbtn g" onclick="openM('fusao')">+ Nova fusão</button></div>
+    <div class="cb" style="max-height:none;padding:13px">
+      <div class="fg"><label>Caixa CEO/CTO</label>
+        <select id="fus-sel" onchange="loadFusoes(this.value)">
+          <option value="">-- Selecione --</option>
+        </select>
+      </div>
+      <div id="fus-diag"><div class="empty"><span>🔗</span>Selecione uma caixa para ver as fusões fibra a fibra</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FIBRAS -->
+<div class="pg" id="pg-fibras">
+  <div class="card" style="margin-bottom:10px">
+    <div class="ch">
+      <div class="ct">🔴 Ocupação de fibras por cabo</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        <span class="tag tg">Livre</span><span class="tag tb">Ativa</span>
+        <span class="tag ta">Reserva</span><span class="tag tr">Danificada</span>
+      </div>
+    </div>
+    <div class="cb" style="max-height:none;padding:13px">
+      <div class="fg"><label>Cabo</label>
+        <select id="fib-sel" onchange="loadFibras(this.value)">
+          <option value="">-- Selecione um cabo --</option>
+        </select>
+      </div>
+      <div id="fib-resumo" style="display:none;margin-bottom:10px">
+        <div id="fib-stats" style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;margin-bottom:6px"></div>
+        <div class="bar"><div class="barf" id="fib-bar" style="background:var(--bl)"></div></div>
+      </div>
+      <div id="fib-grid"><div class="empty"><span>🔴</span>Selecione um cabo</div></div>
+    </div>
+  </div>
+  <div class="card" id="fib-det" style="display:none">
+    <div class="ch"><div class="ct" id="fib-det-t">Fibra</div><button class="nbtn g" onclick="salvarFibra()">Salvar</button></div>
+    <div class="cb" style="max-height:none;padding:13px">
+      <div class="fgr3">
+        <div class="fg"><label>Status</label><select id="fd-st"><option>livre</option><option>ativa</option><option>reserva</option><option>danificada</option></select></div>
+        <div class="fg"><label>Serviço</label><select id="fd-sv"><option value="">—</option><option>DWDM</option><option>HL4</option><option>HL5</option><option>OLT</option><option>SWA</option><option>DATACOM</option><option>CLIENTE</option></select></div>
+        <div class="fg"><label>Cliente</label><input id="fd-cl" placeholder="Nome"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Equip ponta A</label><input id="fd-ea" placeholder="HL2-01"></div>
+        <div class="fg"><label>Porta A</label><input id="fd-pa" placeholder="2/1/C3/1"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Equip ponta B</label><input id="fd-eb" placeholder="HL3-01"></div>
+        <div class="fg"><label>Porta B</label><input id="fd-pb" placeholder="2/1/C3/1"></div>
+      </div>
+      <div class="fgr3">
+        <div class="fg"><label>Tx (dBm)</label><input id="fd-tx" type="number" step="0.1"></div>
+        <div class="fg"><label>Rx (dBm)</label><input id="fd-rx" type="number" step="0.1"></div>
+        <div class="fg"><label>Atenuação (dB)</label><input id="fd-at" type="number" step="0.1"></div>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="fd-obs"></textarea></div>
+    </div>
+  </div>
+</div>
+
+<!-- ORÇAMENTO -->
+<div class="pg" id="pg-orcamento">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">📡 Calculadora de orçamento óptico</div></div>
+      <div class="cb" style="max-height:none;padding:13px">
+        <div style="font-size:11px;color:var(--t2);background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px;margin-bottom:12px;line-height:1.7">
+          Calcula atenuação total conforme <b>norma INS.RE.061</b>. Preencha os campos e o resultado é calculado automaticamente.
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Distância total (km)</label><input id="orc-km" type="number" step="0.1" placeholder="21.3" oninput="calcOrc()"></div>
+          <div class="fg"><label>Tipo de fibra</label>
+            <select id="orc-fib" onchange="calcOrc()">
+              <option value="0.35">G.652D — 0,35 dB/km (padrão)</option>
+              <option value="0.40">G.652B — 0,40 dB/km</option>
+              <option value="0.22">G.654E — 0,22 dB/km (ultra-baixa)</option>
+              <option value="0.30">G.657A — 0,30 dB/km (curva)</option>
+            </select>
+          </div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Nº emendas por fusão</label><input id="orc-em" type="number" value="20" min="0" oninput="calcOrc()"></div>
+          <div class="fg"><label>Atenuação/emenda (dB)</label><input id="orc-aem" type="number" step="0.01" value="0.05" oninput="calcOrc()"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Nº conectores</label><input id="orc-co" type="number" value="4" min="0" oninput="calcOrc()"></div>
+          <div class="fg"><label>Atenuação/conector (dB)</label><input id="orc-aco" type="number" step="0.1" value="0.5" oninput="calcOrc()"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Splitters (perda total dB)</label><input id="orc-spl" type="number" step="0.1" value="0" placeholder="13.5 para 1:32" oninput="calcOrc()"></div>
+          <div class="fg"><label>Margem de segurança (dB)</label><input id="orc-mrg" type="number" step="0.1" value="3" oninput="calcOrc()"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Potência Tx (dBm)</label><input id="orc-tx" type="number" step="0.1" value="-3" oninput="calcOrc()"></div>
+          <div class="fg"><label>Sensibilidade Rx mín (dBm)</label><input id="orc-rx" type="number" step="0.1" value="-26" oninput="calcOrc()"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">📊 Resultado</div><button class="nbtn" onclick="exportarOrc()">⬇ Exportar</button></div>
+      <div class="cb" style="max-height:none;padding:13px" id="orc-res">
+        <div class="empty"><span>📡</span>Preencha os campos ao lado</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VIABILIDADE -->
+<div class="pg" id="pg-viabilidade">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">📍 Viabilidade de atendimento</div></div>
+      <div class="cb" style="max-height:none;padding:13px">
+        <div style="font-size:11px;color:var(--t2);background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:7px;padding:9px;margin-bottom:12px;line-height:1.7">
+          Encontra CTOs com portas livres mais próximas de um endereço. Use o GPS ou informe as coordenadas manualmente.
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Latitude</label><input id="v-lat" type="number" step="0.000001" placeholder="-19.9"></div>
+          <div class="fg"><label>Longitude</label><input id="v-lng" type="number" step="0.000001" placeholder="-43.9"></div>
+        </div>
+        <div class="fg"><button class="btn2 s" onclick="gpsViab()">📍 Usar GPS atual</button></div>
+        <div class="fg"><label>Raio de busca (metros)</label><input id="v-raio" type="number" value="500" min="100" max="5000"></div>
+        <div class="bbs"><button class="btn2 s" onclick="$('v-res').innerHTML='<div class=empty><span>📍</span>Aguardando...</div>'">Limpar</button>
+          <button class="btn2 p" onclick="buscarCTO()">🔍 Buscar CTOs</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">📡 CTOs disponíveis</div></div>
+      <div class="cb" style="max-height:none;padding:13px" id="v-res">
+        <div class="empty"><span>📍</span>Informe coordenadas e clique em Buscar</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">📋 CTOs cadastradas</div><button class="nbtn g" onclick="openM('cto')">+ Cadastrar CTO</button></div>
+    <div class="cb" id="ctos-cb"><div class="empty"><span>📍</span>Carregando...</div></div>
+  </div>
+</div>
+
+<!-- INVENTÁRIO -->
+<div class="pg" id="pg-inventario">
+  <div class="card">
+    <div class="ch">
+      <div style="display:flex;gap:7px;flex:1;flex-wrap:wrap">
+        <input id="inv-q" placeholder="Buscar nome, tipo, site..." oninput="filtInv()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--t);outline:none;font-family:inherit;flex:1;min-width:140px">
+        <select id="inv-tp" onchange="filtInv()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:6px 9px;font-size:12px;color:var(--t);outline:none;font-family:inherit">
+          <option value="">Todos</option><option>OLT</option><option>DWDM</option><option>ROTEADOR</option><option>SWITCH</option><option>DGO</option><option>SPLITTER</option><option>ONU</option>
+        </select>
+      </div>
+      <button class="nbtn g" onclick="openM('equip')">+ Novo</button>
+    </div>
+    <div class="cb" id="inv-cb"><div class="empty"><span>🔧</span>Carregando...</div></div>
+  </div>
+</div>
+
+<!-- MANUTENÇÃO -->
+<div class="pg" id="pg-manutencao">
+  <div class="ch" style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:10px 13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <div class="ct">🛠 Cronograma de manutenção preventiva</div>
+    <button class="nbtn g" onclick="openM('manut')">+ Agendar</button>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">🔴 Urgente / Alta prioridade</div></div>
+      <div class="cb" id="manut-urg"><div class="empty"><span>✅</span>Nenhuma urgente</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">📅 Média prioridade / Próximos 30 dias</div></div>
+      <div class="cb" id="manut-med"><div class="empty"><span>✅</span>Nenhuma agendada</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">✅ Concluídas recentemente</div></div>
+    <div class="cb" id="manut-ok"><div class="empty"><span>📋</span>Nenhuma concluída</div></div>
+  </div>
+</div>
+
+<!-- ANOMALIAS -->
+<div class="pg" id="pg-anomalias">
+  <div class="ch" style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:10px 13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <div class="ct">⚠ Anomalias detectadas</div>
+    <div style="display:flex;gap:6px">
+      <button class="nbtn" onclick="detectarAnomaliasIA()">🤖 Detectar com IA</button>
+      <button class="nbtn g" onclick="detectarAnomalias()">🔄 Atualizar</button>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">🔴 Críticas / Altas</div><span class="tag tr" id="cnt-crit-anom">0</span></div>
+      <div class="cb" id="anom-crit"><div class="empty"><span>✅</span>Nenhuma crítica</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🟡 Médias</div><span class="tag ta" id="cnt-med-anom">0</span></div>
+      <div class="cb" id="anom-med"><div class="empty"><span>✅</span>Nenhuma média</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPANSÃO -->
+<div class="pg" id="pg-expansao">
+  <div class="ch" style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:10px 13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+    <div class="ct">🚀 Simulação de cenários de expansão</div>
+    <button class="nbtn g" onclick="openM('cenario')">+ Novo cenário</button>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">📋 Cenários cadastrados</div></div>
+      <div class="cb" id="cen-cb"><div class="empty"><span>🚀</span>Nenhum cenário</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">🔢 Simulador rápido de capacidade</div></div>
+      <div class="cb" style="max-height:none;padding:13px">
+        <div class="fg"><label>Novos clientes previstos</label><input id="sim-cli" type="number" placeholder="500" oninput="simCapacidade()"></div>
+        <div class="fg"><label>Período (meses)</label><input id="sim-per" type="number" value="12" oninput="simCapacidade()"></div>
+        <div class="fg"><label>Portas OLT por cliente</label><input id="sim-por" type="number" value="1" oninput="simCapacidade()"></div>
+        <div class="fg"><label>Split ratio (1:N)</label><input id="sim-spl" type="number" value="32" oninput="simCapacidade()"></div>
+        <div id="sim-res"><div class="empty"><span>🔢</span>Preencha os campos</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTÓRICO / AUDITORIA -->
+<div class="pg" id="pg-historico">
+  <div class="card">
+    <div class="ch"><div class="ct">📝 Histórico de alterações</div><span style="font-size:10px;color:var(--t3)">Últimas 100</span></div>
+    <div class="cb" id="hist-cb"><div class="empty"><span>📝</span>Nenhuma alteração</div></div>
+  </div>
+</div>
+
+<!-- DOCUMENTAÇÃO -->
+<div class="pg" id="pg-docs">
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><div class="ct">📚 Guias e tutoriais</div></div>
+      <div class="cb" style="max-height:none;padding:13px">
+        <div class="doc-item" onclick="abrirDoc('login')">
+          <div class="doc-icon" style="background:rgba(62,207,142,.15)">🔑</div>
+          <div><div class="doc-t">Acesso ao sistema</div><div class="doc-s">Login, perfis de usuário e permissões. Senhas padrão e como redefinir.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('mapa')">
+          <div class="doc-icon" style="background:rgba(77,166,255,.15)">🗺</div>
+          <div><div class="doc-t">Usando o mapa</div><div class="doc-s">Camadas, busca de sites, painel de detalhe, tema claro/escuro, modo edição.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('otdr')">
+          <div class="doc-icon" style="background:rgba(232,68,85,.15)">📡</div>
+          <div><div class="doc-t">Localizador de rompimento OTDR</div><div class="doc-s">Como usar o localizador OTDR no mapa para encontrar o ponto exato de falha.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('rastreamento')">
+          <div class="doc-icon" style="background:rgba(168,85,247,.15)">🔍</div>
+          <div><div class="doc-t">Rastreamento ponta a ponta</div><div class="doc-s">Rastrear rotas entre dois sites e visualizar cabos no mapa.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('telegram')">
+          <div class="doc-icon" style="background:rgba(34,211,238,.15)">📱</div>
+          <div><div class="doc-t">Importar dados do Telegram</div><div class="doc-s">Passo a passo para exportar histórico e executar o coletor-telegram.py.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('publicar')">
+          <div class="doc-icon" style="background:rgba(240,165,0,.15)">🚀</div>
+          <div><div class="doc-t">Publicar no GitHub Pages</div><div class="doc-s">Como usar o PUBLICAR.bat e resolver problemas comuns de publicação.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('fusoes')">
+          <div class="doc-icon" style="background:rgba(62,207,142,.15)">🔗</div>
+          <div><div class="doc-t">Diagrama de fusão</div><div class="doc-s">Como cadastrar e visualizar fusões fibra a fibra em cada caixa CEO/CTO.</div></div>
+        </div>
+        <div class="doc-item" onclick="abrirDoc('orcamento')">
+          <div class="doc-icon" style="background:rgba(77,166,255,.15)">📊</div>
+          <div><div class="doc-t">Orçamento óptico</div><div class="doc-s">Como calcular a viabilidade de um enlace usando a calculadora de orçamento.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">❓ FAQ — Perguntas frequentes</div></div>
+      <div class="cb" style="max-height:none;padding:13px">
+        <div id="faq-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RELATÓRIOS -->
+<div class="pg" id="pg-relatorio">
+  <div class="card">
+    <div class="ch">
+      <div class="ct">📋 Relatório executivo da rede</div>
+      <div style="display:flex;gap:6px">
+        <button class="nbtn" onclick="exportTxt()">⬇ TXT</button>
+        <button class="nbtn g" onclick="gerarRelatorio()">↻ Gerar</button>
+      </div>
+    </div>
+    <div class="cb" style="max-height:none;padding:13px" id="rel-cb">
+      <div class="empty"><span>📋</span>Clique em "Gerar" para criar o relatório</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /body -->
+
+<!-- MODAL -->
+<div id="mbg" onclick="if(event.target===this)closeM()">
+  <div id="mdl">
+    <div class="mh"><div class="mtt" id="mtt">—</div><button class="mc" onclick="closeM()">×</button></div>
+    <div class="mbd" id="mbd"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══ CONFIG ════════════════════════════════════════
+const SU='https://xmqxhzmjxprhvyqwlqvz.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcXhoem1qeHByaHZ5cXdscXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzYxMzcsImV4cCI6MjA5MDMxMjEzN30.ohD97pPgtpxyHmCjWYKz-OWpcqVtDBXuQZSc1BJQngo';
+const AT='rede-optica-2026';
+const RH={'apikey':SK,'Authorization':'Bearer '+SK};
+const WH={...RH,'Content-Type':'application/json','x-app-token':AT,'Prefer':'return=minimal'};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const km=m=>!m?'—':m>=1000?(m/1000).toFixed(2)+'km':Math.round(m)+'m';
+let _tT; const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='s '+t;clearTimeout(_tT);_tT=setTimeout(()=>e.className='',3200)};
+let sessao=null;
+try{sessao=JSON.parse(localStorage.getItem('_ro_s')||'{}');}catch{}
+
+async function cnt(t,f=''){
+  const r=await fetch(`${SU}/rest/v1/${t}?${f}&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).catch(()=>({headers:{get:()=>'0/0'},ok:true}));
+  return parseInt((r.headers.get('Content-Range')||'0/0').split('/')[1])||0;
+}
+async function get(t,p='',lim=100){
+  const r=await fetch(`${SU}/rest/v1/${t}?${p}&limit=${lim}`,{headers:RH}).catch(()=>({ok:false}));
+  if(!r.ok)return [];const d=await r.json();return Array.isArray(d)?d:[];
+}
+async function post(t,d){
+  const r=await fetch(`${SU}/rest/v1/${t}`,{method:'POST',headers:WH,body:JSON.stringify(d)}).catch(()=>({status:0}));
+  return r.status===201;
+}
+async function patch2(t,f,d){
+  const r=await fetch(`${SU}/rest/v1/${t}?${f}`,{method:'PATCH',headers:WH,body:JSON.stringify(d)}).catch(()=>({status:0}));
+  return r.status===204;
+}
+const haversine=(la1,lo1,la2,lo2)=>{
+  const R=6371000,p=Math.PI/180;
+  const a=Math.sin((la2-la1)*p/2)**2+Math.cos(la1*p)*Math.cos(la2*p)*Math.sin((lo2-lo1)*p/2)**2;
+  return 2*R*Math.asin(Math.sqrt(Math.max(0,Math.min(1,a))));
+};
+
+// ═══ NAV ═══════════════════════════════════════════
+function goTab(id,el){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  if(el)el.classList.add('on');
+  $('pg-'+id).classList.add('on');
+  ({overview:loadOverview,fusoes:loadFusoesSites,fibras:loadCabosSelect,
+    viabilidade:loadCTOs,inventario:loadInventario,manutencao:loadManutencao,
+    anomalias:loadAnomaliasPage,historico:loadHistorico,docs:loadDocs,
+    relatorio:gerarRelatorio})[id]?.();
+}
+
+// ═══ OVERVIEW ══════════════════════════════════════
+async function loadOverview(){
+  const[sites,cabos,spans,crit,caixas,enlaces,rotas,invent,anom,manut]=await Promise.all([
+    cnt('sites'),cnt('cabos'),cnt('trechos_dwdm'),cnt('trechos_dwdm','atenuacao_ida=gt.30'),
+    cnt('sites','tipo=eq.caixa'),cnt('enlaces'),cnt('rotas'),cnt('inventario_equip'),
+    cnt('anomalias','status=eq.aberta'),cnt('manutencao_preventiva','status=eq.pendente'),
+  ]);
+  const semCoord=await cnt('sites','localizacao=is.null');
+  // Stats
+  $('sg').innerHTML=[
+    {n:sites.toLocaleString('pt-BR'),l:'Sites',c:'var(--bl)'},
+    {n:cabos.toLocaleString('pt-BR'),l:'Cabos',c:'var(--bl)'},
+    {n:spans.toLocaleString('pt-BR'),l:'Spans',c:'var(--bl)'},
+    {n:crit.toLocaleString('pt-BR'),l:'Spans críticos',c:'var(--rd)',s:'>30dB'},
+    {n:caixas.toLocaleString('pt-BR'),l:'Caixas CEO/CTO',c:'var(--cy)'},
+    {n:enlaces.toLocaleString('pt-BR'),l:'Enlaces',c:enlaces===0?'var(--am)':'var(--gr)'},
+    {n:anom.toLocaleString('pt-BR'),l:'Anomalias',c:anom>0?'var(--am)':'var(--gr)'},
+    {n:manut.toLocaleString('pt-BR'),l:'Manutenções',c:manut>0?'var(--am)':'var(--gr)'},
+  ].map(s=>`<div class="sb"><div class="sn" style="color:${s.c}">${s.n}</div><div class="sl">${s.l}</div>${s.s?`<div class="sm">${s.s}</div>`:''}</div>`).join('');
+  // Alertas
+  const alertas=[];
+  if(crit>0)alertas.push(`🔴 ${crit} spans com atenuação crítica >30dB — risco de SLA 5h`);
+  if(enlaces===0)alertas.push('⚠ Tabela enlaces vazia — importar dados de campo (coletor-telegram.py)');
+  if(semCoord>500)alertas.push(`📍 ${semCoord} sites sem coordenadas GPS`);
+  if(anom>5)alertas.push(`⚠ ${anom} anomalias abertas aguardando análise`);
+  const ab=$('alerta-bar');
+  if(alertas.length){ab.style.display='block';ab.style.border='1px solid rgba(232,68,85,.3)';ab.style.background='rgba(232,68,85,.08)';
+    ab.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--rd);margin-bottom:6px">⚠ Alertas</div>'+alertas.map(a=>`<div class="alrt">${a}</div>`).join('');}
+  else ab.style.display='none';
+  // Score
+  let score=100;
+  if(crit>0)score-=Math.min(30,crit/50*15+5);
+  if(enlaces===0)score-=20;if(semCoord>1000)score-=10;if(anom>10)score-=10;
+  score=Math.max(0,Math.min(100,Math.round(score)));
+  const cor=score>=80?'var(--gr)':score>=60?'var(--am)':'var(--rd)';
+  const ring=$('score-ring');ring.style.borderColor=cor;
+  $('score-n').textContent=score;$('score-n').style.color=cor;
+  $('saude-cb').innerHTML=`
+    <div class="bar" style="margin-bottom:10px"><div class="barf" style="width:${score}%;background:${cor}"></div></div>
+    ${[
+      {l:'Sites com GPS',v:sites-semCoord,t:sites,ok:semCoord<100},
+      {l:'Spans saudáveis',v:spans-crit,t:spans,ok:crit===0},
+      {l:'Spans críticos',v:crit,t:spans,ok:crit===0,inv:true},
+    ].map(r=>{const pct=r.t>0?Math.round(r.v/r.t*100):0;return`
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+          <span style="color:var(--t2)">${r.l}</span>
+          <span style="color:${r.ok?'var(--gr)':'var(--am)'}">${r.v.toLocaleString('pt-BR')} / ${r.t.toLocaleString('pt-BR')} (${pct}%)</span>
+        </div>
+        <div class="bar"><div class="barf" style="width:${pct}%;background:${r.ok?'var(--gr)':r.inv?'var(--rd)':'var(--am)'}"></div></div>
+      </div>`;}).join('')}`;
+  // Spans críticos
+  const spCrit=await get('trechos_dwdm','select=observacao,atenuacao_ida,atenuacao_volta&atenuacao_ida=gt.30&order=atenuacao_ida.desc',8);
+  $('cnt-crit').textContent=crit;
+  $('spans-crit-cb').innerHTML=spCrit.length?spCrit.map(s=>`
+    <div class="item">
+      <div class="item-t"><span>${esc((s.observacao||'—').substring(0,35))}</span><span style="color:var(--rd);font-weight:700">${s.atenuacao_ida}dB</span></div>
+      <div class="item-s">Volta: ${s.atenuacao_volta||'—'}dB</div>
+    </div>`).join(''):`<div class="empty"><span>✅</span>Nenhum span crítico</div>`;
+  // Camadas
+  const cams=['backbone','metro_alta','metro_dist','acesso'];
+  const cors={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e'};
+  const tots=await Promise.all(cams.map(c=>cnt('sites','camada=eq.'+c)));
+  $('camadas-cb').innerHTML=cams.map((c,i)=>{
+    const pct=sites>0?Math.round(tots[i]/sites*100):0;
+    return`<div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+        <span style="color:var(--t2)">${c}</span><span style="color:var(--t)">${tots[i].toLocaleString('pt-BR')} (${pct}%)</span>
+      </div>
+      <div class="bar"><div class="barf" style="width:${pct}%;background:${cors[c]}"></div></div>
+    </div>`;}).join('');
+  // Anomalias resumo
+  const anoms=await get('anomalias','select=*&status=eq.aberta&order=severidade.asc',5);
+  const sevCor={critica:'var(--rd)',alta:'var(--am)',media:'var(--am)',baixa:'var(--bl)'};
+  $('anom-cb').innerHTML=anoms.length?anoms.map(a=>`
+    <div class="item">
+      <div class="item-t"><span>${esc(a.descricao.substring(0,50))}</span><span class="tag ${a.severidade==='critica'||a.severidade==='alta'?'tr':'ta'}">${a.severidade}</span></div>
+      <div class="item-s">${a.tipo} | ${a.entidade} ${a.valor_detectado?'| '+a.valor_detectado+'dB':''}</div>
+    </div>`).join(''):`<div class="empty"><span>✅</span>Nenhuma anomalia aberta</div>`;
+  // Manutenção resumo
+  const manuts=await get('manutencao_preventiva','select=*&status=eq.pendente&order=data_prevista.asc',5);
+  $('manut-cb').innerHTML=manuts.length?manuts.map(m=>`
+    <div class="item">
+      <div class="item-t"><span>${esc(m.site_nome.substring(0,35))}</span><span class="tag ${m.prioridade==='urgente'?'tr':m.prioridade==='alta'?'tr':'ta'}">${m.prioridade}</span></div>
+      <div class="item-s">${m.tipo} — ${m.data_prevista}</div>
+    </div>`).join(''):`<div class="empty"><span>✅</span>Nenhuma manutenção pendente</div>`;
+}
+
+// ═══ FUSÕES ════════════════════════════════════════
+async function loadFusoesSites(){
+  const s=await get('sites','select=id,nome,codigo&tipo=eq.caixa&order=nome.asc',500);
+  const sel=$('fus-sel');
+  sel.innerHTML='<option value="">-- Selecione --</option>'+
+    s.map(c=>`<option value="${c.id}">${esc(c.nome||c.codigo||c.id.slice(0,8))}</option>`).join('');
+}
+async function loadFusoes(siteId){
+  if(!siteId){$('fus-diag').innerHTML='<div class="empty"><span>🔗</span>Selecione uma caixa</div>';return;}
+  const fusoes=await get('fusoes_caixa','select=*&order=tubo_entrada.asc,fibra_entrada.asc&site_id=eq.'+siteId,300);
+  const nome=$('fus-sel').options[$('fus-sel').selectedIndex].text;
+  if(!fusoes.length){
+    $('fus-diag').innerHTML=`<div class="empty"><span>🔗</span>Nenhuma fusão em ${nome}<br>
+      <button onclick="openM('fusao','${siteId}')" style="margin-top:10px;padding:8px 16px;background:var(--gr);border:none;border-radius:7px;cursor:pointer;font-weight:700;color:#000;font-family:inherit">+ Adicionar fusão</button>
+    </div>`;return;
+  }
+  // Agrupar por tubo
+  const G={};fusoes.forEach(f=>{const t=f.tubo_entrada||1;if(!G[t])G[t]=[];G[t].push(f);});
+  const SCOR={ativo:'var(--bl)',livre:'var(--gr)',reserva:'var(--am)',danificado:'var(--rd)'};
+  const STAG={ativo:'tb',livre:'tg',reserva:'ta',danificado:'tr'};
+  $('fus-diag').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b style="font-size:13px">${esc(nome)} — ${fusoes.length} fusão(ões)</b>
+      <button onclick="openM('fusao','${siteId}')" class="nbtn g">+ Adicionar</button>
+    </div>
+    ${Object.entries(G).map(([tubo,fs])=>`
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;padding:4px 8px;background:var(--bg3);border-radius:5px;display:inline-block">🔴 Tubo ${tubo}</div>
+        ${fs.map(f=>{
+          const cor=SCOR[f.status]||'var(--t3)';
+          return`<div class="frow" style="border-color:${cor}30;background:${cor}10">
+            <div class="fcabo" style="text-align:right;font-size:10px">
+              <div style="font-weight:600;color:var(--t2)">${esc(f.cabo_entrada_nome||'Entrada')}</div>
+              <div style="color:var(--t3)">Tubo ${f.tubo_entrada||'—'}</div>
+            </div>
+            <div class="ffib" style="border-color:${cor};color:${cor}">${f.fibra_entrada||'?'}</div>
+            <span style="color:var(--t3);font-size:16px">→</span>
+            ${f.tipo==='splitter'?`<div style="background:rgba(168,85,247,.15);border:1.5px solid var(--pu);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--pu);font-weight:600">SPLIT ${f.splitter_ratio||'1:8'}</div><span style="color:var(--t3)">→</span>`:''}
+            <div class="ffib" style="border-color:${cor};color:${cor}">${f.fibra_saida||'?'}</div>
+            <div class="fcabo" style="font-size:10px">
+              <div style="font-weight:600;color:var(--t2)">${esc(f.cabo_saida_nome||'Saída')}</div>
+              <div style="color:var(--t3)">Tubo ${f.tubo_saida||'—'}</div>
+            </div>
+            <span class="tag ${STAG[f.status]||'tb'}">${f.status||'—'}</span>
+            ${f.atenuacao_db?`<span style="font-size:9px;color:var(--t3)">${f.atenuacao_db}dB</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>`).join('')}`;
+}
+
+// ═══ FIBRAS ════════════════════════════════════════
+let cabosAll=[],fibraAtual=null;
+async function loadCabosSelect(){
+  cabosAll=await get('cabos','select=id,nome,tipo,comprimento,camada&order=nome.asc',500);
+  const sel=$('fib-sel');
+  sel.innerHTML='<option value="">-- Selecione --</option>'+
+    cabosAll.map(c=>`<option value="${c.id}">[${c.tipo||'—'}] ${esc(c.nome||'?')} (${km(c.comprimento)})</option>`).join('');
+}
+async function loadFibras(caboId){
+  if(!caboId){$('fib-grid').innerHTML='<div class="empty"><span>🔴</span>Selecione um cabo</div>';$('fib-resumo').style.display='none';return;}
+  const cabo=cabosAll.find(c=>c.id===caboId);
+  const fibras=await get('fibras_cabo','select=*&cabo_id=eq.'+caboId+'&order=numero_fibra.asc',500);
+  $('fib-resumo').style.display='block';
+  const total=Math.max(cabo?.fibras||0,fibras.length,24);
+  const fmap={};fibras.forEach(f=>fmap[f.numero_fibra]=f);
+  const ativas=fibras.filter(f=>f.status==='ativa').length;
+  const reserva=fibras.filter(f=>f.status==='reserva').length;
+  const danif=fibras.filter(f=>f.status==='danificada').length;
+  const livres=total-ativas-reserva-danif;
+  const pct=total>0?Math.round((ativas+reserva)/total*100):0;
+  $('fib-stats').innerHTML=`
+    <span style="color:var(--gr)">● Livres: ${livres}</span>
+    <span style="color:var(--bl)">● Ativas: ${ativas}</span>
+    <span style="color:var(--am)">● Reserva: ${reserva}</span>
+    <span style="color:var(--rd)">● Danif.: ${danif}</span>
+    <span style="color:var(--t2)">Ocupação: <b>${pct}%</b></span>`;
+  $('fib-bar').style.width=pct+'%';
+  $('fib-bar').style.background=pct>90?'var(--rd)':pct>70?'var(--am)':'var(--bl)';
+  $('fib-grid').innerHTML='<div class="fibra-grid">'+
+    Array.from({length:total},(_,i)=>{
+      const n=i+1;const f=fmap[n];const st=f?.status||'livre';
+      const tip=f?`F${n}: ${f.servico||'—'} ${f.equipamento_a?'| '+f.equipamento_a:''}`:(`F${n}: livre`);
+      return`<div class="fc2 ${st}" title="${esc(tip)}" onclick="selFibra(${n},'${caboId}','${f?.id||''}')">
+        <span>F${n}</span>
+        ${f?.servico?`<span style="font-size:7px;opacity:.7">${f.servico.substring(0,4)}</span>`:''}
+      </div>`;
+    }).join('')+'</div>';
+}
+function selFibra(n,caboId,fibId){
+  fibraAtual={n,caboId,id:fibId};
+  $('fib-det-t').textContent='Fibra '+n;
+  $('fib-det').style.display='block';
+  $('fib-det').scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(fibId){get('fibras_cabo','select=*&id=eq.'+fibId,1).then(d=>{
+    if(d[0]){const f=d[0];
+      $('fd-st').value=f.status||'livre';$('fd-sv').value=f.servico||'';
+      $('fd-cl').value=f.cliente||'';$('fd-ea').value=f.equipamento_a||'';
+      $('fd-pa').value=f.porta_a||'';$('fd-eb').value=f.equipamento_b||'';
+      $('fd-pb').value=f.porta_b||'';$('fd-tx').value=f.potencia_tx||'';
+      $('fd-rx').value=f.potencia_rx||'';$('fd-at').value=f.atenuacao_db||'';
+      $('fd-obs').value=f.observacao||'';
+    }
+  });}
+}
+async function salvarFibra(){
+  if(!fibraAtual){toast('Selecione uma fibra','er');return;}
+  const cabo=cabosAll.find(c=>c.id===fibraAtual.caboId);
+  const reg={cabo_id:fibraAtual.caboId,cabo_nome:cabo?.nome||'',numero_fibra:fibraAtual.n,
+    status:$('fd-st').value,servico:$('fd-sv').value||null,cliente:$('fd-cl').value||null,
+    equipamento_a:$('fd-ea').value||null,porta_a:$('fd-pa').value||null,
+    equipamento_b:$('fd-eb').value||null,porta_b:$('fd-pb').value||null,
+    potencia_tx:parseFloat($('fd-tx').value)||null,potencia_rx:parseFloat($('fd-rx').value)||null,
+    atenuacao_db:parseFloat($('fd-at').value)||null,observacao:$('fd-obs').value||null,
+    atualizado_em:new Date().toISOString()};
+  Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
+  const ok=fibraAtual.id?await patch2('fibras_cabo','id=eq.'+fibraAtual.id,reg):await post('fibras_cabo',reg);
+  if(ok){toast('✓ Fibra salva!');loadFibras(fibraAtual.caboId);await regHist('fibras_cabo','UPDATE','fibra'+fibraAtual.n,$('fd-st').value);}
+  else toast('Erro ao salvar','er');
+}
+
+// ═══ ORÇAMENTO ═══════════════════════════════════════
+function calcOrc(){
+  const km2=parseFloat($('orc-km')?.value)||0;
+  if(!km2){$('orc-res').innerHTML='<div class="empty"><span>📡</span>Preencha a distância</div>';return;}
+  const atKm=parseFloat($('orc-fib')?.value)||0.35;
+  const nEm=parseFloat($('orc-em')?.value)||0;
+  const aEm=parseFloat($('orc-aem')?.value)||0.05;
+  const nCo=parseFloat($('orc-co')?.value)||0;
+  const aCo=parseFloat($('orc-aco')?.value)||0.5;
+  const spl=parseFloat($('orc-spl')?.value)||0;
+  const mrg=parseFloat($('orc-mrg')?.value)||3;
+  const tx=parseFloat($('orc-tx')?.value)||-3;
+  const rx=parseFloat($('orc-rx')?.value)||-26;
+  const atFib=km2*atKm,atEm=nEm*aEm,atCo=nCo*aCo;
+  const atTot=atFib+atEm+atCo+spl+mrg;
+  const bud=Math.abs(tx-rx);
+  const marg=bud-atTot;
+  const viavel=marg>0;
+  const cor=marg>3?'ok':marg>0?'wn':'er';
+  const maxKm=(bud-atEm-atCo-spl-mrg)/atKm;
+  $('orc-res').innerHTML=`
+    <div style="text-align:center;padding:14px;background:rgba(${viavel?'62,207,142':'232,68,85'},.08);border:1.5px solid var(--${viavel?'gr':'rd'});border-radius:10px;margin-bottom:12px">
+      <div style="font-size:26px;margin-bottom:4px">${viavel?'✅':'❌'}</div>
+      <div style="font-size:16px;font-weight:700;color:var(--${viavel?'gr':'rd'})">${viavel?'VIÁVEL':'INVIÁVEL'}</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:3px">Margem: <b style="color:${marg>3?'var(--gr)':marg>0?'var(--am)':'var(--rd)'}">${marg>=0?'+':''}${marg.toFixed(2)} dB</b></div>
+    </div>
+    <div class="orow"><span class="olbl">Fibra (${km2}km × ${atKm}dB/km)</span><span class="oval">${atFib.toFixed(3)} dB</span></div>
+    <div class="orow"><span class="olbl">Emendas (${nEm} × ${aEm}dB)</span><span class="oval">${atEm.toFixed(3)} dB</span></div>
+    <div class="orow"><span class="olbl">Conectores (${nCo} × ${aCo}dB)</span><span class="oval">${atCo.toFixed(3)} dB</span></div>
+    ${spl>0?`<div class="orow"><span class="olbl">Splitters</span><span class="oval">${spl.toFixed(2)} dB</span></div>`:''}
+    <div class="orow"><span class="olbl">Margem segurança</span><span class="oval">${mrg.toFixed(2)} dB</span></div>
+    <div class="orow" style="border-top:2px solid var(--bd2);margin-top:4px;padding-top:8px;font-weight:700">
+      <span style="color:var(--t)">ATENUAÇÃO TOTAL</span><span class="oval ${cor}">${atTot.toFixed(2)} dB</span></div>
+    <div class="orow"><span class="olbl">Budget (Tx−Sens)</span><span class="oval">${bud.toFixed(2)} dB</span></div>
+    <div class="orow" style="font-weight:700"><span style="color:var(--t)">MARGEM LIVRE</span><span class="oval ${cor}">${marg>=0?'+':''}${marg.toFixed(2)} dB</span></div>
+    <div style="background:var(--bg3);border-radius:8px;padding:9px 11px;margin-top:10px;font-size:11px;color:var(--t2);line-height:1.8">
+      📏 Distância máxima: <b style="color:var(--bl)">${Math.max(0,maxKm).toFixed(2)} km</b><br>
+      ${!viavel?`⚠ Para viabilizar: reduzir ${Math.abs(marg).toFixed(2)}dB`:'✅ Enlace dentro do orçamento óptico'}
+    </div>`;
+}
+function exportarOrc(){
+  const txt='ORÇAMENTO ÓPTICO\n'+($('orc-res')?.innerText||'');
+  const b=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='orcamento-optico.txt';a.click();toast('Exportado!');
+}
+
+// ═══ VIABILIDADE ═══════════════════════════════════
+async function loadCTOs(){
+  const ctos=await get('ctos_portas','select=*&order=portas_livres.desc',100);
+  $('ctos-cb').innerHTML=ctos.length?`<div style="overflow-x:auto"><table class="rtab">
+    <tr><th>CTO</th><th>Total</th><th>Usadas</th><th>Livres</th><th>OLT</th><th>Status</th></tr>
+    ${ctos.map(c=>`<tr>
+      <td style="font-weight:600">${esc(c.site_nome)}</td>
+      <td>${c.total_portas||16}</td><td>${c.portas_usadas||0}</td>
+      <td><b style="color:${c.portas_livres>0?'var(--gr)':'var(--rd)'}">${c.portas_livres||0}</b></td>
+      <td>${esc(c.olt_vinculada||'—')}</td>
+      <td><span class="tag ${c.ativa?'tg':'tr'}">${c.ativa?'ativa':'inativa'}</span></td>
+    </tr>`).join('')}
+  </table></div>`:`<div class="empty"><span>📍</span>Nenhuma CTO cadastrada</div>`;
+}
+function gpsViab(){navigator.geolocation.getCurrentPosition(p=>{$('v-lat').value=p.coords.latitude.toFixed(6);$('v-lng').value=p.coords.longitude.toFixed(6);toast('GPS capturado!');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:8000});}
+async function buscarCTO(){
+  const lat=parseFloat($('v-lat')?.value);const lng=parseFloat($('v-lng')?.value);
+  const raio=parseFloat($('v-raio')?.value)||500;
+  if(!lat||!lng){toast('Informe as coordenadas','er');return;}
+  const el=$('v-res');el.innerHTML='<div style="text-align:center;padding:12px;color:var(--t2)">Buscando...</div>';
+  const caixas=await get('sites','select=id,nome,localizacao&tipo=eq.caixa&localizacao=not.is.null',500);
+  const pd=await get('ctos_portas','select=*',200);
+  const pm={};pd.forEach(p=>pm[p.site_nome]=p);
+  const prox=[];
+  caixas.forEach(c=>{
+    const co=c.localizacao?.coordinates;if(!co)return;
+    const d=haversine(lat,lng,co[1],co[0]);
+    if(d<=raio){const p=pm[c.nome]||{total_portas:16,portas_usadas:0,portas_livres:16,olt_vinculada:null};prox.push({...c,dist:Math.round(d),p});}
+  });
+  prox.sort((a,b)=>a.dist-b.dist);
+  const com=prox.filter(c=>c.p.portas_livres>0);
+  el.innerHTML=`
+    <div class="item ${com.length?'':'item'}" style="border-color:${com.length?'var(--gr)':'var(--rd)'};background:${com.length?'rgba(62,207,142,.06)':'rgba(232,68,85,.06)'};margin-bottom:12px">
+      <div class="item-t" style="color:${com.length?'var(--gr)':'var(--rd)'}">
+        ${com.length?'✅ '+com.length+' CTO(s) disponível(is)':'❌ Nenhuma CTO com porta livre'}
+      </div>
+      ${com.length?`<div class="item-s">Mais próxima: <b>${com[0].nome}</b> a ${com[0].dist}m — ${com[0].p.portas_livres} porta(s)</div>`:''}
+    </div>
+    ${prox.slice(0,6).map(c=>`<div class="item">
+      <div class="item-t"><span>${esc(c.nome)}</span><span style="color:${c.p.portas_livres>0?'var(--gr)':'var(--rd)'};font-weight:700">${c.p.portas_livres} livres</span></div>
+      <div class="item-s">Distância: <b>${c.dist}m</b> | Total: ${c.p.total_portas} portas${c.p.olt_vinculada?' | '+c.p.olt_vinculada:''}</div>
+      <div class="bar"><div class="barf" style="width:${Math.round((c.p.portas_usadas||0)/c.p.total_portas*100)}%;background:${c.p.portas_livres>0?'var(--bl)':'var(--rd)'}"></div></div>
+    </div>`).join('')}
+    ${!prox.length?`<div class="item" style="border-color:var(--am)"><div class="item-t" style="color:var(--am)">⚠ Nenhuma caixa no raio de ${raio}m</div><div class="item-s">Aumente o raio ou verifique se as caixas têm coordenadas GPS cadastradas.</div></div>`:''}`;
+}
+
+// ═══ INVENTÁRIO ════════════════════════════════════
+let invAll=[];
+async function loadInventario(){
+  invAll=await get('inventario_equip','select=*&order=criado_em.desc',300);
+  renderInv(invAll);
+}
+function renderInv(data){
+  const el=$('inv-cb');
+  if(!data.length){el.innerHTML='<div class="empty"><span>🔧</span>Nenhum equipamento</div>';return;}
+  const SC={ativo:'tg',reserva:'ta',manutencao:'ta',sucateado:'tr'};
+  el.innerHTML=data.map(e=>`<div class="item">
+    <div class="item-t"><span>${esc(e.nome)}</span><span class="tag ${SC[e.status]||'tb'}">${e.status||'—'}</span></div>
+    <div class="item-s"><b>${e.tipo||'—'}</b> | ${esc(e.site_nome||'—')} | ${esc(e.fabricante||'—')} ${esc(e.modelo||'')}${e.ip_gestao?'<br>IP: <code style="color:var(--cy)">'+esc(e.ip_gestao)+'</code>':''}${e.n_portas?'<br>Portas: '+(e.portas_usadas||0)+'/'+e.n_portas:''}</div>
+    <div class="item-m">${e.data_instalacao?'Instalado: '+e.data_instalacao:''}${e.proxima_manutencao?' | Manutenção: '+e.proxima_manutencao:''}</div>
+  </div>`).join('');
+}
+function filtInv(){
+  const q=($('inv-q')?.value||'').toLowerCase();
+  const t=$('inv-tp')?.value||'';
+  let d=invAll;
+  if(q)d=d.filter(e=>((e.nome||'')+(e.tipo||'')+(e.site_nome||'')+(e.fabricante||'')).toLowerCase().includes(q));
+  if(t)d=d.filter(e=>e.tipo===t);
+  renderInv(d);
+}
+
+// ═══ MANUTENÇÃO ════════════════════════════════════
+async function loadManutencao(){
+  const [urg,med,ok2]=await Promise.all([
+    get('manutencao_preventiva','select=*&status=eq.pendente&prioridade=in.(urgente,alta)&order=data_prevista.asc',30),
+    get('manutencao_preventiva','select=*&status=eq.pendente&prioridade=in.(media,baixa)&order=data_prevista.asc',30),
+    get('manutencao_preventiva','select=*&status=eq.concluido&order=data_realizada.desc',10),
+  ]);
+  const rend=(arr,el)=>{
+    $(el).innerHTML=arr.length?arr.map(m=>`<div class="item">
+      <div class="item-t"><span>${esc(m.site_nome.substring(0,40))}</span>
+        <div style="display:flex;gap:4px">
+          <span class="tag ${m.prioridade==='urgente'||m.prioridade==='alta'?'tr':'ta'}">${m.prioridade}</span>
+          <button onclick="concluirManut('${m.id}')" style="padding:2px 7px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:9px;cursor:pointer;font-family:inherit;font-weight:600">✓ Concluir</button>
+        </div>
+      </div>
+      <div class="item-s">${m.tipo} — ${m.descricao?esc(m.descricao.substring(0,60)):''}${m.cabo_nome?' | '+esc(m.cabo_nome):''}</div>
+      <div class="item-m">Prevista: ${m.data_prevista}${m.responsavel?' | '+esc(m.responsavel):''}</div>
+    </div>`).join(''):`<div class="empty"><span>✅</span>Nenhuma</div>`;
+  };
+  rend(urg,'manut-urg');rend(med,'manut-med');
+  $('manut-ok').innerHTML=ok2.length?ok2.map(m=>`<div class="item">
+    <div class="item-t"><span>${esc(m.site_nome)}</span><span class="tag tg">concluída</span></div>
+    <div class="item-s">${m.tipo}${m.data_realizada?' — '+m.data_realizada:''}</div>
+  </div>`).join(''):`<div class="empty"><span>📋</span>Nenhuma concluída</div>`;
+}
+async function concluirManut(id){
+  await patch2('manutencao_preventiva','id=eq.'+id,{status:'concluido',data_realizada:new Date().toISOString().slice(0,10)});
+  toast('✓ Manutenção concluída!');loadManutencao();
+}
+
+// ═══ ANOMALIAS ═════════════════════════════════════
+async function loadAnomaliasPage(){
+  const [crit,med]=await Promise.all([
+    get('anomalias','select=*&status=eq.aberta&severidade=in.(critica,alta)&order=detectado_em.desc',30),
+    get('anomalias','select=*&status=eq.aberta&severidade=eq.media&order=detectado_em.desc',30),
+  ]);
+  $('cnt-crit-anom').textContent=crit.length;$('cnt-med-anom').textContent=med.length;
+  const rend=(arr,el)=>{$(el).innerHTML=arr.length?arr.map(a=>`<div class="item">
+    <div class="item-t"><span>${esc(a.descricao.substring(0,50))}</span><span class="tag ${a.severidade==='critica'||a.severidade==='alta'?'tr':'ta'}">${a.severidade}</span></div>
+    <div class="item-s">${a.tipo} | ${a.entidade} ${a.valor_detectado?'| Valor: '+a.valor_detectado+'dB':''}</div>
+    <div class="item-m">${new Date(a.detectado_em).toLocaleString('pt-BR')}
+      <button onclick="resolverAnom('${a.id}')" style="margin-left:8px;padding:2px 6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:9px;cursor:pointer;font-family:inherit">Resolver</button>
+    </div>
+  </div>`).join(''):`<div class="empty"><span>✅</span>Nenhuma</div>`;};
+  rend(crit,'anom-crit');rend(med,'anom-med');
+}
+async function resolverAnom(id){
+  await patch2('anomalias','id=eq.'+id,{status:'resolvida',resolvido_em:new Date().toISOString()});
+  toast('✓ Anomalia resolvida!');loadAnomaliasPage();
+}
+async function detectarAnomalias(){
+  toast('Detectando anomalias...','in');
+  const spans=await get('trechos_dwdm','select=id,observacao,atenuacao_ida&atenuacao_ida=gt.30&order=atenuacao_ida.desc',20);
+  let novos=0;
+  for(const s of spans){
+    const ok=await post('anomalias',{tipo:'atenuacao_alta',entidade:'span',descricao:(s.observacao||'Span')+'— atenuação '+(s.atenuacao_ida)+'dB',valor_detectado:s.atenuacao_ida,valor_esperado:25,severidade:s.atenuacao_ida>50?'critica':s.atenuacao_ida>35?'alta':'media'});
+    if(ok)novos++;
+  }
+  toast(`${novos} anomalias detectadas!`,'wn');loadAnomaliasPage();
+}
+async function detectarAnomaliasIA(){toast('Funcionalidade IA em desenvolvimento — use o Agente IA na tela principal','wn');}
+
+// ═══ EXPANSÃO ══════════════════════════════════════
+async function loadExpansao(){
+  const cens=await get('cenarios_expansao','select=*&order=criado_em.desc',30);
+  const SC={simulacao:'tb',aprovado:'tg',em_execucao:'ta',concluido:'tg',cancelado:'tr'};
+  $('cen-cb').innerHTML=cens.length?cens.map(c=>`<div class="item">
+    <div class="item-t"><span>${esc(c.nome)}</span><span class="tag ${SC[c.status]||'tb'}">${c.status}</span></div>
+    <div class="item-s">${esc(c.tipo)} | ${esc(c.area||'—')} | +${c.novos_sites||0} sites | ${c.km_novos_cabos||0}km novos<br>Custo: R$ ${(c.custo_estimado||0).toLocaleString('pt-BR')}</div>
+    <div class="item-m">${esc(c.responsavel||'—')} | ${new Date(c.criado_em).toLocaleDateString('pt-BR')}</div>
+  </div>`).join(''):`<div class="empty"><span>🚀</span>Nenhum cenário criado<br>Crie cenários para simular expansões da rede</div>`;
+}
+function simCapacidade(){
+  const cli=parseInt($('sim-cli')?.value)||0;
+  const per=parseInt($('sim-per')?.value)||12;
+  const por=parseInt($('sim-por')?.value)||1;
+  const spl=parseInt($('sim-spl')?.value)||32;
+  if(!cli){$('sim-res').innerHTML='<div class="empty"><span>🔢</span>Preencha os campos</div>';return;}
+  const portasOLT=cli*por;
+  const slots=Math.ceil(portasOLT/16);
+  const olts=Math.ceil(slots/8);
+  const ctosN=Math.ceil(cli/spl);
+  const splTotal=ctosN;
+  const cliMes=Math.round(cli/per);
+  $('sim-res').innerHTML=`
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:8px;padding:10px 12px;margin-top:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--bl);margin-bottom:8px">📊 Projeção de capacidade</div>
+      <div style="font-size:11px;color:var(--t2);line-height:2">
+        Clientes novos: <b style="color:var(--t)">${cli.toLocaleString('pt-BR')}</b> em ${per} meses (~${cliMes}/mês)<br>
+        Portas OLT necessárias: <b style="color:var(--t)">${portasOLT.toLocaleString('pt-BR')}</b><br>
+        Slots OLT: <b style="color:var(--t)">${slots}</b> | OLTs: <b style="color:var(--t)">${olts}</b><br>
+        CTOs/Splitters 1:${spl}: <b style="color:var(--t)">${ctosN}</b><br>
+        Km estimado novo cabo: <b style="color:var(--t)">${(ctosN*0.3).toFixed(1)} km</b>
+      </div>
+    </div>`;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  if(document.getElementById('pg-expansao').classList.contains('on'))loadExpansao();
+});
+
+// ═══ HISTÓRICO ═════════════════════════════════════
+async function loadHistorico(){
+  const hist=await get('historico_alteracoes','select=*&order=criado_em.desc',100);
+  $('hist-cb').innerHTML=hist.length?hist.map(h=>`<div class="item">
+    <div class="item-t"><span>${h.acao} — ${esc(h.tabela)}</span><span style="font-size:10px;color:var(--t3)">${new Date(h.criado_em).toLocaleString('pt-BR')}</span></div>
+    <div class="item-s">${esc(h.usuario_nome||'Sistema')}${h.campo_alterado?' — '+esc(h.campo_alterado):''}${h.valor_novo?' → '+esc(String(h.valor_novo).substring(0,60)):''}</div>
+  </div>`).join(''):`<div class="empty"><span>📝</span>Nenhuma alteração registrada<br>As alterações são registradas automaticamente</div>`;
+}
+async function regHist(tabela,acao,campo,valor){
+  await post('historico_alteracoes',{tabela,acao,campo_alterado:campo,valor_novo:String(valor||'').substring(0,200),usuario_nome:sessao?.nome||'Sistema',usuario_email:sessao?.email||''});
+}
+
+// ═══ DOCS ══════════════════════════════════════════
+const DOCS={
+  login:{t:'Acesso ao sistema',c:`<b>Login</b><br>Acesse o mapa em <a href="mapa-rede-optica.html" style="color:var(--bl)">mapa-rede-optica.html</a><br><br>
+    <b>Credenciais padrão:</b><br>
+    lidiomar@redeop.com.br — admin (senha: rede2026)<br>
+    regiane@redeop.com.br — supervisor (senha: rede2026)<br>
+    eduardo@redeop.com.br — colaborador (senha: rede2026)<br><br>
+    <b>Perfis de acesso:</b><br>
+    admin — acesso total + gestão de usuários<br>
+    supervisor — leitura + edição<br>
+    colaborador — leitura + cadastro<br>
+    leitura — somente visualização`},
+  mapa:{t:'Usando o mapa',c:`<b>Painel de camadas (lado esquerdo)</b><br>
+    Clique em "Camadas" para ver grupos expansíveis.<br>
+    Botões "Todos" e "Nenhum" controlam a visibilidade.<br>
+    A preferência é salva automaticamente no navegador.<br><br>
+    <b>Ferramentas (lado direito)</b><br>
+    📍 GPS — centraliza o mapa na sua localização<br>
+    ✏ Edição — clique no mapa para criar site<br>
+    📏 Medir — clique para medir distâncias multiponto<br>
+    🔌 Desenhar cabo — trace o trajeto no mapa<br>
+    🔍 Rastrear — rota entre dois sites<br>
+    📡 OTDR — localizar rompimento<br>
+    🚨 Falha — registrar incidente<br><br>
+    <b>Tema claro/escuro</b><br>
+    Botão 🌙/☀ no canto superior direito.`},
+  otdr:{t:'Localizador OTDR',c:`<b>Passo a passo</b><br>
+    1. Clique no botão 📡 na barra de ferramentas do mapa<br>
+    2. Selecione o cabo afetado na lista<br>
+    3. Informe a distância medida pelo OTDR em metros<br>
+    4. Informe a incerteza (padrão: 100m)<br>
+    5. Clique em "Localizar"<br><br>
+    O sistema usa a função PostGIS <b>ST_LineInterpolatePoint</b> para calcular o ponto exato na geometria do cabo.<br><br>
+    <b>Resultado</b><br>
+    • Ponto ✕ vermelho pulsante no mapa<br>
+    • Círculo de incerteza<br>
+    • Cabo dividido: trecho percorrido (laranja) + trecho após rompimento (vermelho)<br>
+    • Botão para registrar como incidente SLA 5h`},
+  rastreamento:{t:'Rastreamento ponta a ponta',c:`<b>Passo a passo</b><br>
+    1. Clique no botão 🔍 na barra de ferramentas<br>
+    2. Informe o site de origem (ex: SAG)<br>
+    3. Informe o site de destino (ex: BHF)<br>
+    4. Selecione a camada (opcional)<br>
+    5. Clique em "Rastrear"<br><br>
+    O sistema destaca todos os cabos geograficamente localizados no trajeto entre os dois sites, com cores por hierarquia de rede.<br><br>
+    <b>Nota</b><br>
+    Para rastreamento exato OLT→cliente, importe os enlaces via coletor-telegram.py`},
+  telegram:{t:'Importar dados do Telegram',c:`<b>Exportar histórico do Telegram</b><br>
+    1. Abra o Telegram Desktop<br>
+    2. Entre no grupo de rede externa<br>
+    3. Menu ⋮ → Exportar histórico do chat<br>
+    4. Formato: JSON | Fotos: ✓ | Arquivos: ✓ | Todo o período<br>
+    5. Repita para cada grupo<br><br>
+    <b>Importar</b><br>
+    1. Mova as pastas exportadas para C:\\FIBRA CADASTRO\\telegram\\<br>
+    2. Execute: python coletor-telegram.py<br>
+    3. Escolha qual grupo processar<br><br>
+    <b>O que é importado</b><br>
+    • Sites com coordenadas GPS das fotos (EXIF)<br>
+    • Links do Google Maps<br>
+    • DGO, rack, fila, potências, emendas<br>
+    • PDFs de topologia`},
+  publicar:{t:'Publicar no GitHub Pages',c:`<b>Passo a passo</b><br>
+    1. Baixe mapa-rede-optica.html do Claude<br>
+    2. Coloque em C:\\FIBRA CADASTRO\\<br>
+    3. Clique duas vezes em PUBLICAR.bat<br>
+    4. Na primeira execução: cole o token do GitHub<br>
+    5. Aguarde 2-3 minutos<br>
+    6. Acesse: https://Lidiomar90.github.io/rede-optica/<br><br>
+    <b>Obter token GitHub</b><br>
+    1. github.com → Settings → Developer settings<br>
+    2. Personal access tokens → Tokens (classic)<br>
+    3. Generate new token → Selecionar "repo"<br>
+    4. O token começa com ghp_<br><br>
+    <b>Problemas comuns</b><br>
+    • "Não é reconhecido" → use .\\PUBLICAR.bat no PowerShell<br>
+    • Erro 401 → token expirado, delete .github_token e gere novo<br>
+    • Página antiga → Ctrl+Shift+R para forçar atualização`},
+  fusoes:{t:'Diagrama de fusão',c:`<b>Como cadastrar fusões</b><br>
+    1. Vá em Dashboard → aba "Fusões"<br>
+    2. Selecione a caixa CEO ou CTO<br>
+    3. Clique em "+ Adicionar fusão"<br>
+    4. Informe: cabo entrada, cabo saída, tubo, fibra<br>
+    5. Defina o tipo: fusão, splitter, conector ou reserva<br><br>
+    <b>Visualização</b><br>
+    O diagrama mostra as fusões agrupadas por tubo, com cores indicando o status (ativo=azul, livre=verde, reserva=amarelo, danificado=vermelho).<br><br>
+    <b>Splitter</b><br>
+    Para splitters, selecione tipo "splitter" e informe o ratio (1:8, 1:16, 1:32). O ícone aparece no meio da fusão.`},
+  orcamento:{t:'Orçamento óptico',c:`<b>Como usar a calculadora</b><br>
+    1. Informe a distância total do enlace em km<br>
+    2. Selecione o tipo de fibra (G.652D é o padrão)<br>
+    3. Informe o número de emendas e a atenuação por emenda<br>
+    4. Informe o número de conectores<br>
+    5. Se houver splitters, informe a perda total<br>
+    6. O resultado é calculado automaticamente<br><br>
+    <b>Parâmetros típicos</b><br>
+    Fibra G.652D: 0,35 dB/km<br>
+    Emenda por fusão: 0,05 dB (máximo 0,1 dB)<br>
+    Conector: 0,5 dB<br>
+    Splitter 1:8: 10,5 dB | 1:16: 13,5 dB | 1:32: 16,5 dB<br>
+    Margem: 3 dB mínimo<br><br>
+    <b>Resultado</b><br>
+    Verde = viável | Amarelo = limite | Vermelho = inviável`},
+};
+const FAQS=[
+  {q:'Qual a senha do sistema?',a:'A senha padrão é <b>rede2026</b>. Use o e-mail lidiomar@redeop.com.br para o perfil admin.'},
+  {q:'O mapa não está carregando. O que fazer?',a:'Verifique sua conexão com a internet. O sistema precisa acessar o Supabase. Clique em "Tentar novamente" na tela de erro.'},
+  {q:'Como adicionar um novo usuário?',a:'No mapa, vá na aba "Usuários" (visível apenas para admin) e clique em "+ Novo". Informe nome, e-mail e perfil.'},
+  {q:'Os spans críticos no mapa têm atenuação >108dB. Isso é real?',a:'Valores acima de 40-50dB geralmente indicam problemas na medição OTDR ou no cadastro. É recomendado verificar no campo com nova medição.'},
+  {q:'Como importar dados do Telegram?',a:'Exporte o histórico em formato JSON pelo Telegram Desktop, coloque na pasta C:\\FIBRA CADASTRO\\telegram\\ e execute python coletor-telegram.py.'},
+  {q:'Como publicar o mapa na internet?',a:'Clique duas vezes em PUBLICAR.bat na pasta C:\\FIBRA CADASTRO\\. Na primeira execução, será solicitado o token do GitHub (gerado em github.com → Settings → Developer settings).'},
+  {q:'O agente autônomo parou. Como reiniciar?',a:'Execute novamente python .\\agente-autonomo.py no PowerShell. Se faltar dependência, execute primeiro CORRIGIR-DEPS.bat.'},
+  {q:'Como calcular a viabilidade de um novo enlace?',a:'Vá em Dashboard → aba "Orçamento Óptico". Informe distância, tipo de fibra, emendas e conectores. O resultado indica se o enlace é viável.'},
+];
+function loadDocs(){
+  $('faq-list').innerHTML=FAQS.map((f,i)=>`
+    <div style="border:1px solid var(--bd);border-radius:8px;margin-bottom:7px;overflow:hidden">
+      <div onclick="toggleFaq(${i})" style="padding:10px 12px;cursor:pointer;font-size:12px;font-weight:600;color:var(--t);display:flex;justify-content:space-between;align-items:center;transition:.1s" id="faq-h-${i}">
+        ${esc(f.q)}<span style="color:var(--t3);font-size:14px;transition:.2s" id="faq-ic-${i}">▶</span>
+      </div>
+      <div style="display:none;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.7;border-top:1px solid var(--bd)" id="faq-b-${i}">${f.a}</div>
+    </div>`).join('');
+}
+function toggleFaq(i){const b=$(`faq-b-${i}`);const ic=$(`faq-ic-${i}`);b.style.display=b.style.display==='none'?'block':'none';ic.style.transform=b.style.display==='block'?'rotate(90deg)':'rotate(0deg)';}
+function abrirDoc(k){
+  const d=DOCS[k];if(!d)return;
+  $('mtt').textContent=d.t;$('mbd').innerHTML=`<div style="font-size:12px;color:var(--t2);line-height:1.8">${d.c}</div>`;
+  $('mbg').classList.add('show');
+}
+
+// ═══ RELATÓRIO ═════════════════════════════════════
+async function gerarRelatorio(){
+  goTab('relatorio',document.querySelectorAll('.tab')[11]);
+  const el=$('rel-cb');el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t2)">Gerando...</div>';
+  const[sites,cabos,spans,crit,caixas,enlaces,rotas,invent,anom,manut]=await Promise.all([
+    cnt('sites'),cnt('cabos'),cnt('trechos_dwdm'),cnt('trechos_dwdm','atenuacao_ida=gt.30'),
+    cnt('sites','tipo=eq.caixa'),cnt('enlaces'),cnt('rotas'),cnt('inventario_equip'),
+    cnt('anomalias','status=eq.aberta'),cnt('manutencao_preventiva','status=eq.pendente'),
+  ]);
+  const semCoord=await cnt('sites','localizacao=is.null');
+  const spCrit=await get('trechos_dwdm','select=observacao,atenuacao_ida,atenuacao_volta&atenuacao_ida=gt.30&order=atenuacao_ida.desc',10);
+  const manuts=await get('manutencao_preventiva','select=*&status=eq.pendente&prioridade=in.(urgente,alta)&order=data_prevista.asc',10);
+  let score=100;if(crit>0)score-=Math.min(30,Math.round(crit/50*15+5));if(enlaces===0)score-=20;if(semCoord>1000)score-=10;
+  score=Math.max(0,Math.min(100,score));
+  const now=new Date().toLocaleString('pt-BR');
+  el.innerHTML=`
+    <div style="font-size:11px;color:var(--t3);margin-bottom:14px">Gerado em ${now} | ${sessao?.nome||'Sistema'} | COORD MANUT MOVEL MG 2</div>
+    <div style="font-size:14px;font-weight:700;color:var(--t);margin-bottom:14px">RELATÓRIO EXECUTIVO — REDE ÓPTICA MG</div>
+    <table class="rtab" style="margin-bottom:16px">
+      <tr><th colspan="3">📊 RESUMO DO SISTEMA</th></tr>
+      <tr><th>Indicador</th><th>Valor</th><th>Status</th></tr>
+      <tr><td>Sites cadastrados</td><td>${sites.toLocaleString('pt-BR')}</td><td><span class="tag tg">OK</span></td></tr>
+      <tr><td>Sites sem GPS</td><td>${semCoord.toLocaleString('pt-BR')}</td><td><span class="tag ${semCoord>500?'tr':semCoord>100?'ta':'tg'}">${semCoord>500?'Crítico':semCoord>100?'Atenção':'OK'}</span></td></tr>
+      <tr><td>Cabos cadastrados</td><td>${cabos.toLocaleString('pt-BR')}</td><td><span class="tag tg">OK</span></td></tr>
+      <tr><td>Spans DWDM totais</td><td>${spans.toLocaleString('pt-BR')}</td><td><span class="tag tg">OK</span></td></tr>
+      <tr><td>Spans críticos >30dB</td><td>${crit.toLocaleString('pt-BR')}</td><td><span class="tag ${crit>0?'tr':'tg'}">${crit>0?'CRÍTICO — Ação necessária':'OK'}</span></td></tr>
+      <tr><td>Caixas CEO/CTO</td><td>${caixas.toLocaleString('pt-BR')}</td><td><span class="tag tg">OK</span></td></tr>
+      <tr><td>Enlaces A↔B</td><td>${enlaces.toLocaleString('pt-BR')}</td><td><span class="tag ${enlaces===0?'tr':enlaces<10?'ta':'tg'}">${enlaces===0?'Vazio — Importar dados':'OK'}</span></td></tr>
+      <tr><td>Rotas / Anéis</td><td>${rotas.toLocaleString('pt-BR')}</td><td><span class="tag ${rotas===0?'ta':'tg'}">${rotas===0?'Pendente':'OK'}</span></td></tr>
+      <tr><td>Inventário equipamentos</td><td>${invent.toLocaleString('pt-BR')}</td><td><span class="tag ${invent===0?'ta':'tg'}">${invent===0?'Vazio':'OK'}</span></td></tr>
+      <tr><td>Anomalias abertas</td><td>${anom.toLocaleString('pt-BR')}</td><td><span class="tag ${anom>0?'ta':'tg'}">${anom>0?'Pendente análise':'OK'}</span></td></tr>
+      <tr><td>Manutenções pendentes</td><td>${manut.toLocaleString('pt-BR')}</td><td><span class="tag ${manut>0?'ta':'tg'}">${manut>0?'Agendadas':'Nenhuma'}</span></td></tr>
+      <tr style="font-weight:700;background:var(--bg4)"><td>SCORE DE SAÚDE</td><td>${score}/100</td><td><span class="tag ${score>=80?'tg':score>=60?'ta':'tr'}">${score>=80?'SAUDÁVEL':score>=60?'ATENÇÃO':'CRÍTICO'}</span></td></tr>
+    </table>
+    ${crit>0?`<table class="rtab" style="margin-bottom:16px">
+      <tr><th colspan="3">🔴 SPANS COM ATENUAÇÃO CRÍTICA (>30dB)</th></tr>
+      <tr><th>Span</th><th>Atenuação Ida</th><th>Atenuação Volta</th></tr>
+      ${spCrit.map(s=>`<tr><td>${esc((s.observacao||'—').substring(0,45))}</td><td style="color:var(--rd);font-weight:700">${s.atenuacao_ida}dB</td><td>${s.atenuacao_volta||'—'}dB</td></tr>`).join('')}
+    </table>`:''}
+    ${manuts.length?`<table class="rtab" style="margin-bottom:16px">
+      <tr><th colspan="3">🛠 MANUTENÇÕES URGENTES / ALTA PRIORIDADE</th></tr>
+      <tr><th>Site</th><th>Tipo</th><th>Data prevista</th></tr>
+      ${manuts.map(m=>`<tr><td>${esc(m.site_nome)}</td><td>${m.tipo}</td><td>${m.data_prevista}</td></tr>`).join('')}
+    </table>`:''}
+    <table class="rtab">
+      <tr><th colspan="2">📋 AÇÕES RECOMENDADAS</th></tr>
+      ${enlaces===0?'<tr><td>🔴 ALTA</td><td>Importar enlaces via coletor-telegram.py — tabela vazia impede rastreamento completo</td></tr>':''}
+      ${rotas===0?'<tr><td>🟡 MÉDIA</td><td>Cadastrar anéis backbone (ANEL BH-10, JCT-LUE) na aba Rotas do mapa</td></tr>':''}
+      ${crit>0?`<tr><td>🔴 URGENTE</td><td>Acionar equipe de campo para ${crit} spans críticos — risco de SLA 5h</td></tr>`:''}
+      ${semCoord>500?`<tr><td>🟡 MÉDIA</td><td>Importar coordenadas de ${semCoord} sites sem GPS via Telegram ou cadastro manual</td></tr>`:''}
+      ${invent===0?'<tr><td>🟡 MÉDIA</td><td>Cadastrar equipamentos principais (OLTs, DWDM) no inventário</td></tr>':''}
+    </table>`;
+}
+function exportTxt(){
+  const b=new Blob([$('rel-cb')?.innerText||''],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='relatorio-rede-'+new Date().toISOString().slice(0,10)+'.txt';a.click();toast('Exportado!');
+}
+
+// ═══ MODAL ═════════════════════════════════════════
+function openM(tipo,extra){
+  $('mtt').textContent={fusao:'Nova fusão',cto:'Cadastrar CTO',equip:'Novo equipamento',manut:'Agendar manutenção',cenario:'Novo cenário de expansão'}[tipo]||tipo;
+  const F=(id,v='')=>`<div class="fg"><label>${id}</label><input id="m-${id.toLowerCase().replace(/\s/g,'-')}" value="${esc(v)}" placeholder="${esc(v)}"></div>`;
+  const SEL=(id,opts,val='')=>`<div class="fg"><label>${id}</label><select id="m-${id.toLowerCase().replace(/\s/g,'-')}">${opts.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  if(tipo==='fusao'){
+    $('mbd').innerHTML=`
+      <div class="fgr">
+        <div class="fg"><label>Cabo entrada *</label><input id="mf-cei" placeholder="Nome do cabo de entrada"></div>
+        <div class="fg"><label>Cabo saída *</label><input id="mf-ces" placeholder="Nome do cabo de saída"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Tubo entrada</label><input id="mf-ti" type="number" value="1" min="1"></div>
+        <div class="fg"><label>Tubo saída</label><input id="mf-ts" type="number" value="1" min="1"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Fibra entrada *</label><input id="mf-fi" type="number" min="1" placeholder="1"></div>
+        <div class="fg"><label>Fibra saída *</label><input id="mf-fs" type="number" min="1" placeholder="2"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Tipo</label><select id="mf-tp"><option>fusao</option><option>splitter</option><option>conector</option><option>reserva</option></select></div>
+        <div class="fg"><label>Status</label><select id="mf-st"><option>ativo</option><option>reserva</option><option>livre</option><option>danificado</option></select></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Ratio splitter (se splitter)</label><input id="mf-sp" placeholder="1:8, 1:16, 1:32"></div>
+        <div class="fg"><label>Atenuação (dB)</label><input id="mf-at" type="number" step="0.01" placeholder="0.05"></div>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="mf-obs"></textarea></div>
+      <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarFusao('${extra||''}')">Salvar fusão</button></div>`;
+  }else if(tipo==='cto'){
+    $('mbd').innerHTML=`
+      <div class="fg"><label>Nome da CTO *</label><input id="mc-n" placeholder="CTO-BHF-001"></div>
+      <div class="fgr">
+        <div class="fg"><label>Total de portas</label><input id="mc-t" type="number" value="16" min="1"></div>
+        <div class="fg"><label>Portas usadas</label><input id="mc-u" type="number" value="0" min="0"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>OLT vinculada</label><input id="mc-o" placeholder="OLT-BHF-01"></div>
+        <div class="fg"><label>Splitter</label><input id="mc-s" placeholder="1:16"></div>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="mc-obs"></textarea></div>
+      <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarCTO()">Salvar</button></div>`;
+  }else if(tipo==='equip'){
+    $('mbd').innerHTML=`
+      <div class="fg"><label>Nome *</label><input id="me-n" placeholder="OLT-BHF-01 / DWDM-SAG-01"></div>
+      <div class="fgr">
+        <div class="fg"><label>Tipo *</label><select id="me-tp"><option>OLT</option><option>DWDM</option><option>ROTEADOR</option><option>SWITCH</option><option>DGO</option><option>SPLITTER</option><option>ONU</option></select></div>
+        <div class="fg"><label>Status</label><select id="me-st"><option>ativo</option><option>reserva</option><option>manutencao</option><option>sucateado</option></select></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Site</label><input id="me-si" placeholder="SAG, BHF..."></div>
+        <div class="fg"><label>IP gestão</label><input id="me-ip" placeholder="10.1.1.1"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Fabricante</label><input id="me-fb" placeholder="Huawei, Nokia..."></div>
+        <div class="fg"><label>Modelo</label><input id="me-mo" placeholder="MA5800-X17"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Nº série</label><input id="me-ns" placeholder="SN-001"></div>
+        <div class="fg"><label>Nº portas</label><input id="me-np" type="number" placeholder="16"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Data instalação</label><input id="me-di" type="date"></div>
+        <div class="fg"><label>Próx. manutenção</label><input id="me-pm" type="date"></div>
+      </div>
+      <div class="fg"><label>Observação</label><textarea id="me-obs"></textarea></div>
+      <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarEquip()">Salvar</button></div>`;
+  }else if(tipo==='manut'){
+    $('mbd').innerHTML=`
+      <div class="fg"><label>Site / cabo *</label><input id="mm-si" placeholder="CEO-BHF-001 / SAG-LUE-144FO"></div>
+      <div class="fgr">
+        <div class="fg"><label>Tipo *</label><select id="mm-tp"><option>otdr</option><option>limpeza_conector</option><option>fusao</option><option>visual</option><option>troca_equip</option></select></div>
+        <div class="fg"><label>Prioridade</label><select id="mm-pr"><option>urgente</option><option>alta</option><option>media</option><option>baixa</option></select></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Data prevista *</label><input id="mm-dt" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="fg"><label>Responsável</label><input id="mm-re" value="${esc(sessao?.nome||'')}" placeholder="Nome do técnico"></div>
+      </div>
+      <div class="fg"><label>Descrição</label><textarea id="mm-ds" placeholder="Detalhe a manutenção necessária..."></textarea></div>
+      <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarManut()">Agendar</button></div>`;
+  }else if(tipo==='cenario'){
+    $('mbd').innerHTML=`
+      <div class="fg"><label>Nome do cenário *</label><input id="mc2-n" placeholder="Expansão BH Norte 2026"></div>
+      <div class="fgr">
+        <div class="fg"><label>Tipo</label><select id="mc2-tp"><option>expansao</option><option>manutencao</option><option>upgrade</option><option>novo_atendimento</option></select></div>
+        <div class="fg"><label>Área</label><input id="mc2-ar" placeholder="Belo Horizonte Norte"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Novos sites</label><input id="mc2-ns" type="number" placeholder="10"></div>
+        <div class="fg"><label>Km novos cabos</label><input id="mc2-km" type="number" step="0.1" placeholder="5.5"></div>
+      </div>
+      <div class="fgr">
+        <div class="fg"><label>Custo estimado (R$)</label><input id="mc2-cu" type="number" placeholder="150000"></div>
+        <div class="fg"><label>Responsável</label><input id="mc2-re" value="${esc(sessao?.nome||'')}"></div>
+      </div>
+      <div class="fg"><label>Descrição / impacto</label><textarea id="mc2-ds" placeholder="Descreva o cenário e o impacto esperado..."></textarea></div>
+      <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarCenario()">Salvar cenário</button></div>`;
+  }
+  $('mbg').classList.add('show');
+}
+function closeM(){$('mbg').classList.remove('show');}
+
+const gv2=id=>$(id)?.value?.trim()||null;
+const gf2=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
+async function salvarFusao(siteId){
+  if(!siteId){toast('Selecione uma caixa primeiro','er');return;}
+  const fi=gf2('mf-fi'),fs=gf2('mf-fs');
+  if(!fi||!fs){toast('Informe as fibras entrada e saída','er');return;}
+  const nome=$('fus-sel').options[$('fus-sel').selectedIndex]?.text||'';
+  const ok=await post('fusoes_caixa',{site_id:siteId,site_nome:nome,
+    cabo_entrada_nome:gv2('mf-cei'),cabo_saida_nome:gv2('mf-ces'),
+    tubo_entrada:parseInt($('mf-ti')?.value)||1,tubo_saida:parseInt($('mf-ts')?.value)||1,
+    fibra_entrada:fi,fibra_saida:fs,tipo:$('mf-tp').value,status:$('mf-st').value,
+    splitter_ratio:gv2('mf-sp'),atenuacao_db:gf2('mf-at'),observacao:gv2('mf-obs'),criado_por:sessao?.nome});
+  if(ok){toast('✓ Fusão salva!');closeM();loadFusoes(siteId);await regHist('fusoes_caixa','INSERT','fusao','F'+fi+'→F'+fs);}
+  else toast('Erro ao salvar','er');
+}
+async function salvarCTO(){
+  const nome=gv2('mc-n');if(!nome){toast('Nome obrigatório','er');return;}
+  const ok=await post('ctos_portas',{site_nome:nome,total_portas:parseInt($('mc-t')?.value)||16,portas_usadas:parseInt($('mc-u')?.value)||0,olt_vinculada:gv2('mc-o'),splitter:gv2('mc-s'),observacao:gv2('mc-obs'),ativa:true});
+  if(ok){toast('✓ CTO salva!');closeM();loadCTOs();}else toast('Erro','er');
+}
+async function salvarEquip(){
+  const nome=gv2('me-n');if(!nome){toast('Nome obrigatório','er');return;}
+  const ok=await post('inventario_equip',{nome,tipo:$('me-tp').value,status:$('me-st').value,site_nome:gv2('me-si'),ip_gestao:gv2('me-ip'),fabricante:gv2('me-fb'),modelo:gv2('me-mo'),numero_serie:gv2('me-ns'),n_portas:gf2('me-np'),data_instalacao:gv2('me-di'),proxima_manutencao:gv2('me-pm'),observacao:gv2('me-obs')});
+  if(ok){toast('✓ Equipamento salvo!');closeM();loadInventario();await regHist('inventario_equip','INSERT','equipamento',nome);}else toast('Erro','er');
+}
+async function salvarManut(){
+  const site=gv2('mm-si');const data=gv2('mm-dt');if(!site||!data){toast('Site e data obrigatórios','er');return;}
+  const ok=await post('manutencao_preventiva',{site_nome:site,tipo:$('mm-tp').value,prioridade:$('mm-pr').value,data_prevista:data,responsavel:gv2('mm-re'),descricao:gv2('mm-ds'),status:'pendente'});
+  if(ok){toast('✓ Manutenção agendada!');closeM();loadManutencao();}else toast('Erro','er');
+}
+async function salvarCenario(){
+  const nome=gv2('mc2-n');if(!nome){toast('Nome obrigatório','er');return;}
+  const ok=await post('cenarios_expansao',{nome,tipo:$('mc2-tp').value,area:gv2('mc2-ar'),novos_sites:gf2('mc2-ns'),km_novos_cabos:gf2('mc2-km'),custo_estimado:gf2('mc2-cu'),responsavel:gv2('mc2-re'),descricao:gv2('mc2-ds'),status:'simulacao'});
+  if(ok){toast('✓ Cenário salvo!');closeM();loadExpansao();}else toast('Erro','er');
+}
+
+// INIT
+loadOverview();
+</script>
+</body>
+</html>

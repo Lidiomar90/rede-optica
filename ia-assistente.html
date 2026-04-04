@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IA Assistente — Rede Óptica MG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0f18;--bg2:#151824;--bg3:#1c2030;--bg4:#242840;--bd:#252840;--bd2:#343860;--t:#dde2f0;--t2:#8892b0;--t3:#4a506e;--gr:#3ecf8e;--bl:#4da6ff;--am:#f0a500;--rd:#e84455;--pu:#a855f7}
+body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+#top{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 14px;height:48px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#top h1{font-size:14px;font-weight:800}
+#top h1 em{color:var(--gr);font-style:normal}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite}
+.sep{flex:1}
+.tb{padding:5px 12px;border-radius:7px;border:1px solid var(--bd2);background:var(--bg3);color:var(--t2);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
+.tb:hover{background:var(--bg4);color:var(--t)}
+.tb.g{background:var(--gr);border-color:var(--gr);color:#000}
+#ia-sel{background:var(--bg3);border:1px solid var(--bd2);border-radius:7px;padding:5px 10px;color:var(--t);font-size:11px;font-family:inherit;outline:none;cursor:pointer}
+#layout{display:flex;flex:1;overflow:hidden}
+/* SIDEBAR */
+#side{width:220px;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
+.s-sec{padding:10px 10px 6px;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+.s-btn{display:flex;align-items:center;gap:8px;padding:8px 11px;font-size:11px;color:var(--t2);cursor:pointer;border-radius:7px;margin:0 6px 2px;transition:.08s;border:none;background:none;width:calc(100% - 12px);text-align:left;font-family:inherit}
+.s-btn:hover{background:var(--bg3);color:var(--t)}
+.s-btn.on{background:var(--bg3);color:var(--gr);border-left:2px solid var(--gr)}
+.s-ico{font-size:14px;flex-shrink:0;width:18px}
+.ia-card{margin:6px;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:10px}
+.ia-name{font-size:11px;font-weight:700;margin-bottom:3px}
+.ia-sub{font-size:9px;color:var(--t3);line-height:1.6}
+.ia-st{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.ia-h{display:flex;align-items:flex-start;gap:7px;margin-bottom:6px}
+.ia-key{width:100%;background:var(--bg4);border:1px solid var(--bd2);border-radius:5px;padding:5px 8px;font-size:10px;color:var(--t);font-family:monospace;outline:none}
+.ia-key::placeholder{color:var(--t3)}
+.ia-save{width:100%;margin-top:5px;padding:5px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:9px;cursor:pointer;font-weight:700;font-family:inherit;transition:.12s}
+.ia-save:hover{background:var(--gr);color:#000}
+/* CHAT */
+#chat-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+#msgs::-webkit-scrollbar{width:2px}
+#msgs::-webkit-scrollbar-thumb{background:var(--bd2)}
+.msg{max-width:85%;animation:up .15s ease}
+.msg.user{align-self:flex-end}
+.msg.ai{align-self:flex-start}
+.mb{padding:10px 13px;border-radius:12px;font-size:12px;line-height:1.7;word-break:break-word}
+.msg.user .mb{background:var(--bl);color:#fff;border-radius:12px 12px 3px 12px}
+.msg.ai .mb{background:var(--bg2);border:1px solid var(--bd);color:var(--t2);border-radius:12px 12px 12px 3px}
+.msg-meta{font-size:9px;color:var(--t3);margin-top:3px;padding:0 4px}
+.msg.user .msg-meta{text-align:right}
+.typing{display:flex;gap:4px;padding:12px 14px;align-items:center}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--t3);animation:pulse 1s infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+/* INPUT */
+#inp-wrap{border-top:1px solid var(--bd);padding:10px 12px;background:var(--bg2);flex-shrink:0}
+/* ATALHOS */
+#atalhos{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.atal{padding:4px 10px;border-radius:14px;border:1px solid var(--bd2);background:var(--bg3);color:var(--t3);font-size:10px;cursor:pointer;transition:.1s;font-family:inherit}
+.atal:hover{border-color:var(--bl);color:var(--bl)}
+#inp-row{display:flex;gap:8px}
+#inp{flex:1;background:var(--bg3);border:1.5px solid var(--bd2);border-radius:10px;padding:10px 13px;font-size:13px;color:var(--t);outline:none;font-family:inherit;resize:none;max-height:120px;min-height:44px;transition:.12s;line-height:1.5}
+#inp:focus{border-color:var(--bl)}
+#send{width:44px;height:44px;border-radius:10px;border:none;background:var(--bl);color:#fff;font-size:18px;cursor:pointer;transition:.12s;flex-shrink:0}
+#send:hover{background:#3a90e0}
+#send:disabled{background:var(--t3);cursor:not-allowed}
+/* CONTEXTO */
+.ctx-chip{display:inline-block;padding:3px 9px;border-radius:10px;border:1px solid var(--bd2);background:var(--bg3);font-size:9px;color:var(--t2);margin:2px;cursor:pointer;transition:.1s}
+.ctx-chip.on{border-color:var(--gr);color:var(--gr);background:rgba(62,207,142,.08)}
+/* CONFIG IA */
+#ia-config{padding:10px}
+.ia-add{width:100%;padding:7px;border-radius:7px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit;transition:.12s;margin-top:6px}
+.ia-add:hover{background:var(--gr);color:#000}
+pre{white-space:pre-wrap;font-family:inherit;font-size:11px}
+code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:monospace;font-size:10px;color:var(--cy)}
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="dot"></div>
+  <h1>Rede <em>Óptica</em> — IA Assistente</h1>
+  <select id="ia-sel" onchange="trocarIA(this.value)"></select>
+  <div class="sep"></div>
+  <span id="ia-status" style="font-size:10px;color:var(--t3)">—</span>
+  <button class="tb" onclick="location.href='index.html'">← Portal</button>
+  <button class="tb g" onclick="novaConversa()">+ Nova conversa</button>
+</div>
+
+<div id="layout">
+  <div id="side">
+    <div class="s-sec">Modo de uso</div>
+    <button class="s-btn on" onclick="setModo('geral',this)"><span class="s-ico">🤖</span>Assistente geral</button>
+    <button class="s-btn" onclick="setModo('campo',this)"><span class="s-ico">📱</span>Orientação de campo</button>
+    <button class="s-btn" onclick="setModo('fibras',this)"><span class="s-ico">🔌</span>Cadastro de fibras</button>
+    <button class="s-btn" onclick="setModo('falha',this)"><span class="s-ico">🚨</span>Diagnóstico de falha</button>
+    <button class="s-btn" onclick="setModo('otdr',this)"><span class="s-ico">📡</span>Análise OTDR</button>
+    <button class="s-btn" onclick="setModo('expansao',this)"><span class="s-ico">📈</span>Planejamento expansão</button>
+    <div class="s-sec" style="margin-top:8px">IAs configuradas</div>
+    <div id="ia-config"></div>
+    <button class="ia-add" onclick="addIA()">+ Adicionar nova IA</button>
+    <div style="flex:1"></div>
+    <div style="padding:10px;font-size:9px;color:var(--t3);line-height:1.7">
+      <b style="color:var(--t2)">Contexto ativo:</b><br>
+      <span id="ctx-info">—</span>
+    </div>
+  </div>
+
+  <div id="chat-wrap">
+    <div id="msgs">
+      <div class="msg ai">
+        <div class="mb">
+          👋 Olá, Lidiomar! Sou o assistente de IA da Rede Óptica MG.<br><br>
+          Posso ajudar com:<br>
+          🔌 <b>Cadastro de fibras</b> — tubo loose, fibra por fibra, DWDM, distâncias<br>
+          🚨 <b>Diagnóstico de falhas</b> — análise de OTDR, spans críticos<br>
+          📱 <b>Orientação de campo</b> — o que registrar em cada situação<br>
+          📈 <b>Planejamento</b> — análise de capacidade, expansão<br>
+          🔍 <b>Auditoria</b> — revisar dados, validar cadastros<br><br>
+          Configure sua chave de API no painel esquerdo e me faça uma pergunta!
+        </div>
+        <div class="msg-meta">Sistema · agora</div>
+      </div>
+    </div>
+
+    <div id="inp-wrap">
+      <div id="atalhos">
+        <button class="atal" onclick="usar('Como cadastrar fibras do cabo JCT-ESL?')">📋 Como cadastrar fibras</button>
+        <button class="atal" onclick="usar('Tenho OTDR mostrando 11km para ESL e 2km para JCT, onde está o rompimento?')">📡 Localizar rompimento</button>
+        <button class="atal" onclick="usar('O que perguntar ao técnico de campo ao fazer emenda?')">👷 Checklist emenda</button>
+        <button class="atal" onclick="usar('Como registrar um cabo de 144FO com 12 tubos loose?')">🔌 Cadastrar cabo 144FO</button>
+        <button class="atal" onclick="usar('Span DWDM com 35dB de atenuação, o que verificar?')">⚠ Span crítico 35dB</button>
+        <button class="atal" onclick="usar('Qual a diferença entre tubo loose e fibra indexada?')">❓ Tubo loose</button>
+      </div>
+      <div id="inp-row">
+        <textarea id="inp" placeholder="Pergunte sobre fibras, cabos, falhas, OTDR, cadastros..." rows="1" onkeydown="onKey(event)" oninput="autoH(this)"></textarea>
+        <button id="send" onclick="enviar()">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SU='https://xmqxhzmjxprhvyqwlqvz.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcXhoem1qeHByaHZ5cXdscXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzYxMzcsImV4cCI6MjA5MDMxMjEzN30.ohD97pPgtpxyHmCjWYKz-OWpcqVtDBXuQZSc1BJQngo';
+const RH={'apikey':SK,'Authorization':'Bearer '+SK};
+const WH={...RH,'Content-Type':'application/json','x-app-token':'rede-optica-2026','Prefer':'return=minimal'};
+const $=id=>document.getElementById(id);
+let ias=[],iaAtual=null,modo='geral',hist=[];
+
+const MODOS={
+  geral:{sys:`Você é um assistente técnico especialista em redes ópticas de telecomunicações (GPON, DWDM, Metro HL4/HL5, Backbone) da Vivo MG. Responda em português brasileiro, de forma técnica e direta. Use exemplos práticos. Quando mencionar fibras, sempre especifique: tubo loose, número da fibra, cor, serviço que passa.`,label:'Assistente Geral'},
+  campo:{sys:`Você é um guia de campo para técnicos de fibra óptica. Oriente o técnico de forma simples e direta sobre o que registrar. Sempre pergunte: (1) Qual cabo/caixa está sendo trabalhado? (2) Qual tubo loose? (3) Qual fibra? (4) O que está passando nessa fibra (DWDM, OLT, DATACOM)? (5) Quais as distâncias até cada ponta? Responda em português, simples, com listas numeradas.`,label:'Orientação Campo'},
+  fibras:{sys:`Você é especialista em documentação de cabos ópticos. Para cada cabo, solicite: nome do cabo, comprimento total, número de fibras, número de tubos loose, fabricante, lote, ano. Para cada fibra: tubo loose (1-12), número da fibra no tubo (1-12), cor do tubo, cor da fibra, status (livre/ativa/reserva/danificada), serviço que passa, ponta A (site+equip+porta), ponta B (site+equip+porta), distância da ponta A em metros, distância da ponta B em metros, canal DWDM se aplicável. Valide os dados antes de confirmar o cadastro. Responda em português.`,label:'Cadastro Fibras'},
+  falha:{sys:`Você é especialista em diagnóstico de falhas em redes ópticas. Ao receber uma descrição de falha, sempre pergunte: (1) Qual span/cabo afetado? (2) Medição OTDR disponível? (3) Distância do rompimento medida? (4) Qual a atenuação atual vs esperada? (5) Houve obras próximas? Forneça passos de diagnóstico em ordem de prioridade. Cite sempre os riscos de SLA 5h para spans críticos. Responda em português.`,label:'Diagnóstico Falha'},
+  otdr:{sys:`Você é especialista em análise de OTDR em fibras ópticas. Ao receber dados OTDR, calcule: ponto de rompimento exato, distância de cada ponta, incerteza de medição. Explique o que os eventos do OTDR significam (reflexão, descontinuidade, fim de cabo). Oriente sobre como localizar o ponto físico no campo usando as distâncias calculadas. Responda em português com precisão técnica.`,label:'Análise OTDR'},
+  expansao:{sys:`Você é consultor de planejamento de redes ópticas. Analise cenários de expansão considerando: capacidade atual dos cabos, quantidade de fibras livres por rota, demanda projetada, custo de novos cabos vs ativação de reservas. Sempre considere redundância e proteção de rotas críticas. Responda em português com análise estratégica.`,label:'Planejamento Expansão'},
+};
+
+async function carregarIAs(){
+  const r=await fetch(`${SU}/rest/v1/ias_configuradas?order=prioridade.asc`,{headers:RH});
+  ias=r.ok?await r.json():[];
+  // Carregar keys salvas localmente
+  ias.forEach(ia=>{const k=localStorage.getItem('ia_key_'+ia.id);if(k)ia._key=k;});
+  renderIAConfig();
+  renderIASelect();
+  if(ias.length)trocarIA(ias[0].id);
+}
+
+function renderIASelect(){
+  $('ia-sel').innerHTML=ias.map(ia=>`<option value="${ia.id}">${ia.nome} (${ia.provedor})</option>`).join('');
+}
+
+function renderIAConfig(){
+  $('ia-config').innerHTML=ias.map(ia=>`
+    <div class="ia-card">
+      <div class="ia-h">
+        <div class="ia-st" style="background:${ia._key?'#3ecf8e':'#e84455'}"></div>
+        <div><div class="ia-name">${ia.nome}</div><div class="ia-sub">${ia.modelo}<br>${ia.papel}</div></div>
+      </div>
+      <input class="ia-key" id="key-${ia.id}" type="password" placeholder="sk-ant-... / sk-..." value="${ia._key||''}" oninput="salvarKey('${ia.id}',this.value)">
+      <button class="ia-save" onclick="testarIA('${ia.id}')">Testar conexão</button>
+    </div>`).join('');
+}
+
+function salvarKey(id,val){
+  localStorage.setItem('ia_key_'+id,val);
+  const ia=ias.find(i=>i.id===id);if(ia)ia._key=val;
+  renderIAConfig();
+  fetch(`${SU}/rest/v1/ias_configuradas?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_uso:new Date().toISOString()})});
+}
+
+function trocarIA(id){
+  iaAtual=ias.find(i=>i.id===id)||ias[0];
+  if(iaAtual){
+    const hasKey=!!(iaAtual._key);
+    $('ia-status').textContent=hasKey?`✓ ${iaAtual.nome} pronta`:`⚠ ${iaAtual.nome} — insira a API key`;
+    $('ia-status').style.color=hasKey?'var(--gr)':'var(--am)';
+  }
+}
+
+function setModo(m,el){
+  modo=m;hist=[];
+  document.querySelectorAll('.s-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  $('ctx-info').textContent=MODOS[m]?.label||m;
+  toast('Modo: '+MODOS[m]?.label,'in');
+}
+
+async function enviar(){
+  const txt=$('inp').value.trim();if(!txt)return;
+  $('inp').value='';autoH($('inp'));
+  addMsg(txt,'user');
+  if(!iaAtual||!iaAtual._key){addMsg('⚠ Configure a API key da IA no painel esquerdo.','ai');return;}
+  const typing=addTyping();
+  const sys=MODOS[modo]?.sys||MODOS.geral.sys;
+  hist.push({role:'user',content:txt});
+  const msgs=hist.slice(-12);
+  try{
+    let resposta='';
+    if(iaAtual.provedor==='anthropic'){
+      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':iaAtual._key,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:iaAtual.modelo,max_tokens:1500,system:sys,messages:msgs})});
+      const d=await r.json();
+      resposta=d.content?.[0]?.text||d.error?.message||'Erro na resposta';
+    }else if(iaAtual.provedor==='openai'){
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+iaAtual._key},
+        body:JSON.stringify({model:iaAtual.modelo,max_tokens:1500,messages:[{role:'system',content:sys},...msgs]})});
+      const d=await r.json();
+      resposta=d.choices?.[0]?.message?.content||d.error?.message||'Erro na resposta';
+    }else{
+      resposta='Provedor "'+iaAtual.provedor+'" não integrado ainda. Use Anthropic ou OpenAI.';
+    }
+    hist.push({role:'assistant',content:resposta});
+    salvarMemoria(txt,resposta);
+    typing.remove();
+    addMsg(resposta,'ai');
+  }catch(e){typing.remove();addMsg('❌ Erro: '+e.message,'ai');}
+}
+
+function addMsg(txt,tipo){
+  const d=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const el=document.createElement('div');
+  el.className='msg '+tipo;
+  const html=txt.replace(/```([^`]+)```/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  el.innerHTML=`<div class="mb">${html}</div><div class="msg-meta">${tipo==='user'?'Você':'IA · '+((iaAtual?.nome)||'—')} · ${d}</div>`;
+  $('msgs').appendChild(el);$('msgs').scrollTop=$('msgs').scrollHeight;return el;
+}
+function addTyping(){
+  const el=document.createElement('div');
+  el.className='msg ai';
+  el.innerHTML='<div class="mb typing"><span></span><span></span><span></span></div>';
+  $('msgs').appendChild(el);$('msgs').scrollTop=$('msgs').scrollHeight;return el;
+}
+async function salvarMemoria(pergunta,resposta){
+  if(resposta.length<50)return;
+  await fetch(`${SU}/rest/v1/ia_memoria`,{method:'POST',headers:WH,body:JSON.stringify({contexto:pergunta.substring(0,200),conteudo:resposta.substring(0,500),tipo:'campo',ia_modelo:iaAtual?.nome||'—'})});
+}
+
+async function addIA(){
+  const nome=prompt('Nome da IA (ex: Gemini Pro):');if(!nome)return;
+  const provedor=prompt('Provedor (anthropic/openai/google/mistral/custom):','openai');if(!provedor)return;
+  const modelo=prompt('Modelo (ex: gpt-4o, claude-sonnet-4-20250514):');if(!modelo)return;
+  const papel=prompt('Papel (assistente/campo/auditoria/falha):','assistente');
+  const desc=prompt('Descrição:','Nova IA assistente');
+  const r=await fetch(`${SU}/rest/v1/ias_configuradas`,{method:'POST',headers:WH,body:JSON.stringify({nome,provedor,modelo,papel,descricao:desc,ativa:true,prioridade:ias.length+1,criado_por:'admin'})});
+  if(r.status===201){toast('✓ IA adicionada!');await carregarIAs();}else toast('Erro ao adicionar','er');
+}
+
+async function testarIA(id){
+  const ia=ias.find(i=>i.id===id);if(!ia?._key){alert('Insira a API key primeiro.');return;}
+  toast('Testando conexão...','in');
+  try{
+    if(ia.provedor==='anthropic'){
+      const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':ia._key,'anthropic-version':'2023-06-01'},
+        body:JSON.stringify({model:ia.modelo,max_tokens:30,messages:[{role:'user',content:'Responda apenas: OK'}]})});
+      const d=await r.json();
+      if(d.content?.[0]?.text){toast('✓ '+ia.nome+' conectada!');
+        await fetch(`${SU}/rest/v1/ias_configuradas?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ativa:true,ultimo_uso:new Date().toISOString()})});}
+      else toast('Erro: '+(d.error?.message||'key inválida'),'er');
+    }else if(ia.provedor==='openai'){
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+ia._key},
+        body:JSON.stringify({model:ia.modelo,max_tokens:10,messages:[{role:'user',content:'OK'}]})});
+      const d=await r.json();
+      if(d.choices?.[0]){toast('✓ '+ia.nome+' conectada!');}else toast('Erro: '+(d.error?.message||'key inválida'),'er');
+    }
+  }catch(e){toast('Erro: '+e.message,'er');}
+}
+
+function novaConversa(){hist=[];$('msgs').innerHTML='';addMsg('Nova conversa iniciada. Como posso ajudar?','ai');}
+function usar(txt){$('inp').value=txt;$('inp').focus();}
+function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}}
+function autoH(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+let _toT;function toast(m,t='ok'){const e=document.createElement('div');e.className='toast s '+t;e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.style.opacity='0',2800);setTimeout(()=>e.remove(),3100);}
+
+carregarIAs();
+</script>
+</body>
+</html>

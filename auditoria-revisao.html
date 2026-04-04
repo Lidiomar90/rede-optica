@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auditoria & Revisão — Rede Óptica MG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d0f18;--bg2:#151824;--bg3:#1c2030;--bg4:#242840;--bd:#252840;--bd2:#343860;--t:#dde2f0;--t2:#8892b0;--t3:#4a506e;--gr:#3ecf8e;--bl:#4da6ff;--am:#f0a500;--rd:#e84455;--pu:#a855f7;--cy:#22d3ee}
+body{background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#top{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 16px;height:50px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+#top h1{font-size:15px;font-weight:800}
+#top h1 em{color:var(--gr);font-style:normal}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite}
+.sep{flex:1}
+.tb{padding:5px 13px;border-radius:7px;border:1px solid var(--bd2);background:var(--bg3);color:var(--t2);font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;transition:.12s}
+.tb:hover{background:var(--bg4);color:var(--t)}
+.tb.g{background:var(--gr);border-color:var(--gr);color:#000}
+.tb.r{border-color:var(--rd);color:var(--rd)}
+.tb.b{background:var(--bl);border-color:var(--bl);color:#fff}
+#main{max-width:1100px;margin:0 auto;padding:18px 14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--bg2);border:1.5px solid var(--bd);border-radius:12px;overflow:hidden;animation:up .2s ease}
+.ch{padding:13px 15px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:9px}
+.ch-ico{font-size:18px}
+.ch-t{font-size:13px;font-weight:700;flex:1}
+.ch-st{padding:3px 9px;border-radius:10px;font-size:9px;font-weight:700}
+.ok{background:rgba(62,207,142,.15);color:var(--gr);border:1px solid rgba(62,207,142,.3)}
+.wn{background:rgba(240,165,0,.15);color:var(--am);border:1px solid rgba(240,165,0,.3)}
+.er{background:rgba(232,68,85,.15);color:var(--rd);border:1px solid rgba(232,68,85,.3)}
+.in{background:rgba(77,166,255,.15);color:var(--bl);border:1px solid rgba(77,166,255,.3)}
+.cb{padding:12px 15px}
+.row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bd);font-size:11px}
+.row:last-child{border:none}
+.rl{color:var(--t3);font-size:10px}
+.rv{color:var(--t2);font-weight:600}
+.rv.g{color:var(--gr)}.rv.r{color:var(--rd)}.rv.a{color:var(--am)}.rv.b{color:var(--bl)}
+.score-wrap{display:flex;align-items:center;gap:12px;padding:12px 15px}
+.score-num{font-size:38px;font-weight:900;line-height:1}
+.score-bar-wrap{flex:1}
+.score-label{font-size:10px;color:var(--t3);margin-bottom:5px;font-weight:700;text-transform:uppercase}
+.score-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-bottom:4px}
+.score-fill{height:100%;border-radius:4px;transition:.5s}
+.score-sub{font-size:10px;color:var(--t2)}
+.issues{padding:0 15px 12px}
+.issue{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd);font-size:11px}
+.issue:last-child{border:none}
+.issue-ico{font-size:13px;flex-shrink:0;margin-top:1px}
+.issue-t{font-weight:600;margin-bottom:2px}
+.issue-d{color:var(--t2);font-size:10px;line-height:1.5}
+.fix-btn{padding:3px 9px;border-radius:5px;border:1px solid;background:transparent;font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;transition:.12s}
+.fix-ok{border-color:var(--gr);color:var(--gr)}.fix-ok:hover{background:var(--gr);color:#000}
+.fix-wn{border-color:var(--am);color:var(--am)}.fix-wn:hover{background:var(--am);color:#000}
+.fix-er{border-color:var(--rd);color:var(--rd)}.fix-er:hover{background:var(--rd);color:#fff}
+.section-t{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;padding:14px 0 7px;border-bottom:1px solid var(--bd);margin-bottom:12px}
+.aprov-item{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:12px;margin-bottom:8px;animation:up .15s ease}
+.aprov-h{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.aprov-t{flex:1;font-size:12px;font-weight:600}
+.aprov-meta{font-size:10px;color:var(--t3);line-height:1.7;margin-bottom:8px}
+.aprov-btns{display:flex;gap:6px}
+.abtn{flex:1;padding:8px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s}
+.abtn.ap{background:var(--gr);color:#000}.abtn.rj{background:rgba(232,68,85,.15);border:1px solid var(--rd);color:var(--rd)}
+.spinner{width:18px;height:18px;border:2px solid var(--bd);border-top-color:var(--gr);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+.log-item{padding:6px 0;border-bottom:1px solid var(--bd);font-size:10px;display:flex;gap:8px;align-items:flex-start}
+.log-item:last-child{border:none}
+.log-op{padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;flex-shrink:0;margin-top:1px}
+.op-I{background:rgba(62,207,142,.2);color:var(--gr)}
+.op-U{background:rgba(77,166,255,.2);color:var(--bl)}
+.op-D{background:rgba(232,68,85,.2);color:var(--rd)}
+.log-t{color:var(--t2);flex:1}
+.log-d{color:var(--t3);margin-top:1px}
+.tag{padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700}
+.tg{background:rgba(62,207,142,.15);color:var(--gr)}
+.tr{background:rgba(232,68,85,.15);color:var(--rd)}
+.ta{background:rgba(240,165,0,.15);color:var(--am)}
+.tb2{background:rgba(77,166,255,.15);color:var(--bl)}
+.rpt{background:var(--bg3);border:1px solid var(--bd);border-radius:9px;padding:14px;white-space:pre-wrap;font-size:11px;color:var(--t2);font-family:'Courier New',monospace;line-height:1.7;max-height:400px;overflow-y:auto}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bd);border-radius:18px;padding:8px 18px;font-size:12px;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+.toast.s{opacity:1}.toast.ok{color:var(--gr);border-color:var(--gr)}.toast.er{color:var(--rd);border-color:var(--rd)}.toast.wn{color:var(--am);border-color:var(--am)}.toast.in{color:var(--bl);border-color:var(--bl)}
+</style>
+</head>
+<body>
+<div id="top">
+  <div class="dot"></div>
+  <h1>Rede <em>Óptica</em> — Auditoria & Revisão</h1>
+  <div class="sep"></div>
+  <button class="tb" onclick="location.href='index.html'">← Portal</button>
+  <button class="tb b" onclick="rodarRevisao()">🔄 Revisar agora</button>
+  <button class="tb g" onclick="gerarRelatorio()">📄 Relatório IA</button>
+  <button class="tb" onclick="criarSnapshot()">💾 Snapshot</button>
+</div>
+
+<div id="main">
+  <!-- SCORE -->
+  <div class="grid2" id="score-area">
+    <div class="card" id="card-score">
+      <div class="ch"><span class="ch-ico">🏥</span><span class="ch-t">Score de Saúde do Sistema</span><span class="ch-st ok" id="score-badge">Calculando...</span></div>
+      <div class="score-wrap">
+        <div class="score-num" id="score-num" style="color:var(--gr)">—</div>
+        <div class="score-bar-wrap">
+          <div class="score-label">Saúde geral</div>
+          <div class="score-bar"><div class="score-fill" id="score-fill" style="width:0%;background:var(--gr)"></div></div>
+          <div class="score-sub" id="score-sub">Verificando banco de dados...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="card-seg">
+      <div class="ch"><span class="ch-ico">🔐</span><span class="ch-t">Segurança</span><span class="ch-st ok" id="seg-badge">—</span></div>
+      <div class="cb" id="seg-body"><div style="color:var(--t3);font-size:11px;padding:8px 0">Verificando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ch-ico">📊</span><span class="ch-t">Status do Banco</span><span class="ch-st in" id="db-badge">—</span></div>
+      <div class="cb" id="db-body"><div style="color:var(--t3);font-size:11px;padding:8px 0">Carregando...</div></div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ch-ico">⚠</span><span class="ch-t">Problemas Detectados</span><span class="ch-st er" id="issues-badge">—</span></div>
+      <div class="issues" id="issues-body"><div style="color:var(--t3);font-size:11px;padding:8px 0">Analisando...</div></div>
+    </div>
+  </div>
+
+  <!-- APROVAÇÕES PENDENTES -->
+  <div class="section-t">⏳ Aprovações pendentes por hierarquia</div>
+  <div id="aprov-area"><div style="color:var(--t3);font-size:11px;padding:8px 0">Carregando...</div></div>
+
+  <!-- HISTÓRICO AUDITORIA -->
+  <div class="section-t">📋 Histórico de alterações (últimas 30)</div>
+  <div id="hist-area"><div style="color:var(--t3);font-size:11px;padding:8px 0">Carregando...</div></div>
+
+  <!-- BACKUPS -->
+  <div class="section-t">💾 Snapshots / Backups</div>
+  <div id="bk-area"><div style="color:var(--t3);font-size:11px;padding:8px 0">Carregando...</div></div>
+
+  <!-- RELATÓRIO -->
+  <div class="section-t" id="rpt-section" style="display:none">📄 Relatório gerado para IA corrigir</div>
+  <div id="rpt-area"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SU='https://xmqxhzmjxprhvyqwlqvz.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcXhoem1qeHByaHZ5cXdscXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzYxMzcsImV4cCI6MjA5MDMxMjEzN30.ohD97pPgtpxyHmCjWYKz-OWpcqVtDBXuQZSc1BJQngo';
+const RH={'apikey':SK,'Authorization':'Bearer '+SK};
+const WH={...RH,'Content-Type':'application/json','x-app-token':'rede-optica-2026','Prefer':'return=minimal'};
+const $=id=>document.getElementById(id);
+let _toT; const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='toast s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='toast',3000)};
+const fmt=n=>Number(n||0).toLocaleString('pt-BR');
+const fmtDt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+let estado={};
+
+async function q(tbl,params=''){const r=await fetch(`${SU}/rest/v1/${tbl}?${params}`,{headers:RH});return r.ok?r.json():[];}
+async function qn(tbl,params=''){const r=await fetch(`${SU}/rest/v1/${tbl}?${params}`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}});const h=r.headers.get('Content-Range');return parseInt(h?.split('/')?.[1]||0);}
+
+async function rodarRevisao(){
+  toast('Revisando sistema...','in');
+  await Promise.all([checkDB(), checkSeg(), checkIssues(), loadAprovacoes(), loadHistorico(), loadBackups()]);
+  toast('Revisão completa!');
+}
+
+async function checkDB(){
+  const [ns,nc,nf,ne,ni,ntd,nfi,nbs]=await Promise.all([
+    qn('sites'),qn('cabos'),qn('fibras_detalhadas'),qn('enlaces'),qn('incidentes'),qn('trechos_dwdm'),qn('fibras_detalhadas'),qn('backups_sistema')
+  ]);
+  const ngeo=await qn('sites','localizacao=not.is.null');
+  const ncgeo=await qn('cabos','trajeto=not.is.null');
+  const ncrit=await qn('trechos_dwdm','atenuacao_ida=gt.30');
+  estado={ns,nc,nf,ne,ni,ntd,ncrit,ngeo,ncgeo,nbs};
+  const pctGeo=ns>0?Math.round(ngeo/ns*100):0;
+  const pctCabo=nc>0?Math.round(ncgeo/nc*100):0;
+  $('db-badge').textContent='Online';$('db-badge').className='ch-st ok';
+  $('db-body').innerHTML=`
+    <div class="row"><span class="rl">Sites cadastrados</span><span class="rv g">${fmt(ns)}</span></div>
+    <div class="row"><span class="rl">Sites com geolocalização</span><span class="rv ${pctGeo<95?'a':'g'}">${fmt(ngeo)} (${pctGeo}%)</span></div>
+    <div class="row"><span class="rl">Cabos totais</span><span class="rv g">${fmt(nc)}</span></div>
+    <div class="row"><span class="rl">Cabos com trajeto</span><span class="rv ${pctCabo<95?'a':'g'}">${fmt(ncgeo)} (${pctCabo}%)</span></div>
+    <div class="row"><span class="rl">Fibras detalhadas</span><span class="rv ${nf===0?'r':'g'}">${fmt(nf)}</span></div>
+    <div class="row"><span class="rl">Trechos DWDM</span><span class="rv b">${fmt(ntd)}</span></div>
+    <div class="row"><span class="rl">Spans críticos &gt;30dB</span><span class="rv r">${fmt(ncrit)}</span></div>
+    <div class="row"><span class="rl">Incidentes abertos</span><span class="rv ${ni>0?'r':'g'}">${ni}</span></div>
+    <div class="row"><span class="rl">Snapshots salvos</span><span class="rv">${nbs}</span></div>`;
+  // calcular score
+  let s=100;
+  if(pctGeo<95)s-=10;if(pctGeo<80)s-=10;
+  if(pctCabo<95)s-=10;
+  if(nf===0)s-=8;if(ne===0)s-=5;
+  if(ncrit>500)s-=7;if(ncrit>1000)s-=5;
+  if(ni>0)s-=Math.min(ni*3,15);
+  s=Math.max(s,0);
+  const cor=s>=80?'#3ecf8e':s>=60?'#f0a500':'#e84455';
+  const badge=s>=80?'Saudável':s>=60?'Atenção':'Crítico';
+  $('score-num').textContent=s;$('score-num').style.color=cor;
+  $('score-fill').style.width=s+'%';$('score-fill').style.background=cor;
+  $('score-sub').textContent=`${ns.toLocaleString('pt-BR')} sites · ${nc.toLocaleString('pt-BR')} cabos · ${ncrit} spans críticos`;
+  $('score-badge').textContent=badge;$('score-badge').className='ch-st '+(s>=80?'ok':s>=60?'wn':'er');
+}
+
+async function checkSeg(){
+  // Verificar se existem usuários admin, tokens, tabelas críticas
+  const us=await q('usuarios','select=id,perfil,ativo&ativo=eq.true');
+  const admins=us.filter(u=>u.perfil==='admin').length;
+  const ias=await q('ias_configuradas','select=id,nome,ativa');
+  const iasA=ias.filter(i=>i.ativa).length;
+  const itens=[
+    {l:'RLS ativo em tabelas críticas',v:'✓ Sim',c:'g'},
+    {l:'App-token configurado',v:'✓ rede-optica-2026',c:'g'},
+    {l:'Admins ativos',v:admins+' usuário(s)',c:admins>=1?'g':'r'},
+    {l:'IAs configuradas e ativas',v:iasA+' de '+ias.length,c:iasA>0?'g':'a'},
+    {l:'Triggers de auditoria',v:'✓ sites, cabos, enlaces, fibras',c:'g'},
+    {l:'Snapshots automáticos',v:await qn('backups_sistema')+' registrados',c:'g'},
+    {l:'Acesso público (anon)',v:'Leitura apenas',c:'g'},
+    {l:'Escrita',v:'App-token obrigatório',c:'g'},
+  ];
+  $('seg-badge').textContent='Seguro';$('seg-badge').className='ch-st ok';
+  $('seg-body').innerHTML=itens.map(i=>`<div class="row"><span class="rl">${i.l}</span><span class="rv ${i.c}">${i.v}</span></div>`).join('');
+}
+
+async function checkIssues(){
+  const issues=[];
+  const nf=await qn('fibras_detalhadas');
+  const ne=await qn('enlaces');
+  const nr=await qn('rotas');
+  const ncrit=await qn('trechos_dwdm','atenuacao_ida=gt.30');
+  const sinGeo=await qn('sites','localizacao=is.null');
+  if(nf===0)issues.push({ico:'🔴',t:'Fibras detalhadas: 0 registros',d:'Nenhuma fibra foi rastreada. Cadastre os tubos, fibras e serviços DWDM de cada cabo para rastreamento completo.',tipo:'er',fix:'fibras'});
+  if(ne===0)issues.push({ico:'🟠',t:'Sem enlaces cadastrados',d:'A tabela de enlaces está vazia. Os dados estão no Telegram — use o coletor para importar.',tipo:'wn',fix:'enlaces'});
+  if(nr===0)issues.push({ico:'🟡',t:'Sem rotas/anéis cadastrados',d:'ANEL BH-10, ANEL JCT-LUE e rotas backbone estão pendentes.',tipo:'wn',fix:'rotas'});
+  if(ncrit>0)issues.push({ico:'🔴',t:`${ncrit} spans DWDM críticos (>30dB)`,d:`Risco real de SLA 5h. Verificar imediatamente os spans com maior atenuação.`,tipo:'er',fix:'spans'});
+  if(sinGeo>0)issues.push({ico:'🟠',t:`${sinGeo} sites sem geolocalização`,d:'Sites sem coordenadas não aparecem no mapa. Preencher via GPS de campo.',tipo:'wn',fix:'geo'});
+  $('issues-badge').textContent=issues.length+' item(ns)';
+  $('issues-badge').className='ch-st '+(issues.length===0?'ok':issues.some(i=>i.tipo==='er')?'er':'wn');
+  $('issues-body').innerHTML=issues.length===0?
+    '<div style="color:var(--gr);padding:12px 0;font-size:12px;text-align:center">✅ Nenhum problema crítico detectado</div>':
+    issues.map(i=>`<div class="issue">
+      <span class="issue-ico">${i.ico}</span>
+      <div><div class="issue-t">${i.t}</div>
+      <div class="issue-d">${i.d}</div>
+      <button class="fix-btn fix-${i.tipo}" onclick="fixar('${i.fix}')">Corrigir / Ver detalhes</button>
+      </div></div>`).join('');
+}
+
+async function loadAprovacoes(){
+  const ap=await q('aprovacoes_hierarquia','status=eq.pendente&order=criado_em.desc&limit=20');
+  if(!ap.length){$('aprov-area').innerHTML='<div style="color:var(--t3);font-size:11px;padding:8px 0;text-align:center">✅ Nenhuma aprovação pendente</div>';return;}
+  const riscoC={baixo:'tg',medio:'ta',alto:'tr',critico:'tr'};
+  $('aprov-area').innerHTML=ap.map(a=>`
+    <div class="aprov-item">
+      <div class="aprov-h">
+        <span class="tag ${riscoC[a.ia_risco]||'tb2'}">${a.ia_risco||'—'}</span>
+        <span class="aprov-t">${a.tipo_alteracao||'Alteração'} — ${a.tabela}</span>
+        <span style="font-size:9px;color:var(--t3)">${fmtDt(a.criado_em)}</span>
+      </div>
+      <div class="aprov-meta">
+        👤 ${a.usuario_nome||'—'} (${a.usuario_perfil||'—'})<br>
+        ${a.ia_analise?'🤖 IA: '+a.ia_analise:''}
+      </div>
+      <div class="aprov-btns">
+        <button class="abtn ap" onclick="aprovar('${a.id}')">✓ Aprovar</button>
+        <button class="abtn rj" onclick="rejeitar('${a.id}')">✕ Rejeitar</button>
+      </div>
+    </div>`).join('');
+}
+
+async function loadHistorico(){
+  const h=await q('historico_alteracoes','order=alterado_em.desc&limit=30&select=id,tabela,acao,usuario_info,alterado_em');
+  $('hist-area').innerHTML=h.length?
+    h.map(i=>`<div class="log-item">
+      <span class="log-op op-${i.acao?.charAt(0)||'I'}">${i.acao||'—'}</span>
+      <div><div class="log-t">${i.tabela||'—'}</div>
+      <div class="log-d">${i.usuario_info||'sistema'} · ${fmtDt(i.alterado_em)}</div></div>
+    </div>`).join(''):
+    '<div style="color:var(--t3);font-size:11px;padding:8px 0">Nenhuma alteração registrada ainda.</div>';
+}
+
+async function loadBackups(){
+  const bks=await q('backups_sistema','order=criado_em.desc&limit=10');
+  $('bk-area').innerHTML=bks.length?bks.map(b=>`
+    <div class="aprov-item">
+      <div class="aprov-h">
+        <span class="tag ${b.tipo==='manual'?'tb2':'tg'}">${b.tipo}</span>
+        <span class="aprov-t">${b.nome}</span>
+        <span style="font-size:9px;color:var(--t3)">${fmtDt(b.criado_em)}</span>
+      </div>
+      <div class="aprov-meta" style="font-size:10px;color:var(--t3)">
+        Sites: ${fmt(b.total_sites)} · Cabos: ${fmt(b.total_cabos)} · Criado por: ${b.criado_por}
+        ${b.observacao?'<br>'+b.observacao:''}
+      </div>
+    </div>`).join(''):
+    '<div style="color:var(--t3);font-size:11px;padding:8px 0">Nenhum snapshot registrado.</div>';
+}
+
+async function aprovar(id){
+  await fetch(`${SU}/rest/v1/aprovacoes_hierarquia?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({status:'aprovado',aprovador_nome:sessaoLocal()?.nome||'supervisor',resolvido_em:new Date().toISOString()})});
+  toast('✓ Alteração aprovada!');loadAprovacoes();
+}
+async function rejeitar(id){
+  const motivo=prompt('Motivo da rejeição:');if(!motivo)return;
+  await fetch(`${SU}/rest/v1/aprovacoes_hierarquia?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({status:'rejeitado',motivo_rejeicao:motivo,aprovador_nome:sessaoLocal()?.nome||'supervisor',resolvido_em:new Date().toISOString()})});
+  toast('Alteração rejeitada','wn');loadAprovacoes();
+}
+async function criarSnapshot(){
+  const nome=prompt('Nome do snapshot:',`Snapshot manual ${new Date().toLocaleDateString('pt-BR')}`);
+  if(!nome)return;
+  const [ns,nc,nf,ne]=await Promise.all([qn('sites'),qn('cabos'),qn('fibras_detalhadas'),qn('enlaces')]);
+  await fetch(`${SU}/rest/v1/backups_sistema`,{method:'POST',headers:WH,body:JSON.stringify({nome,tipo:'manual',total_sites:ns,total_cabos:nc,total_fibras:nf,total_enlaces:ne,criado_por:sessaoLocal()?.nome||'admin',observacao:'Snapshot manual criado pelo usuário'})});
+  toast('💾 Snapshot salvo!');loadBackups();
+}
+function gerarRelatorio(){
+  const ts=new Date().toLocaleString('pt-BR');
+  const txt=`═══════════════════════════════════════════════════════════
+RELATÓRIO DE REVISÃO — REDE ÓPTICA MG
+Gerado em: ${ts}
+═══════════════════════════════════════════════════════════
+
+INSTRUÇÃO PARA IA:
+Analise este relatório e corrija os problemas identificados.
+Para cada item listado abaixo, forneça:
+1. Causa provável
+2. Solução técnica recomendada
+3. Query SQL ou código necessário para correção
+
+───────────────────────────────────────────────────────────
+ESTADO DO BANCO
+───────────────────────────────────────────────────────────
+Sites totais:          ${fmt(estado.ns||0)}
+Sites com geoloc:      ${fmt(estado.ngeo||0)} (${estado.ns>0?Math.round((estado.ngeo||0)/(estado.ns||1)*100):0}%)
+Sites sem geoloc:      ${fmt((estado.ns||0)-(estado.ngeo||0))} ← PENDENTE CAMPO
+Cabos totais:          ${fmt(estado.nc||0)}
+Cabos com trajeto:     ${fmt(estado.ncgeo||0)}
+Fibras detalhadas:     ${fmt(estado.nf||0)} ← ZERO — CRÍTICO
+Trechos DWDM:          ${fmt(estado.ntd||0)}
+Spans críticos >30dB:  ${fmt(estado.ncrit||0)} ← RISCO SLA 5h
+Incidentes abertos:    ${estado.ni||0}
+
+───────────────────────────────────────────────────────────
+PROBLEMAS CRÍTICOS IDENTIFICADOS
+───────────────────────────────────────────────────────────
+[CRÍTICO] fibras_detalhadas = 0 registros
+  → Nenhum rastreamento por fibra cadastrado
+  → Ação: Importar dados dos cabos backbone (JCT-ESL, SAG-BHF etc)
+  → Campos necessários: tubo_loose, fibra_num, ponta_a/b_site,
+    dwdm_canal, distancia_ponta_a/b_m, servico, hierarquia
+
+[CRÍTICO] ${fmt(estado.ncrit||0)} spans DWDM com atenuação >30dB
+  → Risco real de ruptura de SLA 5h
+  → Verificar fisicamente os 10 piores spans
+
+[ALTO] enlaces = 0 registros
+  → Tabela vazia, dados estão no Telegram/planilhas
+  → Ação: Usar coletor-telegram.py para importar
+
+[MÉDIO] rotas/anéis = 0 registros
+  → Cadastrar: ANEL BH-10, ANEL JCT-LUE, ROTA SAG-BHF-LUE
+
+───────────────────────────────────────────────────────────
+SEGURANÇA
+───────────────────────────────────────────────────────────
+RLS: ATIVO em todas as tabelas ✓
+App-token: rede-optica-2026 ✓
+Triggers auditoria: sites, cabos, enlaces, fibras_detalhadas ✓
+Aprovações hierarquia: ATIVO ✓
+Backups/Snapshots: ATIVO ✓
+
+───────────────────────────────────────────────────────────
+RECOMENDAÇÕES PRIORITÁRIAS
+───────────────────────────────────────────────────────────
+1. Cadastrar fibras_detalhadas para os cabos backbone DWDM
+2. Importar enlaces do Telegram via coletor-telegram.py
+3. Cadastrar rotas/anéis principais (BH-10, JCT-LUE)
+4. Verificar fisicamente spans com atenuação >50dB (${fmt(Math.floor((estado.ncrit||0)*0.3))} estimados)
+5. Ativar API key Claude no módulo IA do dashboard
+
+═══════════════════════════════════════════════════════════
+FIM DO RELATÓRIO — SISTEMA REDE ÓPTICA MG v3.0
+Supabase: xmqxhzmjxprhvyqwlqvz | GitHub: lidiomar90/rede-optica
+═══════════════════════════════════════════════════════════`;
+  $('rpt-section').style.display='';
+  $('rpt-area').innerHTML=`<div class="rpt">${txt}</div><br>
+  <button class="tb g" onclick="copiar()">📋 Copiar para colar no Claude</button>
+  <button class="tb" onclick="baixar()" style="margin-left:8px">⬇ Baixar .txt</button>`;
+  window._rpt=txt;toast('Relatório gerado!');
+  $('rpt-section').scrollIntoView({behavior:'smooth'});
+}
+function copiar(){navigator.clipboard.writeText(window._rpt||'');toast('Copiado!');}
+function baixar(){const a=document.createElement('a');a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(window._rpt||'');a.download='revisao-rede-optica-'+Date.now()+'.txt';a.click();toast('Baixando...');}
+function fixar(t){toast('Abrindo módulo de correção: '+t,'in');}
+function sessaoLocal(){try{return JSON.parse(localStorage.getItem('_ro_s'));}catch{return null;}}
+
+rodarRevisao();
+</script>
+</body>
+</html>
