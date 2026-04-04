@@ -2,10 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#0d0f18">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Rede Óptica — MG</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
@@ -16,8 +13,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 
-/* ── LOGIN ── */
+/* LOGIN */
 #ls{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center}
 .lb{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;padding:32px 28px;width:90%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .ll{text-align:center;margin-bottom:24px}
@@ -27,16 +25,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .lf label{display:block;font-size:10px;color:var(--t2);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 .lf input{width:100%;background:var(--bg3);border:1.5px solid var(--bd2);border-radius:8px;padding:11px 13px;font-size:14px;color:var(--t);outline:none;font-family:inherit;-webkit-appearance:none;transition:.12s}
 .lf input:focus{border-color:var(--bl)}
+/* OCULTAR senha por padrão — mostrar só asteriscos */
+.lf input[type=password]{letter-spacing:2px}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:38px}
+.pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--t3);font-size:15px;padding:4px;line-height:1}
 .lbtn{width:100%;padding:13px;border-radius:8px;border:none;background:var(--gr);color:#000;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s;margin-top:4px}
 .lbtn:hover{background:#2fbf7e}.lbtn:disabled{background:var(--t3);cursor:not-allowed}
 .lerr{color:var(--rd);font-size:11px;text-align:center;margin-top:10px;min-height:16px;font-weight:500}
-.lhint{font-size:10px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.8;background:var(--bg3);border-radius:8px;padding:10px}
+/* Hints ocultos — só admin vê ao clicar no ? */
+.lhint{display:none;font-size:10px;color:var(--t3);text-align:center;margin-top:14px;line-height:1.8;background:var(--bg3);border-radius:8px;padding:10px}
 .lhint b{color:var(--am)}
+.lhint-btn{background:none;border:1px solid var(--bd2);border-radius:5px;padding:3px 10px;font-size:10px;color:var(--t3);cursor:pointer;display:block;margin:10px auto 0;font-family:inherit}
 
-/* ── APP ── */
+/* APP */
 #app{display:none;flex-direction:column;height:100vh}
-
-/* TOP */
 #top{background:var(--bg2);border-bottom:1px solid var(--bd);height:46px;display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;transition:background .25s}
 .pdot{width:7px;height:7px;border-radius:50%;background:var(--gr);animation:pulse 2s infinite;flex-shrink:0}
 #top h1{font-size:13px;font-weight:700;white-space:nowrap}
@@ -86,7 +89,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .lg{margin-bottom:4px;border:1px solid var(--bd);border-radius:7px;overflow:hidden}
 .lg-h{display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;transition:.08s;user-select:none}
 .lg-h:hover{background:var(--bg3)}
-.lg-ck{width:14px;height:14px;border-radius:3px;border:1.5px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:.12s;cursor:pointer;flex-shrink:0}
+.lg-ck{width:14px;height:14px;border-radius:3px;border:1.5px solid;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;transition:.12s;cursor:pointer}
 .lg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .lg-nm{flex:1;font-size:11px;font-weight:600;color:var(--t2)}
 .lg-arr{font-size:10px;color:var(--t3);transition:transform .2s}
@@ -105,8 +108,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .gh{padding:6px 9px 2px;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between}
 .gh span:last-child{background:var(--bg3);border-radius:7px;padding:1px 5px}
 .si{padding:6px 9px;cursor:pointer;display:flex;align-items:center;gap:6px;border-left:2px solid transparent;transition:.08s}
-.si:hover{background:var(--bg3)}
-.si.on{background:var(--bg3);border-left-color:var(--gr)}
+.si:hover{background:var(--bg3)}.si.on{background:var(--bg3);border-left-color:var(--gr)}
 .sii{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sii.ln{width:13px;height:2px;border-radius:1px}
 .sin{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2);font-size:11px}
@@ -117,7 +119,6 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 /* MAPA */
 #mw{flex:1;position:relative;overflow:hidden}
 #map{width:100%;height:100%;background:var(--bg)}
-.leaflet-container{background:var(--bg);transition:background .25s}
 #mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:5px}
 .mb{width:36px;height:36px;border-radius:8px;background:var(--bg2);border:1.5px solid var(--bd2);color:var(--t2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 .mb:hover{background:var(--bg4);color:var(--t)}
@@ -143,10 +144,10 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .ld{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .ll2{width:16px;height:2px;border-radius:1px;flex-shrink:0}
 
-/* PAINEL */
-#pan{position:absolute;z-index:390;background:var(--bg2);border:1px solid var(--bd2);overflow:hidden;display:none;box-shadow:0 4px 32px rgba(0,0,0,.6);animation:up .18s ease;transition:background .25s}
-@media(min-width:680px){#pan{bottom:10px;left:10px;width:280px;max-height:60vh;overflow-y:auto;border-radius:10px}}
-@media(max-width:679px){#pan{bottom:0;left:0;right:0;border-radius:14px 14px 0 0;max-height:68vh;overflow-y:auto}}
+/* PAINEL — CORRIGIDO: z-index acima dos botões do mapa */
+#pan{position:absolute;z-index:500;background:var(--bg2);border:1px solid var(--bd2);overflow:hidden;display:none;box-shadow:0 4px 32px rgba(0,0,0,.6);animation:up .18s ease;transition:background .25s}
+@media(min-width:680px){#pan{bottom:10px;left:10px;width:290px;max-height:62vh;overflow-y:auto;border-radius:10px}}
+@media(max-width:679px){#pan{bottom:0;left:0;right:0;border-radius:14px 14px 0 0;max-height:72vh;overflow-y:auto}}
 #pan::-webkit-scrollbar{width:2px}
 #pan::-webkit-scrollbar-thumb{background:var(--bd2)}
 .ph{padding:13px 14px 9px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);z-index:2;display:flex;align-items:flex-start;gap:8px}
@@ -165,6 +166,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .pac.r{border-color:var(--rd);color:var(--rd)}.pac.r:hover{background:var(--rd);color:#fff}
 .pac.b{background:var(--bl);border-color:var(--bl);color:#fff}
 .pac.a{background:var(--am);border-color:var(--am);color:#000;font-weight:700}
+
+/* ROMPIMENTO no mapa */
+.romp-marker{animation:pulse 1s infinite}
 
 /* PÁGINAS INTERNAS */
 .pgc{flex:1;overflow-y:auto;padding:14px}
@@ -193,6 +197,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .bbs{display:flex;gap:8px}
 .btn2{flex:1;padding:11px;border-radius:7px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s}
 .btn2.p{background:var(--gr);color:#000}.btn2.s{background:var(--bg3);border:1px solid var(--bd2);color:var(--t2)}
+.btn2.r{background:var(--rd);color:#fff}
+.err-field{border-color:var(--rd)!important;animation:shake .2s}
 
 /* MODAL */
 #mbg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
@@ -205,6 +211,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 .mtt{font-size:14px;font-weight:700}
 .mc{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:2px;line-height:1}
 .mc:hover{color:var(--t)}.mbd{padding:14px 16px}
+.mfg{margin-bottom:10px}
+.mfg label{display:block;font-size:9px;color:var(--t2);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.mfg input,.mfg select,.mfg textarea{width:100%;background:var(--bg3);border:1px solid var(--bd2);border-radius:7px;padding:9px 11px;font-size:12px;color:var(--t);outline:none;font-family:inherit;-webkit-appearance:none;transition:.12s}
+.mfg input:focus,.mfg select:focus{border-color:var(--bl)}
+.mfgr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 
 /* LOADING */
 #load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(13,15,24,.94);z-index:600;flex-direction:column;gap:14px}
@@ -233,14 +244,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
       <p>Sistema de cadastro e inventário</p>
     </div>
     <div class="lf"><label>E-mail</label><input id="le" type="email" placeholder="seu@redeop.com.br" autocomplete="email"></div>
-    <div class="lf"><label>Senha</label><input id="lp" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="lf"><label>Senha</label>
+      <div class="pw-wrap">
+        <input id="lp" type="password" placeholder="••••••••" autocomplete="current-password">
+        <button class="pw-eye" onclick="togglePw()" title="Mostrar/ocultar">👁</button>
+      </div>
+    </div>
     <button class="lbtn" id="lbtn" onclick="login()">Entrar</button>
     <div class="lerr" id="lerr"></div>
-    <div class="lhint">
-      <b>lidiomar@redeop.com.br</b> — admin<br>
-      <b>regiane@redeop.com.br</b> — supervisor<br>
-      <b>eduardo@redeop.com.br</b> — colaborador<br>
-      Senha: <b>rede2026</b>
+    <button class="lhint-btn" onclick="toggleHint()">? Esqueceu a senha</button>
+    <div class="lhint" id="lhint">
+      Contate o administrador do sistema.<br>
+      <b>lidiomar@redeop.com.br</b> (admin)<br>
+      Senha padrão: <b>rede2026</b>
     </div>
   </div>
 </div>
@@ -256,15 +272,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
     <div class="sc">Spans <b id="cs">—</b></div>
   </div>
   <div class="sep"></div>
-  <button class="tb" id="btema" onclick="toggleTema()" title="Tema">🌙</button>
-  <div id="ubadge" onclick="logout()"><span id="unome">—</span> ▾</div>
+  <button class="tb" id="btema" onclick="toggleTema()">🌙</button>
+  <div id="ubadge" onclick="showUserMenu()"><span id="unome">—</span> ▾</div>
 </div>
 <div id="nav">
   <div class="nt on" onclick="goTab('mapa',this)">🗺 Mapa</div>
   <div class="nt" onclick="goTab('rotas',this)">🔗 Rotas</div>
   <div class="nt" onclick="goTab('incidentes',this)">🚨 Incidentes<span class="nbadge" id="ibadge" style="display:none">0</span></div>
   <div class="nt" onclick="goTab('cadastro',this)">✏ Cadastrar</div>
-  <div class="nt adm" onclick="goTab('usuarios',this)" style="display:none">👥 Usuários</div>
+  <div class="nt adm" style="display:none" onclick="goTab('usuarios',this)">👥 Usuários</div>
 </div>
 
 <!-- MAPA -->
@@ -291,7 +307,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
   <div id="mob-ov" onclick="closeSB()"></div>
   <div id="mw">
     <div id="map"></div>
-    <button id="mobb" class="mb" onclick="toggleSB()">☰<div class="tip" style="right:auto;left:42px">Menu</div></button>
+    <button id="mobb" class="mb" onclick="toggleSB()">☰</button>
     <div id="h-med" class="hint">📏 Clique para medir • duplo clique para finalizar</div>
     <div id="h-draw" class="hint">🔌 Trace o cabo • duplo clique para salvar</div>
     <div id="h-inc" class="hint">🚨 Clique no local da falha</div>
@@ -299,13 +315,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
     <div id="med-info"></div>
     <div id="mt">
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
-      <div style="position:relative"><button class="mb" id="bed" onclick="toggleEdit()">✏<div class="tip">Modo edição</div></button></div>
+      <div style="position:relative"><button class="mb" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
       <div style="position:relative"><button class="mb" id="bmed" onclick="toggleMed()">📏<div class="tip">Medir distância</div></button></div>
       <div style="position:relative"><button class="mb" id="bdc" onclick="startDraw()">🔌<div class="tip">Desenhar cabo</div></button></div>
       <div style="position:relative"><button class="mb on-b" onclick="abrirRastreamento()">🔍<div class="tip">Rastrear rota A→B</div></button></div>
       <div style="position:relative"><button class="mb" onclick="abrirOTDR()">📡<div class="tip">Localizar rompimento OTDR</div></button></div>
       <div style="position:relative"><button class="mb tb r" id="binc" onclick="toggleInc()">🚨<div class="tip">Registrar falha</div></button></div>
     </div>
+    <!-- PAINEL — posicionado acima de tudo com z-index:500 -->
     <div id="pan">
       <div class="ph"><div class="pt" id="pt">—</div><button class="px" onclick="closePan()">×</button></div>
       <div class="pb" id="pb"></div>
@@ -319,6 +336,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
       <div class="lr"><div class="ld" style="background:#3ecf8e"></div>Acesso / OLT / Caixa</div>
       <div class="lr"><div class="ld" style="background:#a855f7"></div>B2B / Datacom</div>
       <div class="lr"><div class="ld" style="background:#f43f5e"></div>ERB</div>
+      <div class="lr"><div class="ld" style="background:#e84455;border-radius:2px;width:12px;height:6px"></div>Rompimento ativo</div>
       <div class="lr"><div class="ll2" style="background:#f0a500;height:3px"></div>Cabo backbone</div>
       <div class="lr"><div class="ll2" style="background:#4da6ff"></div>Cabo distribuição</div>
       <div class="lr"><div class="ll2" style="background:#3ecf8e;height:1px"></div>Cabo drop</div>
@@ -333,33 +351,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 
 <!-- ROTAS -->
 <div class="pg" id="pg-rotas" style="flex-direction:column">
-  <div class="pgc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <b style="font-size:13px">Anéis e rotas</b>
-      <button class="tb g" onclick="openM('rota')">+ Nova rota</button>
-    </div>
-    <div id="rotas-list"></div>
-  </div>
+  <div class="pgc"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:13px">Anéis e rotas</b><button class="tb g" onclick="openM('rota')">+ Nova rota</button></div><div id="rotas-list"></div></div>
 </div>
 
 <!-- INCIDENTES -->
 <div class="pg" id="pg-incidentes" style="flex-direction:column">
-  <div class="pgc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <b style="font-size:13px">Incidentes / Falhas</b>
-      <button class="tb r" onclick="openM('incidente')">🚨 Registrar</button>
-    </div>
-    <div id="inc-list"></div>
-  </div>
+  <div class="pgc"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:13px">Incidentes / Falhas</b><button class="tb r" onclick="openM('incidente')">🚨 Registrar</button></div><div id="inc-list"></div></div>
 </div>
 
 <!-- CADASTRO -->
 <div class="pg" id="pg-cadastro" style="flex-direction:column">
   <div class="pgc">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px">
+      <!-- Site/Caixa -->
       <div class="fc">
         <div class="fct">📍 Cadastrar site / caixa</div>
-        <div class="fg"><label>Nome <span class="req">*</span></label><input id="cs-nome" placeholder="CEO-001 / ERB-JFA-001"></div>
+        <div class="fg"><label>Nome <span class="req">*</span></label><input id="cs-nome" placeholder="CEO-001 / ERB-JFA-001 / SAG"></div>
         <div class="fgr">
           <div class="fg"><label>Tipo</label><select id="cs-tipo"><option>site</option><option>caixa</option><option>ERB</option><option>equipamento</option><option>POP</option></select></div>
           <div class="fg"><label>Camada</label><select id="cs-cam"><option>backbone</option><option>metro_alta</option><option>metro_dist</option><option>acesso</option><option>b2b</option></select></div>
@@ -372,16 +379,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
           <div class="fg"><label>Latitude</label><input id="cs-lat" type="number" step="0.000001" placeholder="-19.9"></div>
           <div class="fg"><label>Longitude</label><input id="cs-lng" type="number" step="0.000001" placeholder="-43.9"></div>
         </div>
-        <div class="fg"><button class="tb" style="width:100%;padding:8px" onclick="gpsF('cs-lat','cs-lng')">📍 GPS atual</button></div>
+        <div class="fg"><button type="button" class="tb" style="width:100%;padding:8px" onclick="gpsF('cs-lat','cs-lng')">📍 GPS atual</button></div>
+        <div class="fg"><label>Status</label><select id="cs-status"><option>ativo</option><option>inativo</option><option>previsto</option><option>em_obra</option></select></div>
         <div class="fg"><label>Responsável</label><input id="cs-resp" placeholder="Nome do técnico"></div>
-        <div class="fg"><label>Observação</label><textarea id="cs-obs"></textarea></div>
-        <div class="bbs"><button class="btn2 s" onclick="limpar('cs')">Limpar</button><button class="btn2 p" onclick="salvarSite()">Salvar</button></div>
+        <div class="fg"><label>Observação</label><textarea id="cs-obs" placeholder="Informe: lote cabo, estrutura, acessos, referências..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('cs')">Limpar</button><button class="btn2 p" onclick="salvarSite()">💾 Salvar</button></div>
+        <div id="cs-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
+      <!-- Enlace -->
       <div class="fc">
         <div class="fct">🔌 Cadastrar enlace A↔B</div>
         <div class="fgr">
           <div class="fg"><label>Ponta A <span class="req">*</span></label><input id="ce-a" placeholder="SAG"></div>
-          <div class="fg"><label>Ponta B <span class="req">*</span></label><input id="ce-b" placeholder="BHF"></div>
+          <div class="fg"><label>Ponta B <span class="req">*</span></label><input id="ce-b" placeholder="ESL"></div>
         </div>
         <div class="fgr">
           <div class="fg"><label>Equip A</label><input id="ce-eqa" placeholder="HL2-01"></div>
@@ -404,18 +414,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
           <div class="fg"><label>Rx B (dBm)</label><input id="ce-rxb" type="number" step="0.1" placeholder="-18.5"></div>
         </div>
         <div class="fgr">
-          <div class="fg"><label>Distância (m)</label><input id="ce-dist" type="number"></div>
-          <div class="fg"><label>Atenuação (dB)</label><input id="ce-aten" type="number" step="0.1"></div>
+          <div class="fg"><label>Distância (m)</label><input id="ce-dist" type="number" placeholder="13000"></div>
+          <div class="fg"><label>Atenuação (dB)</label><input id="ce-aten" type="number" step="0.1" placeholder="17.5"></div>
         </div>
-        <div class="fg"><label>Emendas</label><input id="ce-em" placeholder="E-0138, E-0215..."></div>
-        <div class="fg"><label>Hierarquias</label><input id="ce-hier" placeholder="DWDM, HL4, OLT, SWA..."></div>
+        <div class="fg"><label>Cabo</label><input id="ce-cabo" placeholder="JCT-ESL-144FO"></div>
+        <div class="fg"><label>Emendas no caminho</label><input id="ce-em" placeholder="E-0138, E-0215, E-0280"></div>
+        <div class="fg"><label>Hierarquias</label><input id="ce-hier" placeholder="DWDM, HL4, OLT, SWA"></div>
         <div class="fg"><label>Camada</label><select id="ce-cam"><option>backbone</option><option>metro_alta</option><option>metro_dist</option><option>acesso</option></select></div>
-        <div class="fg"><label>Observação</label><textarea id="ce-obs"></textarea></div>
-        <div class="bbs"><button class="btn2 s" onclick="limpar('ce')">Limpar</button><button class="btn2 p" onclick="salvarEnlace()">Salvar</button></div>
+        <div class="fg"><label>Observação</label><textarea id="ce-obs" placeholder="Informe: fibra IDA/VOLTA, tubo loose, lote cabo, detalhes técnicos..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('ce')">Limpar</button><button class="btn2 p" onclick="salvarEnlace()">💾 Salvar</button></div>
+        <div id="ce-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
+      <!-- Rota -->
       <div class="fc">
         <div class="fct">🛣 Cadastrar rota / anel</div>
-        <div class="fg"><label>Nome <span class="req">*</span></label><input id="cr-nome" placeholder="ANEL BH-10 / ROTA SAG-BHF"></div>
+        <div class="fg"><label>Nome <span class="req">*</span></label><input id="cr-nome" placeholder="ANEL BH-10 / ROTA SAG-ESL"></div>
         <div class="fgr">
           <div class="fg"><label>Tipo</label><select id="cr-tipo"><option>anel</option><option>rota_principal</option><option>rota_protecao</option></select></div>
           <div class="fg"><label>Camada</label><select id="cr-cam"><option>backbone</option><option>metro_alta</option><option>metro_dist</option></select></div>
@@ -425,12 +438,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
           <div class="fg"><label>Site B</label><input id="cr-b" placeholder="JCT"></div>
         </div>
         <div class="fgr">
-          <div class="fg"><label>Distância total (m)</label><input id="cr-dist" type="number"></div>
-          <div class="fg"><label>Nº emendas</label><input id="cr-nem" type="number"></div>
+          <div class="fg"><label>Distância total (m)</label><input id="cr-dist" type="number" placeholder="36500"></div>
+          <div class="fg"><label>Nº emendas</label><input id="cr-nem" type="number" placeholder="12"></div>
         </div>
         <div class="fg"><label>Hierarquias</label><input id="cr-hier" placeholder="DWDM, HL4, OLT, DATACOM"></div>
-        <div class="fg"><label>Trechos (sequência)</label><textarea id="cr-seq" placeholder="SAG → E119 → BMJ → BSR → RAP"></textarea></div>
-        <div class="bbs"><button class="btn2 s" onclick="limpar('cr')">Limpar</button><button class="btn2 p" onclick="salvarRota()">Salvar</button></div>
+        <div class="fg"><label>Trechos / Sequência</label><textarea id="cr-seq" placeholder="SAG → E119 → BMJ → BSR → RAP → JCT"></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('cr')">Limpar</button><button class="btn2 p" onclick="salvarRota()">💾 Salvar</button></div>
+        <div id="cr-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
     </div>
   </div>
@@ -441,14 +455,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
   <div class="pgc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <b style="font-size:13px">Colaboradores</b>
-      <button class="tb g" onclick="openM('usuario')">+ Novo</button>
+      <button class="tb g" onclick="openM('usuario')">+ Novo colaborador</button>
     </div>
     <div id="user-list"></div>
   </div>
 </div>
 </div><!-- /app -->
 
-<!-- MODAL -->
+<!-- MODAL GENÉRICO -->
 <div id="mbg" onclick="if(event.target===this)closeM()">
   <div id="mdl">
     <div class="mh"><div class="mtt" id="mtt">—</div><button class="mc" onclick="closeM()">×</button></div>
@@ -459,32 +473,28 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t);font-f
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// ═══════════════════════════════════════════════════
-// CONFIG — KEYS FIXAS (não precisa configurar nada)
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
 const SU='https://xmqxhzmjxprhvyqwlqvz.supabase.co';
 const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcXhoem1qeHByaHZ5cXdscXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzYxMzcsImV4cCI6MjA5MDMxMjEzN30.ohD97pPgtpxyHmCjWYKz-OWpcqVtDBXuQZSc1BJQngo';
 const AT='rede-optica-2026';
 const RH={'apikey':SK,'Authorization':'Bearer '+SK};
 const WH={...RH,'Content-Type':'application/json','x-app-token':AT,'Prefer':'return=minimal'};
-
-// ═══════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════
 const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const km=m=>!m?'—':m>=1000?(m/1000).toFixed(2)+'km':Math.round(m)+'m';
 const TC=s=>s==='ativo'?'tok':s==='previsto'?'twn':'ter';
 let _toT;
-const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3200)};
+const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
 const setProg=p=>{$('lbar').style.width=p+'%'};
 
-// ═══════════════════════════════════════════════════
-// LOGIN — SIMPLES E ROBUSTO
-// Compara senha_texto diretamente (campo do banco)
-// Fallback SHA-256 para compatibilidade
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// LOGIN — senha oculta por padrão, sem hint visível
+// ═══════════════════════════════════════════
 let sessao=null;
+function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
+function toggleHint(){const h=$('lhint');h.style.display=h.style.display==='block'?'none':'block';}
 
 async function login(){
   const email=$('le').value.trim().toLowerCase();
@@ -493,35 +503,28 @@ async function login(){
   if(!email||!senha){$('lerr').textContent='Preencha e-mail e senha';return;}
   const btn=$('lbtn');btn.disabled=true;btn.textContent='Verificando...';
   try{
-    // Buscar usuário pelo e-mail
     const r=await fetch(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
-    if(!r.ok){$('lerr').textContent='Erro de conexão com o banco';btn.disabled=false;btn.textContent='Entrar';return;}
+    if(!r.ok){$('lerr').textContent='Erro de conexão. Tente novamente.';btn.disabled=false;btn.textContent='Entrar';return;}
     const lista=await r.json();
-    if(!lista||!lista.length){$('lerr').textContent='E-mail não encontrado. Verifique: lidiomar@redeop.com.br';btn.disabled=false;btn.textContent='Entrar';return;}
+    if(!lista||!lista.length){$('lerr').textContent='E-mail não encontrado ou usuário inativo.';btn.disabled=false;btn.textContent='Entrar';return;}
     const u=lista[0];
     let ok=false;
-    // 1. Comparar senha_texto direto (mais simples, sempre funciona)
     if(u.senha_texto&&u.senha_texto===senha)ok=true;
-    // 2. SHA-256 fallback
     if(!ok&&u.senha_hash){
-      try{
-        const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(senha));
-        const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-        if(u.senha_hash===hash)ok=true;
-      }catch{}
+      try{const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(senha));const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');if(u.senha_hash===hash)ok=true;}catch{}
     }
-    if(!ok){$('lerr').textContent='Senha incorreta. Use: rede2026';btn.disabled=false;btn.textContent='Entrar';return;}
+    if(!ok){$('lerr').textContent='Senha incorreta.';btn.disabled=false;btn.textContent='Entrar';return;}
     sessao={id:u.id,nome:u.nome,email:u.email,perfil:u.perfil};
     localStorage.setItem('_ro_s',JSON.stringify(sessao));
     fetch(`${SU}/rest/v1/usuarios?id=eq.${u.id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})});
     iniciarApp();
-  }catch(e){
-    $('lerr').textContent='Erro: '+e.message;
-    btn.disabled=false;btn.textContent='Entrar';
-  }
+  }catch(e){$('lerr').textContent='Erro: '+e.message;btn.disabled=false;btn.textContent='Entrar';}
 }
-
-function logout(){if(!confirm('Sair?'))return;localStorage.removeItem('_ro_s');location.reload();}
+function logout(){if(!confirm('Sair do sistema?'))return;localStorage.removeItem('_ro_s');location.reload();}
+function showUserMenu(){
+  const m=`${sessao.nome} (${sessao.perfil})\n\nDeseja sair?`;
+  if(confirm(m))logout();
+}
 function checkSessao(){const s=localStorage.getItem('_ro_s');if(s){try{sessao=JSON.parse(s);return true;}catch{}}return false;}
 
 function iniciarApp(){
@@ -529,21 +532,17 @@ function iniciarApp(){
   const a=$('app');a.style.display='flex';a.style.flexDirection='column';
   $('unome').textContent=sessao.nome.split(' ')[0];
   if(sessao.perfil==='admin')document.querySelectorAll('.adm').forEach(e=>e.style.display='');
-  buildLayerPanel();
-  loadMap();
-  loadIncidentes();
-  loadRotas();
+  buildLayerPanel();loadMap();loadIncidentes();loadRotas();
   if(sessao.perfil==='admin')loadUsuarios();
   aplicarTema();
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // TEMA
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 let temaEsc=localStorage.getItem('_tema')!=='light';
 let tileLayer=null;
 const TILES={dark:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',light:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'};
-
 function toggleTema(){temaEsc=!temaEsc;localStorage.setItem('_tema',temaEsc?'dark':'light');aplicarTema();}
 function aplicarTema(){
   document.body.classList.toggle('light',!temaEsc);
@@ -551,17 +550,16 @@ function aplicarTema(){
   if(map&&tileLayer){map.removeLayer(tileLayer);tileLayer=L.tileLayer(temaEsc?TILES.dark:TILES.light,{attribution:'©OSM©CARTO',maxZoom:20}).addTo(map);tileLayer.bringToBack();}
 }
 
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 // MAPA
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
 let editMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
-let rastLayer=null,otdrLayer=null;
+let rastLayer=null,otdrLayer=null,rompLayer=null;
 
-// Definição das camadas
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:true,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
   {id:'metro_alta',label:'HL4 / Metro alta',cor:'#f97316',vis:true,sub:[{id:'m4_equip',label:'Equipamentos HL4',cor:'#f97316'}]},
@@ -580,22 +578,18 @@ const VIS={};
 LAYERS.forEach(l=>{VIS[l.id]=l.vis;l.sub.forEach(s=>VIS[s.id]=l.vis);});
 const LYR={};
 
-function camVis(c,t){
-  const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();
-  if(tl.includes('erb'))return'ERB';
-  if(tl.includes('caixa')||tl.includes('armario'))return'caixa';
-  if(cl in COR)return cl;
-  return'outros';
-}
-function getSiteLayer(cv){
-  return{backbone:'bb_site',metro_alta:'m4_equip',metro_dist:'m5_equip',ERB:'ac_erb',caixa:'ac_caixa',acesso:'ac_site',b2b:'b2b_site'}[cv]||'outros';
-}
+function camVis(c,t){const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();if(tl.includes('erb'))return'ERB';if(tl.includes('caixa')||tl.includes('armario'))return'caixa';if(cl in COR)return cl;return'outros';}
+function getSiteLayer(cv){return{backbone:'bb_site',metro_alta:'m4_equip',metro_dist:'m5_equip',ERB:'ac_erb',caixa:'ac_caixa',acesso:'ac_site',b2b:'b2b_site'}[cv]||'outros';}
 const PP=g=>g?.type==='Point'?[g.coordinates[1],g.coordinates[0]]:null;
 const PL=g=>g?.type==='LineString'?g.coordinates.map(c=>[c[1],c[0]]):null;
 const mkD=(c,s=9)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
 const mkSq=(c,s=8)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:2px;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
 const mkDia=(c,s=13)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s*.7}px;height:${s*.7}px;margin:${s*.15}px;background:${c};border:2px solid rgba(255,255,255,.6);transform:rotate(45deg);border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.9)"></div>`});
 const mkLoc=()=>L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],html:'<div style="width:14px;height:14px;margin:2px;border-radius:50%;background:#4da6ff;border:2.5px solid #fff;box-shadow:0 0 0 5px rgba(77,166,255,.3),0 2px 8px rgba(0,0,0,.8)"></div>'});
+// Marcador de rompimento — vermelho pulsante
+const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
+// Marcador de nova caixa após lançamento
+const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
 
 function initMapObj(){
   if(map)return;
@@ -607,6 +601,7 @@ function initMapObj(){
     else{l.sub.forEach(s=>{LYR[s.id]=L.layerGroup();if(l.vis)LYR[s.id].addTo(map);});}
   });
   LYR['outros']=L.layerGroup().addTo(map);
+  rompLayer=L.layerGroup().addTo(map);
 }
 
 async function loadMap(){
@@ -624,7 +619,7 @@ async function loadMap(){
     $('ce').textContent=allS.length.toLocaleString('pt-BR');
     $('cc').textContent=allC.length.toLocaleString('pt-BR');
     const sr=await fetch(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}});
-    $('cs').textContent=(parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0)).toLocaleString('pt-BR');
+    $('cs').textContent=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
     $('ltt').textContent=`Renderizando ${allS.length.toLocaleString()} sites...`;setProg(50);
     const pts=[];
     for(let i=0;i<allS.length;i+=500){
@@ -632,9 +627,10 @@ async function loadMap(){
         const pt=PP(s.localizacao);if(!pt)return;
         const cv=camVis(s.camada,s.tipo);const cor=COR[cv]||COR.outros;
         const sz=cv==='backbone'?13:cv==='metro_alta'?11:cv==='metro_dist'?10:cv==='ERB'?8:7;
-        const ic=cv==='backbone'?mkDia(cor):(s.tipo==='caixa'||(s.tipo||'').includes('ARMARIO'))?mkSq(cor,sz):mkD(cor,sz);
+        const ic=cv==='backbone'?mkDia(cor):(s.tipo==='caixa'||(s.tipo||'').toLowerCase().includes('armario'))?mkSq(cor,sz):mkD(cor,sz);
         const lyr=LYR[getSiteLayer(cv)]||LYR['outros'];
-        const mk=L.marker(pt,{icon:ic}).on('click',()=>{
+        const mk=L.marker(pt,{icon:ic}).on('click',e=>{
+          L.DomEvent.stopPropagation(e);
           if(moveMode){moverSite(pt[0],pt[1],s.id,s.nome);return;}
           if(incMode){regFalha(pt[0],pt[1],s.nome);return;}
           showPanSite(s,pt);
@@ -658,12 +654,31 @@ async function loadMap(){
       const caboLyr=t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist';
       (LYR[caboLyr]||LYR['outros']).addLayer(pl);
     });
+    // Carregar incidentes abertos com rompimento no mapa
+    loadRompimentosNoMapa();
     applyVis();renderSB();
     if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:11});
     $('load').style.display='none';setProg(0);
   }catch(err){
     $('load').innerHTML=`<div style="color:var(--rd);text-align:center;padding:20px;max-width:260px"><div style="font-size:32px;margin-bottom:10px">⚠</div><b>Erro ao carregar</b><br><span style="font-size:11px;color:var(--t2)">${err.message}</span><br><br><button onclick="loadMap()" style="padding:10px 24px;background:var(--gr);border:none;border-radius:8px;cursor:pointer;font-weight:700;color:#000;font-size:13px">Tentar novamente</button></div>`;
   }
+}
+
+// Carregar rompimentos ativos no mapa com marcador vermelho
+async function loadRompimentosNoMapa(){
+  if(!rompLayer)return;rompLayer.clearLayers();
+  const incs=await fetch(`${SU}/rest/v1/incidentes?status=eq.aberto&lat_falha=not.is.null&select=*`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
+  incs.forEach(i=>{
+    if(!i.lat_falha||!i.lng_falha)return;
+    const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp(),zIndexOffset:5000})
+      .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`);
+    // Se tem cabo lançado, mostrar indicativo
+    if(i.distancia_otdr_m){
+      const sub=`+${i.distancia_otdr_m}m cabo lançado`;
+      L.marker([i.lat_falha,i.lng_falha],{icon:mkNovaBox(i.distancia_otdr_m),zIndexOffset:4900}).addTo(rompLayer);
+    }
+    rompLayer.addLayer(mk);
+  });
 }
 
 // CAMADAS
@@ -673,9 +688,7 @@ function buildLayerPanel(){
     const hasSub=l.sub&&l.sub.length>0;
     return`<div class="lg">
       <div class="lg-h" onclick="toggleLg('${l.id}')">
-        <div class="lg-ck ${VIS[l.id]?'on':''}" id="ck-${l.id}" style="border-color:${l.cor};${VIS[l.id]?'background:'+l.cor:''}" onclick="event.stopPropagation();toggleLayer('${l.id}')">
-          ${VIS[l.id]?'✓':''}
-        </div>
+        <div class="lg-ck ${VIS[l.id]?'on':''}" id="ck-${l.id}" style="border-color:${l.cor};${VIS[l.id]?'background:'+l.cor:''}" onclick="event.stopPropagation();toggleLayer('${l.id}')">${VIS[l.id]?'✓':''}</div>
         <div class="lg-dot" style="background:${l.cor}${l.tipo==='cabo'?';border-radius:2px;width:12px;height:3px':''}"></div>
         <span class="lg-nm">${l.label}</span>
         ${hasSub?`<span class="lg-arr" id="arr-${l.id}">▶</span>`:''}
@@ -689,56 +702,23 @@ function buildLayerPanel(){
     </div>`;
   }).join('');
 }
-
-function toggleLg(id){
-  const sub=$('sub-'+id),arr=$('arr-'+id);
-  if(!sub)return;
-  sub.classList.toggle('op');if(arr)arr.classList.toggle('op');
-}
-function toggleLayer(id){
-  VIS[id]=!VIS[id];
-  const ck=$('ck-'+id),l=LAYERS.find(x=>x.id===id);
-  if(ck&&l){ck.classList.toggle('on',VIS[id]);ck.textContent=VIS[id]?'✓':'';ck.style.background=VIS[id]?l.cor:'';}
-  l?.sub?.forEach(s=>{VIS[s.id]=VIS[id];const sk=$('sck-'+s.id);if(sk){sk.classList.toggle('on',VIS[id]);sk.textContent=VIS[id]?'✓':'';sk.style.background=VIS[id]?s.cor:'';}});
-  applyVis();savePref();
-}
-function toggleSubLayer(sid,pid){
-  VIS[sid]=!VIS[sid];
-  const sk=$('sck-'+sid),l=LAYERS.find(x=>x.id===pid),s=l?.sub.find(x=>x.id===sid);
-  if(sk&&s){sk.classList.toggle('on',VIS[sid]);sk.textContent=VIS[sid]?'✓':'';sk.style.background=VIS[sid]?s.cor:'';}
-  const allOn=l?.sub.every(x=>VIS[x.id]);VIS[pid]=allOn;
-  const pk=$('ck-'+pid);if(pk&&l){pk.classList.toggle('on',allOn);pk.textContent=allOn?'✓':'';pk.style.background=allOn?l.cor:'';}
-  applyVis();savePref();
-}
-function applyVis(){
-  if(!map)return;
-  Object.entries(LYR).forEach(([id,lyr])=>{
-    const vis=VIS[id]!==false;
-    if(vis&&!map.hasLayer(lyr))lyr.addTo(map);
-    else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);
-  });
-}
+function toggleLg(id){const sub=$('sub-'+id),arr=$('arr-'+id);if(!sub)return;sub.classList.toggle('op');if(arr)arr.classList.toggle('op');}
+function toggleLayer(id){VIS[id]=!VIS[id];const ck=$('ck-'+id),l=LAYERS.find(x=>x.id===id);if(ck&&l){ck.classList.toggle('on',VIS[id]);ck.textContent=VIS[id]?'✓':'';ck.style.background=VIS[id]?l.cor:'';}l?.sub?.forEach(s=>{VIS[s.id]=VIS[id];const sk=$('sck-'+s.id);if(sk){sk.classList.toggle('on',VIS[id]);sk.textContent=VIS[id]?'✓':'';sk.style.background=VIS[id]?s.cor:'';}});applyVis();savePref();}
+function toggleSubLayer(sid,pid){VIS[sid]=!VIS[sid];const sk=$('sck-'+sid),l=LAYERS.find(x=>x.id===pid),s=l?.sub.find(x=>x.id===sid);if(sk&&s){sk.classList.toggle('on',VIS[sid]);sk.textContent=VIS[sid]?'✓':'';sk.style.background=VIS[sid]?s.cor:'';}const allOn=l?.sub.every(x=>VIS[x.id]);VIS[pid]=allOn;const pk=$('ck-'+pid);if(pk&&l){pk.classList.toggle('on',allOn);pk.textContent=allOn?'✓':'';pk.style.background=allOn?l.cor:'';}applyVis();savePref();}
+function applyVis(){if(!map)return;Object.entries(LYR).forEach(([id,lyr])=>{const vis=VIS[id]!==false;if(vis&&!map.hasLayer(lyr))lyr.addTo(map);else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);});}
 function setAll(on){Object.keys(VIS).forEach(k=>VIS[k]=on);buildLayerPanel();applyVis();savePref();}
 function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));}
 function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}}
 
 // SIDEBAR
-function sbTab(m,el){
-  sbMode=m;
-  document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));
-  el.classList.add('on');
-  $('lc').style.display=m==='camadas'?'':'none';
-  $('sbl').style.display=m!=='camadas'?'':'none';
-  if(m!=='camadas')renderSB($('si').value);
-}
+function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'':'none';if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){if(sbMode!=='camadas')renderSB(q);}
 function renderSB(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
   let data=sbMode==='cabos'?allC:allS;
   if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')).toLowerCase().includes(q));
   if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
-  const G={};
-  data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
+  const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
   let h='';
   Object.entries(G).sort().forEach(([g,arr])=>{
     h+=`<div class="gh"><span>${g}</span><span>${arr.length}</span></div>`;
@@ -747,24 +727,17 @@ function renderSB(q=''){
       const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
       const sub=i.municipio||km(i.comprimento)||'';
       const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
-      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">
-        ${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}
-        </div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}
-      </div>`;
+      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
     });
     if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} — refine a busca</div>`;
   });
   el.innerHTML=h;
 }
-function focI(id){
-  document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));
-  const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}
-  if(fmap[id])fmap[id]();closeSB();
-}
+function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(fmap[id])fmap[id]();closeSB();}
 function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
 function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
 
-// PAINEL SITE
+// PAINEL
 function showPanSite(s,pt){
   closePan();
   showPan(s.nome||s.codigo||'Site',[
@@ -773,13 +746,13 @@ function showPanSite(s,pt){
     s.municipio&&['Município',(s.municipio||'')+(s.uf?'/'+s.uf:'')],
     s.responsavel&&['Responsável',s.responsavel],
     s.status&&['Status',s.status,TC(s.status)],
-    s.observacao&&['Obs',s.observacao.substring(0,150)],
+    s.observacao&&['Obs',s.observacao.substring(0,200)],
   ],[
-    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`openM('site','${s.id}')`},
-    sessao.perfil!=='leitura'&&{l:'↕ Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'')}')` },
-    sessao.perfil!=='leitura'&&{l:'🚨 Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'')}')` },
-    {l:'🔍 Rota',c:'b',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'')}')` },
-    sessao.perfil==='admin'&&{l:'🗑',c:'r',fn:`del('sites','${s.id}')`},
+    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarSite('${s.id}')`},
+    sessao.perfil!=='leitura'&&{l:'↕ Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil!=='leitura'&&{l:'🚨 Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    {l:'🔍 Rota',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('sites','${s.id}')`},
   ].filter(Boolean));
   focI('s-'+s.id);
 }
@@ -792,11 +765,11 @@ function showPanCabo(c,pts,lenCalc){
     ['Comprimento calc.',km(lenCalc)],
     diff!==null&&['Diferença',km(diff)+(diff>1000?' ⚠':'')],
     c.status&&['Status',c.status,TC(c.status)],
-    c.observacao&&['Obs',c.observacao.substring(0,120)],
+    c.observacao&&['Obs',c.observacao.substring(0,200)],
   ],[
-    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`openM('cabo','${c.id}')`},
-    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'')}',${c.comprimento||0})`},
-    sessao.perfil==='admin'&&{l:'🗑',c:'r',fn:`del('cabos','${c.id}')`},
+    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${c.id}')`},
+    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
+    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
   ].filter(Boolean));
   focI('c-'+c.id);
 }
@@ -809,121 +782,60 @@ function showPan(t,rows,acts){
 function closePan(){$('pan').style.display='none';}
 
 // FERRAMENTAS
-function goLoc(){
-  const btn=document.querySelector('#mt .mb');
-  navigator.geolocation.getCurrentPosition(p=>{
-    if(locMk)map.removeLayer(locMk);
-    locMk=L.marker([p.coords.latitude,p.coords.longitude],{icon:mkLoc(),zIndexOffset:3000}).addTo(map);
-    map.setView([p.coords.latitude,p.coords.longitude],17);toast('Localização atual','in');
-  },()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:12000});
-}
+function goLoc(){navigator.geolocation.getCurrentPosition(p=>{if(locMk)map.removeLayer(locMk);locMk=L.marker([p.coords.latitude,p.coords.longitude],{icon:mkLoc(),zIndexOffset:3000}).addTo(map);map.setView([p.coords.latitude,p.coords.longitude],17);toast('Localização atual','in');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:12000});}
 function toggleEdit(){editMode=!editMode;$('bed').classList.toggle('on',editMode);if(editMode){map.on('click',editClick);toast('Clique no mapa para criar site','wn');}else map.off('click',editClick);}
 function editClick(e){if(!drawMode&&!medMode&&!incMode&&!moveMode)openM('site',null,e.latlng.lat,e.latlng.lng);}
-function toggleMed(){
-  if(medMode){cancelMed();return;}
-  medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';$('med-info').textContent='Clique para iniciar';
-  medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);toast('Medição multiponto ativa','in');
-}
-function addMedPt(e){
-  if(!medMode)return;medPts.push(e.latlng);
-  medMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#4da6ff',fillOpacity:1,weight:2}).addTo(map));
-  if(medPts.length>=2){if(medLn)map.removeLayer(medLn);medLn=L.polyline(medPts,{color:'#4da6ff',weight:2.5,dashArray:'5 4',opacity:.9}).addTo(map);}
-  const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);
-  $('med-info').textContent=medPts.length>1?`${medPts.length} pts • ${km(d)}`:'1 ponto — continue clicando';
-  if(medPts.length>1)$('h-med').textContent=`📏 ${medPts.length} pts • ${km(d)} — duplo clique p/ finalizar`;
-}
-function finishMed(e){
-  L.DomEvent.stopPropagation(e);if(medPts.length<2)return;
-  const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);
-  toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();
-}
-function cancelMed(){
-  medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);
-  $('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';
-  $('med-info').style.display='none';clearMedLines();
-}
+function toggleMed(){if(medMode){cancelMed();return;}medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);toast('Medição ativa','in');}
+function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#4da6ff',fillOpacity:1,weight:2}).addTo(map));if(medPts.length>=2){if(medLn)map.removeLayer(medLn);medLn=L.polyline(medPts,{color:'#4da6ff',weight:2.5,dashArray:'5 4',opacity:.9}).addTo(map);}const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);$('med-info').textContent=medPts.length>1?`${medPts.length} pts • ${km(d)}`:'1 ponto';if(medPts.length>1)$('h-med').textContent=`📏 ${medPts.length} pts • ${km(d)} — duplo clique p/ finalizar`;}
+function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
+function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
 function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
-function startDraw(){
-  if(drawMode){cancelDraw();return;}
-  drawMode=true;drawPts=[];$('bdc').classList.add('on-g');$('h-draw').style.display='block';clearDrawLines();
-  map.on('click',addDrawPt);map.on('dblclick',finishDraw);toast('Trace o cabo no mapa','in');
-}
-function addDrawPt(e){
-  if(!drawMode)return;drawPts.push(e.latlng);
-  drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));
-  if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}
-  if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}
-}
-function finishDraw(e){
-  L.DomEvent.stopPropagation(e);if(drawPts.length<2)return;
-  const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));
-  const pts=[...drawPts];cancelDraw();openM('cabo',null,null,null,pts,d);
-}
-function cancelDraw(){
-  drawMode=false;map.off('click',addDrawPt);map.off('dblclick',finishDraw);
-  $('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();
-}
+function startDraw(){if(drawMode){cancelDraw();return;}drawMode=true;drawPts=[];$('bdc').classList.add('on-g');$('h-draw').style.display='block';clearDrawLines();map.on('click',addDrawPt);map.on('dblclick',finishDraw);toast('Trace o cabo','in');}
+function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}}
+function finishDraw(e){L.DomEvent.stopPropagation(e);if(drawPts.length<2)return;const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));const pts=[...drawPts];cancelDraw();openM('cabo',null,null,null,pts,d);}
+function cancelDraw(){drawMode=false;map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
-function toggleInc(){
-  incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';
-  if(incMode)toast('Clique no local da falha','er');
-  map[incMode?'on':'off']('click',incClick);
-}
+function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
 function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
 function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);openM('incidente',null,lat,lng,null,null,site);}
-function moverIniciar(id,nome){
-  closePan();moveMode=true;$('h-move').style.display='block';toast('Clique no novo local de '+nome,'wn');
-  map.once('click',async e=>{
-    moveMode=false;$('h-move').style.display='none';
-    const{lat,lng}=e.latlng;
-    const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({localizacao:`SRID=4326;POINT(${lng} ${lat})`})});
-    if(r.status===204){toast('✓ Site movido!');loadMap();}else toast('Erro ao mover','er');
-  });
-}
+function moverIniciar(id,nome){closePan();moveMode=true;$('h-move').style.display='block';toast('Clique no novo local de '+nome,'wn');map.once('click',async e=>{moveMode=false;$('h-move').style.display='none';const{lat,lng}=e.latlng;const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({localizacao:`SRID=4326;POINT(${lng} ${lat})`})});if([200,204].includes(r.status)){toast('✓ Site movido!');loadMap();}else toast('Erro ao mover','er');});}
 
 // RASTREAMENTO
 function abrirRastreamento(siteNome){
   siteNome=siteNome||'';
-  openM('_rast');
   $('mtt').textContent='🔍 Rastreamento ponta a ponta';
   $('mbd').innerHTML=`
-    <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.6;background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px">
-      Selecione dois sites para destacar todos os cabos no trajeto entre eles.
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px;background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;line-height:1.6">Destaque todos os cabos entre dois sites.</div>
+    <div class="mfgr">
+      <div class="mfg"><label>Origem *</label><input id="rt-a" value="${esc(siteNome)}" placeholder="SAG, JCT..."></div>
+      <div class="mfg"><label>Destino *</label><input id="rt-b" placeholder="ESL, BMJ..."></div>
     </div>
-    <div class="fgr">
-      <div class="fg"><label>Origem *</label><input id="rt-a" value="${esc(siteNome)}" placeholder="SAG, LUE, BHF..."></div>
-      <div class="fg"><label>Destino *</label><input id="rt-b" placeholder="JCT, BMJ, RAP..."></div>
-    </div>
-    <div class="fg"><label>Filtrar camada</label>
-      <select id="rt-c"><option value="">Todas</option><option>backbone</option><option>metro_alta</option><option>metro_dist</option><option>acesso</option></select>
-    </div>
+    <div class="mfg"><label>Filtrar camada</label><select id="rt-c"><option value="">Todas</option><option>backbone</option><option>metro_alta</option><option>metro_dist</option><option>acesso</option></select></div>
     <div id="rt-res" style="display:none;margin:8px 0"></div>
-    <div class="bbs"><button class="btn2 s" onclick="limparRast()">Limpar mapa</button><button class="btn2 p" onclick="execRast()">🔍 Rastrear</button></div>`;
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="limparRast()">Limpar</button><button class="btn2 p" onclick="execRast()">🔍 Rastrear</button></div>`;
+  $('mbg').classList.add('show');
 }
 async function execRast(){
   const orig=($('rt-a')?.value||'').trim().toUpperCase();
   const dest=($('rt-b')?.value||'').trim().toUpperCase();
   const cam=$('rt-c')?.value||'';
   if(!orig||!dest){toast('Informe origem e destino','er');return;}
-  const el=$('rt-res');el.style.display='block';
-  el.innerHTML='<div style="text-align:center;padding:10px;color:var(--t2)">Calculando...</div>';
+  const el=$('rt-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando...</div>';
   const sA=allS.find(s=>(s.nome||'').toUpperCase().includes(orig)||(s.codigo||'').toUpperCase()===orig);
   const sB=allS.find(s=>(s.nome||'').toUpperCase().includes(dest)||(s.codigo||'').toUpperCase()===dest);
-  if(!sA){el.innerHTML=`<div style="color:var(--rd);padding:8px">Site "${orig}" não encontrado.</div>`;return;}
-  if(!sB){el.innerHTML=`<div style="color:var(--rd);padding:8px">Site "${dest}" não encontrado.</div>`;return;}
-  const ptA=sA.localizacao?.coordinates;const ptB=sB.localizacao?.coordinates;
   limparRast();rastLayer=L.layerGroup().addTo(map);
   const mA=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="width:14px;height:14px;margin:1px;border-radius:50%;background:#3ecf8e;border:3px solid #fff;box-shadow:0 0 12px rgba(62,207,142,.8)"></div>'});
   const mB=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="width:14px;height:14px;margin:1px;border-radius:50%;background:#e84455;border:3px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.8)"></div>'});
+  const ptA=sA?.localizacao?.coordinates;const ptB=sB?.localizacao?.coordinates;
   if(ptA)L.marker([ptA[1],ptA[0]],{icon:mA,zIndexOffset:3000}).bindPopup(`<b>Origem: ${orig}</b>`).addTo(rastLayer);
   if(ptB)L.marker([ptB[1],ptB[0]],{icon:mB,zIndexOffset:3000}).bindPopup(`<b>Destino: ${dest}</b>`).addTo(rastLayer);
   let filtro='trajeto=not.is.null';if(cam)filtro+='&camada=eq.'+cam;
   const cabosAll=await fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,comprimento,trajeto&${filtro}&limit=3000`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
-  const bounds=[];let dist=0,nc=0;
   const laMin=ptA&&ptB?Math.min(ptA[1],ptB[1])-0.6:-90;
   const laMax=ptA&&ptB?Math.max(ptA[1],ptB[1])+0.6:90;
   const loMin=ptA&&ptB?Math.min(ptA[0],ptB[0])-0.6:-180;
   const loMax=ptA&&ptB?Math.max(ptA[0],ptB[0])+0.6:180;
+  const bounds=[];let dist=0,nc=0;
   cabosAll.forEach(c=>{
     const pts=c.trajeto?.type==='LineString'?c.trajeto.coordinates.map(p=>[p[1],p[0]]):null;
     if(!pts||pts.length<2)return;
@@ -934,66 +846,62 @@ async function execRast(){
     pts.forEach(p=>bounds.push(p));dist+=Number(c.comprimento)||0;nc++;
   });
   if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
-  closeM();el.style.display='none';
-  toast(`🔍 ${orig}→${dest}: ${nc} cabos | ${km(dist)}`,'in');
+  closeM();toast(`🔍 ${orig}→${dest}: ${nc} cabos | ${km(dist)}`,'in');
 }
 function limparRast(){if(rastLayer){map.removeLayer(rastLayer);rastLayer=null;}}
 
 // OTDR
 function abrirOTDR(caboId,caboNome,compTotal){
   caboId=caboId||'';caboNome=caboNome||'';compTotal=Number(compTotal)||0;
-  openM('_otdr');
   $('mtt').textContent='📡 Localizar rompimento OTDR';
   const opts=allC.filter(c=>Number(c.comprimento)>0).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c=>`<option value="${c.id}" data-comp="${c.comprimento}"${c.id===caboId?' selected':''}>${c.nome||c.id.slice(0,8)} (${km(c.comprimento)})</option>`).join('');
   $('mbd').innerHTML=`
-    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.25);border-radius:7px;padding:9px 11px;margin-bottom:12px;font-size:11px;color:var(--t2);line-height:1.6">
-      📡 Insira a distância medida pelo OTDR. O ponto exato será plotado no cabo no mapa.
+    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.25);border-radius:7px;padding:9px 11px;margin-bottom:12px;font-size:11px;color:var(--t2);line-height:1.6">📡 Insira a distância do OTDR. O ponto será plotado no mapa com marcador vermelho pulsante.</div>
+    <div class="mfg"><label>Cabo afetado *</label><select id="ot-cb"><option value="">-- Selecione --</option>${opts}</select></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Distância OTDR da ponta A (m) *</label><input id="ot-d" type="number" step="1" min="0" placeholder="3500"></div>
+      <div class="mfg"><label>Cabo lançado após rompimento (m)</label><input id="ot-lc" type="number" step="1" min="0" placeholder="200"></div>
     </div>
-    <div class="fg"><label>Cabo afetado *</label>
-      <select id="ot-cb" onchange="const o=this.options[this.selectedIndex];$('ot-inf').textContent=o?.dataset?.comp?'Comprimento: '+km(Number(o.dataset.comp)):''">
-        <option value="">-- Selecione o cabo --</option>${opts}
-      </select>
-    </div>
-    <div id="ot-inf" style="font-size:10px;color:var(--t3);margin-bottom:8px">${compTotal?'Comprimento: '+km(compTotal):''}</div>
-    <div class="fgr">
-      <div class="fg"><label>Distância OTDR da ponta A (m) *</label><input id="ot-d" type="number" step="1" min="0" placeholder="3500"></div>
-      <div class="fg"><label>Incerteza (m)</label><input id="ot-i" type="number" value="100" min="0"></div>
-    </div>
-    <div class="fg"><label>Descrição da falha</label><input id="ot-desc" placeholder="Rompimento por obra, vandalismo..."></div>
+    <div class="mfg"><label>Descrição da falha</label><input id="ot-desc" placeholder="Rompimento por obra, vandalismo, causa natural..."></div>
     <div id="ot-res" style="display:none;margin:8px 0"></div>
-    <div class="bbs"><button class="btn2 s" onclick="limparOTDR()">Limpar</button><button class="btn2 p" onclick="plotarOTDR()">📍 Localizar</button></div>`;
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="limparOTDR()">Limpar</button><button class="btn2 p" onclick="plotarOTDR()">📍 Localizar</button></div>`;
+  $('mbg').classList.add('show');
 }
 async function plotarOTDR(){
   const caboId=$('ot-cb')?.value;
   const dist=parseFloat($('ot-d')?.value);
-  const incert=parseFloat($('ot-i')?.value||100);
+  const lanc=parseFloat($('ot-lc')?.value||0);
   const desc=$('ot-desc')?.value||'';
   if(!caboId){toast('Selecione o cabo','er');return;}
   if(!dist||dist<=0){toast('Informe a distância','er');return;}
   const cabo=allC.find(c=>c.id===caboId);
   if(!cabo){toast('Cabo não encontrado','er');return;}
-  const el=$('ot-res');el.style.display='block';
-  el.innerHTML='<div style="text-align:center;padding:10px;color:var(--t2)">Calculando...</div>';
+  const el=$('ot-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando...</div>';
   let lat=null,lng=null,pct=0;
-  // Tentar RPC PostGIS
   try{
     const r=await fetch(`${SU}/rest/v1/rpc/ponto_no_cabo`,{method:'POST',headers:{...RH,'Content-Type':'application/json'},body:JSON.stringify({cabo_id:caboId,distancia_m:dist})});
     if(r.ok){const d=await r.json();if(d&&d[0]){lat=d[0].lat;lng=d[0].lng;pct=d[0].pct;}}
   }catch{}
-  // Fallback interpolação local
   if(!lat&&cabo.trajeto?.coordinates){
-    const coords=cabo.trajeto.coordinates;
-    const comp=Number(cabo.comprimento)||1;
-    pct=Math.min(dist/comp,1.0);
-    const idx=Math.round(pct*(coords.length-1));
-    const c2=coords[Math.min(idx,coords.length-1)];
-    lng=c2[0];lat=c2[1];
+    const coords=cabo.trajeto.coordinates;const comp=Number(cabo.comprimento)||1;
+    pct=Math.min(dist/comp,1.0);const idx=Math.round(pct*(coords.length-1));
+    const c2=coords[Math.min(idx,coords.length-1)];lng=c2[0];lat=c2[1];
   }
-  if(!lat){el.innerHTML='<div style="color:var(--rd);padding:8px">Não foi possível calcular — cabo sem geometria completa.</div>';return;}
+  if(!lat){el.innerHTML='<div style="color:var(--rd);padding:8px">Não foi possível calcular — cabo sem geometria.</div>';return;}
   limparOTDR();otdrLayer=L.layerGroup().addTo(map);
-  L.circle([lat,lng],{radius:incert,color:'#e84455',fillColor:'#e84455',fillOpacity:.12,weight:2,dashArray:'6 4'}).addTo(otdrLayer);
-  const icX=L.divIcon({className:'',iconSize:[28,28],iconAnchor:[14,14],html:'<div style="position:relative;width:28px;height:28px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.2);animation:pulse 1.2s infinite"></div><div style="position:absolute;inset:4px;border-radius:50%;background:#e84455;border:2.5px solid #fff;box-shadow:0 0 16px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff">✕</div></div>'});
-  L.marker([lat,lng],{icon:icX,zIndexOffset:4000}).bindPopup(`<b>📡 Rompimento OTDR</b><br><b>Cabo:</b> ${esc(cabo.nome||'—')}<br><b>Distância:</b> ${dist}m (${Math.round(pct*100)}%)<br><b>Coords:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><b>Incerteza:</b> ±${incert}m${desc?'<br><b>Falha:</b> '+esc(desc):''}`).openPopup().addTo(otdrLayer);
+  // Marcador de rompimento vermelho pulsante
+  L.marker([lat,lng],{icon:mkRomp(),zIndexOffset:4000})
+    .bindPopup(`<b>📡 Rompimento OTDR</b><br><b>Cabo:</b> ${esc(cabo.nome||'—')}<br><b>Distância:</b> ${dist}m (${Math.round(pct*100)}%)<br><b>Coords:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}${lanc?`<br><b>Cabo lançado:</b> ${lanc}m`:''}<br><b>Falha:</b> ${esc(desc)||'—'}`)
+    .openPopup().addTo(otdrLayer);
+  // Se tem cabo lançado, mostrar marcador de nova caixa
+  if(lanc>0){
+    const angulo=Math.random()*Math.PI*2;
+    const latN=lat+Math.cos(angulo)*lanc/111320;
+    const lngN=lng+Math.sin(angulo)*lanc/(111320*Math.cos(lat*Math.PI/180));
+    L.marker([latN,lngN],{icon:mkNovaBox(lanc),zIndexOffset:3900}).bindPopup(`<b>📦 Nova caixa / emenda</b><br>+${lanc}m de cabo lançado após rompimento`).addTo(otdrLayer);
+    L.polyline([[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:3,dashArray:'6 4',opacity:.9}).bindPopup(`Cabo novo lançado: ${lanc}m`).addTo(otdrLayer);
+  }
+  // Trecho percorrido e após rompimento
   if(cabo.trajeto?.coordinates){
     const pts=cabo.trajeto.coordinates.map(c2=>[c2[1],c2[0]]);
     const idx=Math.round(pct*(pts.length-1));
@@ -1001,17 +909,16 @@ async function plotarOTDR(){
     if(idx<pts.length-1)L.polyline(pts.slice(idx),{color:'#e84455',weight:5,opacity:.9,dashArray:'8 5'}).bindPopup('Trecho após rompimento').addTo(otdrLayer);
   }
   map.setView([lat,lng],16);
-  const nomeEsc=esc((cabo.nome||'').replace(/'/g,"'"));
-  const descEsc=esc(desc.replace(/'/g,"'"));
+  const nomeEsc=(cabo.nome||'').replace(/'/g,"\\'");const descEsc=desc.replace(/'/g,"\\'");
   el.innerHTML=`<div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.3);border-radius:8px;padding:10px 12px">
     <div style="font-size:12px;font-weight:700;color:var(--rd);margin-bottom:6px">📍 Rompimento localizado!</div>
-    <div style="font-size:11px;color:var(--t2);line-height:1.9">
+    <div style="font-size:11px;color:var(--t2);line-height:2">
       Cabo: <b>${esc(cabo.nome||'—')}</b><br>
       Distância: <b>${dist}m</b> (${Math.round(pct*100)}% do cabo)<br>
-      Coordenadas: <b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b><br>
-      Incerteza: <b>±${incert}m</b>
+      Coords: <b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b><br>
+      ${lanc?`Cabo lançado: <b>${lanc}m</b> após rompimento<br>`:''}
     </div>
-    <button onclick="regIncOTDR(${lat},${lng},'${nomeEsc}',${dist},'${descEsc}')"
+    <button onclick="regIncOTDR(${lat},${lng},'${nomeEsc}',${dist},${lanc},'${descEsc}')"
       style="margin-top:8px;width:100%;padding:8px;border-radius:6px;border:1px solid var(--rd);background:rgba(232,68,85,.15);color:var(--rd);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit">
       🚨 Registrar como incidente SLA 5h
     </button>
@@ -1019,10 +926,11 @@ async function plotarOTDR(){
   closeM();toast(`📍 Rompimento: ${dist}m da ponta A`,'er');
 }
 function limparOTDR(){if(otdrLayer){map.removeLayer(otdrLayer);otdrLayer=null;}}
-async function regIncOTDR(lat,lng,cabo,dist,desc){
-  const reg={titulo:`Rompimento OTDR: ${cabo} a ${dist}m`,descricao:desc||`Localizado por OTDR a ${dist}m. Coords: ${lat.toFixed(5)},${lng.toFixed(5)}`,tipo:'rompimento',severidade:'critica',lat_falha:lat,lng_falha:lng,distancia_otdr_m:dist,status:'aberto',sla_horas:5,responsavel:sessao?.nome||'Sistema'};
+async function regIncOTDR(lat,lng,cabo,dist,lanc,desc){
+  const obs=`Localizado por OTDR a ${dist}m da ponta A. Coords: ${lat.toFixed(5)},${lng.toFixed(5)}.${lanc?` Cabo novo lançado: ${lanc}m.`:''} ${desc||''}`.trim();
+  const reg={titulo:`Rompimento OTDR: ${cabo} a ${dist}m`,descricao:obs,tipo:'rompimento',severidade:'critica',lat_falha:lat,lng_falha:lng,distancia_otdr_m:dist,status:'aberto',sla_horas:5,responsavel:sessao?.nome||'Sistema'};
   const r=await fetch(`${SU}/rest/v1/incidentes`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201){toast('🚨 Incidente registrado!','er');loadIncidentes();}else toast('Erro ao registrar','er');
+  if(r.status===201){toast('🚨 Incidente registrado!','er');loadIncidentes();loadRompimentosNoMapa();}else toast('Erro ao registrar','er');
 }
 
 // NAVEGAÇÃO
@@ -1035,12 +943,13 @@ function goTab(tab,el){
 
 // INCIDENTES
 async function loadIncidentes(){
-  const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc&limit=50`,{headers:RH});
+  const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,criado_em.desc&limit=50`,{headers:RH});
   const incs=r.ok?await r.json():[];
   const ab=incs.filter(i=>i.status!=='resolvido').length;
   const badge=$('ibadge');badge.style.display=ab>0?'inline':'none';if(ab>0)badge.textContent=ab;
   $('inc-list').innerHTML=incs.length?incs.map(i=>{
-    const h=(Date.now()-new Date(i.abertura_em))/3600000;
+    const dt=i.abertura_em||i.criado_em||new Date().toISOString();
+    const h=(Date.now()-new Date(dt))/3600000;
     const sla=i.sla_horas||5;const pct=Math.min(h/sla*100,100);
     const cor=i.status==='resolvido'?'#3ecf8e':pct>=100?'#e84455':pct>=70?'#f0a500':'#4da6ff';
     return`<div class="lcard"><div class="lct">
@@ -1050,8 +959,17 @@ async function loadIncidentes(){
     </div>
     <div class="lcsb">${i.site_afetado?`<span>📍 ${esc(i.site_afetado)}</span>`:''}
     <span>⏱ ${h.toFixed(1)}h/${sla}h SLA</span>${i.responsavel?`<span>👤 ${esc(i.responsavel)}</span>`:''}</div>
-    <div class="sla-bar"><div class="sla-p" style="width:${pct}%;background:${cor}"></div></div></div>`;
+    <div class="sla-bar"><div class="sla-p" style="width:${pct}%;background:${cor}"></div></div>
+    ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<div style="margin-top:8px;display:flex;gap:6px">
+      <button onclick="resolverInc('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✓ Resolver</button>
+    </div>`:''}
+    </div>`;
   }).join(''):`<div style="padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">✅</div>Nenhum incidente ativo</div>`;
+}
+async function resolverInc(id){
+  if(!confirm('Marcar como resolvido?'))return;
+  const r=await fetch(`${SU}/rest/v1/incidentes?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({status:'resolvido',resolvido_em:new Date().toISOString()})});
+  if([200,204].includes(r.status)){toast('✓ Incidente resolvido!');loadIncidentes();loadRompimentosNoMapa();}else toast('Erro ao resolver','er');
 }
 
 // ROTAS
@@ -1064,7 +982,8 @@ async function loadRotas(){
       <div class="lctt">${esc(rt.nome)}</div>
       <span class="tag tg">${rt.status||'ativo'}</span>
     </div>
-    <div class="lcsb"><span>📍 ${esc(rt.site_a||'?')} ↔ ${esc(rt.site_b||'?')}</span>
+    <div class="lcsb">
+      <span>📍 ${esc(rt.site_a||'?')} ↔ ${esc(rt.site_b||'?')}</span>
       ${rt.distancia_total_m?`<span>📏 ${km(rt.distancia_total_m)}</span>`:''}
       ${rt.n_emendas?`<span>🔴 ${rt.n_emendas} emendas</span>`:''}
       ${rt.hierarquias?.length?`<span>📶 ${rt.hierarquias.join(', ')}</span>`:''}
@@ -1083,43 +1002,189 @@ async function loadUsuarios(){
       <span class="tag ${PC[u.perfil]||'ta'}">${u.perfil}</span>
       <span class="tag ${u.ativo?'tg':'ter'}">${u.ativo?'ativo':'inativo'}</span>
     </div>
-    <div class="lcsb"><span>✉ ${esc(u.email)}</span>
-    ${u.ultimo_acesso?`<span>🕐 ${new Date(u.ultimo_acesso).toLocaleDateString('pt-BR')}</span>`:'<span style="color:var(--t3)">Nunca acessou</span>'}
-    </div></div>`).join('');
+    <div class="lcsb">
+      <span>✉ ${esc(u.email)}</span>
+      ${u.ultimo_acesso?`<span>🕐 ${new Date(u.ultimo_acesso).toLocaleDateString('pt-BR')}</span>`:'<span style="color:var(--t3)">Nunca acessou</span>'}
+    </div>
+    ${sessao.perfil==='admin'?`<div style="margin-top:8px;display:flex;gap:6px">
+      <button onclick="editarUsuario('${u.id}')" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--bl);background:transparent;color:var(--bl);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✏ Editar</button>
+      ${u.id!==sessao.id?`<button onclick="toggleUsuario('${u.id}',${!u.ativo})" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">${u.ativo?'⊘ Inativar':'✓ Ativar'}</button>`:''}</div>`:''}</div>`).join('');
+}
+async function editarUsuario(id){
+  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
+  const us=r.ok?await r.json():[];if(!us.length)return;
+  const u=us[0];
+  $('mtt').textContent='Editar colaborador';
+  $('mbd').innerHTML=`
+    <div class="mfg"><label>Nome *</label><input id="eu-nome" value="${esc(u.nome||'')}"></div>
+    <div class="mfg"><label>E-mail *</label><input id="eu-email" type="email" value="${esc(u.email||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Perfil</label><select id="eu-perfil">${['colaborador','supervisor','leitura','admin'].map(p=>`<option ${u.perfil===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Nova senha (deixe em branco para manter)</label><input id="eu-senha" type="password" placeholder="••••••••"></div>
+    </div>
+    <div id="eu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarUsuarioEdit('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarUsuarioEdit(id){
+  const nome=($('eu-nome')?.value||'').trim();
+  const email=($('eu-email')?.value||'').trim().toLowerCase();
+  const perfil=$('eu-perfil')?.value;
+  const senha=($('eu-senha')?.value||'').trim();
+  const msg=$('eu-msg');
+  if(!nome||!email){msg.textContent='Nome e e-mail são obrigatórios';msg.style.color='var(--rd)';return;}
+  const reg={nome,email,perfil};
+  if(senha)reg.senha_texto=senha;
+  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status)){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
+  else{msg.textContent='Erro ao salvar. E-mail já existe?';msg.style.color='var(--rd)';}
+}
+async function toggleUsuario(id,ativo){
+  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ativo})});
+  if([200,204].includes(r.status)){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast('Erro','er');
 }
 
-// SALVAR
+// SALVAR FORMS INLINE
 const gv=id=>$(id)?.value?.trim()||null;
 const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
 function gpsF(li,lo){navigator.geolocation.getCurrentPosition(p=>{$(li).value=p.coords.latitude.toFixed(6);$(lo).value=p.coords.longitude.toFixed(6);toast('GPS capturado!');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:8000});}
-function limpar(pre){document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});}
+function limpar(pre){document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});$(pre+'-msg').textContent='';}
+function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 
 async function salvarSite(){
-  const nome=gv('cs-nome');if(!nome){toast('Nome obrigatório','er');return;}
+  const nome=gv('cs-nome');
+  if(!nome){msgField('cs-msg','Nome é obrigatório');return;}
   const lat=gf('cs-lat'),lng=gf('cs-lng');
-  const reg={nome,tipo:gv('cs-tipo'),camada:gv('cs-cam'),municipio:gv('cs-mun'),uf:gv('cs-uf')||'MG',responsavel:gv('cs-resp'),observacao:gv('cs-obs'),status:'ativo'};
+  const reg={nome,tipo:gv('cs-tipo')||'site',camada:gv('cs-cam')||'acesso',municipio:gv('cs-mun'),uf:gv('cs-uf')||'MG',status:gv('cs-status')||'ativo',responsavel:gv('cs-resp'),observacao:gv('cs-obs')};
   if(lat&&lng)reg.localizacao=`SRID=4326;POINT(${lng} ${lat})`;
-  Object.keys(reg).forEach(k=>!reg[k]&&delete reg[k]);
+  Object.keys(reg).forEach(k=>{if(!reg[k])delete reg[k];});
+  msgField('cs-msg','Salvando...','in');
   const r=await fetch(`${SU}/rest/v1/sites`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201){toast('✓ Site salvo!');limpar('cs');loadMap();}else toast('Erro ao salvar','er');
+  if(r.status===201){msgField('cs-msg','✓ Site salvo com sucesso!','ok');limpar('cs');if(lat&&lng)loadMap();}
+  else{const err=await r.json().catch(()=>({}));msgField('cs-msg','Erro: '+(err.message||err.details||r.status));}
 }
+
 async function salvarEnlace(){
-  const pa=gv('ce-a'),pb=gv('ce-b');if(!pa||!pb){toast('Ponta A e B obrigatórias','er');return;}
-  const reg={nome:`${pa}-${pb}-${Date.now().toString().slice(-6)}`,camada:gv('ce-cam')||'backbone',status:'ativo',ponta_a_site:pa,ponta_b_site:pb,ponta_a_equip:gv('ce-eqa'),ponta_b_equip:gv('ce-eqb'),ponta_a_dgo:gv('ce-dgoa'),ponta_b_dgo:gv('ce-dgob'),ponta_a_rack:gv('ce-rka'),ponta_b_rack:gv('ce-rkb'),ponta_a_posicao:gv('ce-posa'),ponta_b_posicao:gv('ce-posb'),potencia_tx_a:gf('ce-txa'),potencia_rx_b:gf('ce-rxb'),distancia_m:gf('ce-dist'),atenuacao_ida:gf('ce-aten'),emendas_caminho:gv('ce-em'),observacao:gv('ce-obs'),responsavel:sessao.nome};
-  Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
+  const pa=gv('ce-a'),pb=gv('ce-b');
+  if(!pa||!pb){msgField('ce-msg','Ponta A e Ponta B são obrigatórias');return;}
+  const reg={
+    nome:`${pa}-${pb}`,
+    camada:gv('ce-cam')||'backbone',
+    status:'ativo',
+    ponta_a_site:pa,ponta_b_site:pb,
+    ponta_a_equip:gv('ce-eqa'),ponta_b_equip:gv('ce-eqb'),
+    ponta_a_dgo:gv('ce-dgoa'),ponta_b_dgo:gv('ce-dgob'),
+    ponta_a_rack:gv('ce-rka'),ponta_b_rack:gv('ce-rkb'),
+    ponta_a_posicao:gv('ce-posa'),ponta_b_posicao:gv('ce-posb'),
+    potencia_tx_a:gf('ce-txa'),potencia_rx_b:gf('ce-rxb'),
+    distancia_m:gf('ce-dist')?Math.round(gf('ce-dist')):null,
+    atenuacao_ida:gf('ce-aten'),
+    cabo_nome:gv('ce-cabo'),
+    emendas_caminho:gv('ce-em'),
+    observacao:gv('ce-obs'),
+    responsavel:sessao.nome
+  };
+  // hierarquias como texto na observação (campo não existe como array no banco)
+  if(gv('ce-hier'))reg.observacao=(reg.observacao?reg.observacao+' | ':'')+'Hierarquias: '+gv('ce-hier');
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  msgField('ce-msg','Salvando...','in');
   const r=await fetch(`${SU}/rest/v1/enlaces`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201){toast('✓ Enlace salvo!');limpar('ce');}else toast('Erro ao salvar','er');
+  if(r.status===201){msgField('ce-msg','✓ Enlace salvo!','ok');limpar('ce');}
+  else{const err=await r.json().catch(()=>({}));msgField('ce-msg','Erro: '+(err.message||err.details||r.status));}
 }
+
 async function salvarRota(){
-  const nome=gv('cr-nome');if(!nome){toast('Nome obrigatório','er');return;}
+  const nome=gv('cr-nome');
+  if(!nome){msgField('cr-msg','Nome é obrigatório');return;}
   const hier=gv('cr-hier');
-  const reg={nome,tipo:gv('cr-tipo'),camada:gv('cr-cam'),site_a:gv('cr-a'),site_b:gv('cr-b'),distancia_total_m:gf('cr-dist'),n_emendas:gf('cr-nem'),hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,observacao:gv('cr-seq'),status:'ativo'};
-  Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
+  const reg={
+    nome,tipo:gv('cr-tipo')||'anel',camada:gv('cr-cam')||'backbone',
+    site_a:gv('cr-a'),site_b:gv('cr-b'),
+    distancia_total_m:gf('cr-dist')?Math.round(gf('cr-dist')):null,
+    n_emendas:gf('cr-nem')?Math.round(gf('cr-nem')):null,
+    hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,
+    observacao:gv('cr-seq'),status:'ativo'
+  };
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  msgField('cr-msg','Salvando...','in');
   const r=await fetch(`${SU}/rest/v1/rotas`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201){toast('✓ Rota salva!');limpar('cr');loadRotas();}else toast('Erro ao salvar','er');
+  if(r.status===201){msgField('cr-msg','✓ Rota salva!','ok');limpar('cr');loadRotas();}
+  else{const err=await r.json().catch(()=>({}));msgField('cr-msg','Erro: '+(err.message||err.details||r.status));}
 }
+
+// EDITAR SITE e CABO via modal
+async function editarSite(id){
+  const s=allS.find(x=>x.id===id);if(!s){toast('Site não encontrado em memória','er');return;}
+  const pt=PP(s.localizacao)||[];
+  $('mtt').textContent='✏ Editar site';
+  $('mbd').innerHTML=`
+    <div class="mfg"><label>Nome *</label><input id="es-nome" value="${esc(s.nome||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Tipo</label><select id="es-tipo">${['site','caixa','ERB','equipamento','POP'].map(t=>`<option ${s.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Camada</label><select id="es-cam">${['backbone','metro_alta','metro_dist','acesso','b2b'].map(c=>`<option ${s.camada===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Município</label><input id="es-mun" value="${esc(s.municipio||'')}"></div>
+      <div class="mfg"><label>UF</label><input id="es-uf" value="${esc(s.uf||'MG')}" maxlength="2"></div>
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Latitude</label><input id="es-lat" type="number" step="0.000001" value="${pt[0]||''}"></div>
+      <div class="mfg"><label>Longitude</label><input id="es-lng" type="number" step="0.000001" value="${pt[1]||''}"></div>
+    </div>
+    <div class="mfg"><button type="button" class="btn2 s" style="padding:7px" onclick="gpsF('es-lat','es-lng')">📍 GPS atual</button></div>
+    <div class="mfg"><label>Status</label><select id="es-st">${['ativo','inativo','previsto','em_obra'].map(v=>`<option ${s.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="mfg"><label>Responsável</label><input id="es-resp" value="${esc(s.responsavel||'')}"></div>
+    <div class="mfg"><label>Observação</label><textarea id="es-obs">${esc(s.observacao||'')}</textarea></div>
+    <div id="es-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarEditSite('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarEditSite(id){
+  const nome=($('es-nome')?.value||'').trim();
+  if(!nome){const m=$('es-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const lat=parseFloat($('es-lat')?.value),lng=parseFloat($('es-lng')?.value);
+  const reg={nome,tipo:$('es-tipo')?.value,camada:$('es-cam')?.value,municipio:($('es-mun')?.value||'').trim()||null,uf:($('es-uf')?.value||'MG'),status:$('es-st')?.value,responsavel:($('es-resp')?.value||'').trim()||null,observacao:($('es-obs')?.value||'').trim()||null};
+  if(!isNaN(lat)&&!isNaN(lng)&&lat&&lng)reg.localizacao=`SRID=4326;POINT(${lng} ${lat})`;
+  const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status)){toast('✓ Site atualizado!');closeM();closePan();loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('es-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function editarCabo(id){
+  const c=allC.find(x=>x.id===id);if(!c)return;
+  $('mtt').textContent='✏ Editar cabo';
+  $('mbd').innerHTML=`
+    <div class="mfg"><label>Nome *</label><input id="ec-nome" value="${esc(c.nome||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Tipo</label><select id="ec-tipo">${['distribuicao','backbone','drop','interligacao'].map(t=>`<option ${c.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Status</label><select id="ec-st">${['ativo','inativo','previsto'].map(v=>`<option ${c.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="mfg"><label>Comprimento (m)</label><input id="ec-comp" type="number" value="${c.comprimento||''}"></div>
+    <div class="mfg"><label>Observação</label><textarea id="ec-obs">${esc(c.observacao||'')}</textarea></div>
+    <div id="ec-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarEditCabo('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarEditCabo(id){
+  const nome=($('ec-nome')?.value||'').trim();
+  if(!nome){const m=$('ec-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const reg={nome,tipo:$('ec-tipo')?.value,status:$('ec-st')?.value,comprimento:Math.round(parseFloat($('ec-comp')?.value))||null,observacao:($('ec-obs')?.value||'').trim()||null};
+  const r=await fetch(`${SU}/rest/v1/cabos?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status)){toast('✓ Cabo atualizado!');closeM();closePan();loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('ec-msg');m.textContent='Erro: '+(err.message||r.status);m.style.color='var(--rd)';}
+}
+
+// EXCLUIR
 async function del(tbl,id){
-  if(!confirm('Excluir permanentemente?'))return;
+  if(!confirm('Excluir permanentemente? Esta ação não pode ser desfeita.'))return;
   const r=await fetch(`${SU}/rest/v1/${tbl}?id=eq.${id}`,{method:'DELETE',headers:WH});
   if([200,204].includes(r.status)){toast('Excluído!');closePan();loadMap();}else toast('Erro ao excluir','er');
 }
@@ -1128,120 +1193,110 @@ async function del(tbl,id){
 let _mt=null,_mi=null,_dp=null;
 function openM(tipo,id,lat,lng,dpts,dlen,siteRef){
   _mt=tipo;_mi=id||null;_dp=dpts||null;
-  if(tipo==='_rast'||tipo==='_otdr')return; // abertos por funções próprias
-  const S=id?allS.find(x=>x.id===id):null;
-  const C=id?allC.find(x=>x.id===id):null;
+  if(['_rast','_otdr'].includes(tipo))return;
+  if(tipo==='site'){editarSite(id||'__new__');if(!id){$('mtt').textContent='Novo site';/* fallback handled by editarSite check */}return;}
+  if(tipo==='cabo'){editarCabo(id||'__new__');return;}
   let titulo='',body='';
-  if(tipo==='site'){
-    titulo=(id?'Editar':'Novo')+' site';
-    body=`<div class="fg"><label>Nome <span class="req">*</span></label><input id="f0" value="${esc(S?.nome||'')}" placeholder="CEO-001/ERB/SAG"></div>
-    <div class="fgr"><div class="fg"><label>Tipo</label><select id="f1">${['site','caixa','ERB','equipamento','POP'].map(t=>`<option ${S?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
-    <div class="fg"><label>Camada</label><select id="f2">${['backbone','metro_alta','metro_dist','acesso','b2b'].map(c=>`<option ${S?.camada===c?'selected':''}>${c}</option>`).join('')}</select></div></div>
-    <div class="fgr"><div class="fg"><label>Município</label><input id="f3" value="${esc(S?.municipio||'')}" placeholder="BH"></div>
-    <div class="fg"><label>UF</label><input id="f4" value="${esc(S?.uf||'MG')}" maxlength="2"></div></div>
-    <div class="fgr"><div class="fg"><label>Latitude</label><input id="f5" type="number" step="0.000001" value="${lat||S?.localizacao?.coordinates?.[1]||''}"></div>
-    <div class="fg"><label>Longitude</label><input id="f6" type="number" step="0.000001" value="${lng||S?.localizacao?.coordinates?.[0]||''}"></div></div>
-    <div class="fg"><button type="button" class="tb" style="width:100%;padding:9px" onclick="gpsF('f5','f6')">📍 GPS atual</button></div>
-    <div class="fg"><label>Status</label><select id="f7">${['ativo','inativo','previsto','em_obra'].map(s=>`<option ${S?.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
-    <div class="fg"><label>Responsável</label><input id="f8" value="${esc(S?.responsavel||'')}" placeholder="Nome"></div>
-    <div class="fg"><label>Observação</label><textarea id="f9">${esc(S?.observacao||'')}</textarea></div>
-    <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="saveM()">Salvar</button></div>`;
-  }else if(tipo==='cabo'){
-    titulo=(id?'Editar':'Novo')+' cabo';
-    body=`<div class="fg"><label>Nome <span class="req">*</span></label><input id="f0" value="${esc(C?.nome||'')}" placeholder="JFA-UBA-144FO"></div>
-    <div class="fgr"><div class="fg"><label>Tipo</label><select id="f1">${['distribuicao','backbone','drop','interligacao'].map(t=>`<option ${C?.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
-    <div class="fg"><label>Status</label><select id="f2">${['ativo','inativo','previsto'].map(s=>`<option ${C?.status===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
-    ${dlen?`<div class="fg" style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.25);border-radius:7px;padding:9px"><label style="color:var(--gr)">Trajeto desenhado</label><div style="font-size:12px;color:var(--t2);margin-top:3px">${dpts?.length} pontos • ${km(dlen)}</div></div>`:''}
-    <div class="fgr"><div class="fg"><label>Comprimento (m)</label><input id="f3" type="number" value="${dlen||C?.comprimento||''}"></div>
-    <div class="fg"><label>Nº fibras</label><input id="f4" type="number" placeholder="144"></div></div>
-    <div class="fgr"><div class="fg"><label>Fabricante</label><input id="f5" placeholder="Corning / Prysmian"></div>
-    <div class="fg"><label>Ano fabricação</label><input id="f6" type="number" placeholder="2018"></div></div>
-    <div class="fg"><label>Hierarquias que passam</label><input id="f7" placeholder="DWDM, HL4, OLT, SWA, DATACOM"></div>
-    <div class="fg"><label>Observação</label><textarea id="f8">${esc(C?.observacao||'')}</textarea></div>
-    <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="saveM()">Salvar</button></div>`;
-  }else if(tipo==='incidente'){
+  if(tipo==='incidente'){
     titulo='🚨 Registrar incidente / falha';
-    body=`<div class="fg"><label>Título <span class="req">*</span></label><input id="f0" placeholder="Rompimento JFA-003 / Alta atenuação SAG-BHF"></div>
-    <div class="fgr"><div class="fg"><label>Tipo</label><select id="f1"><option>rompimento</option><option>alta_atenuacao</option><option>degradacao</option><option>falha_equip</option><option>outro</option></select></div>
-    <div class="fg"><label>Severidade</label><select id="f2"><option>critica</option><option>alta</option><option>media</option><option>baixa</option></select></div></div>
-    <div class="fg"><label>Site afetado</label><input id="f3" value="${esc(siteRef||'')}" placeholder="SAG, BHF, LUE..."></div>
-    <div class="fgr"><div class="fg"><label>Lat. falha</label><input id="f4" type="number" step="0.000001" value="${lat||''}"></div>
-    <div class="fg"><label>Lng. falha</label><input id="f5" type="number" step="0.000001" value="${lng||''}"></div></div>
-    <div class="fg"><button type="button" class="tb" style="width:100%;padding:9px" onclick="gpsF('f4','f5')">📍 GPS atual</button></div>
-    <div class="fg"><label>Distância OTDR (m)</label><input id="f6" type="number" placeholder="3500"></div>
-    <div class="fg"><label>Responsável</label><input id="f7" value="${esc(sessao?.nome||'')}" placeholder="Técnico"></div>
-    <div class="fg"><label>Descrição</label><textarea id="f8" placeholder="Detalhe o problema..."></textarea></div>
-    <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" style="background:var(--rd)" onclick="saveM()">Registrar</button></div>`;
+    body=`<div class="mfg"><label>Título *</label><input id="fi-t" placeholder="Rompimento JFA-003 / Alta atenuação SAG-ESL"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="fi-tp"><option>rompimento</option><option>alta_atenuacao</option><option>degradacao</option><option>falha_equip</option><option>outro</option></select></div>
+    <div class="mfg"><label>Severidade</label><select id="fi-sv"><option>critica</option><option>alta</option><option>media</option><option>baixa</option></select></div></div>
+    <div class="mfg"><label>Site afetado</label><input id="fi-sa" value="${esc(siteRef||'')}" placeholder="SAG, ESL, JCT..."></div>
+    <div class="mfgr"><div class="mfg"><label>Lat. falha</label><input id="fi-la" type="number" step="0.000001" value="${lat||''}"></div>
+    <div class="mfg"><label>Lng. falha</label><input id="fi-lo" type="number" step="0.000001" value="${lng||''}"></div></div>
+    <div class="mfg"><button type="button" class="btn2 s" style="padding:7px" onclick="gpsF('fi-la','fi-lo')">📍 GPS atual</button></div>
+    <div class="mfg"><label>Distância OTDR (m)</label><input id="fi-od" type="number" placeholder="3500"></div>
+    <div class="mfg"><label>Cabo lançado após rompimento (m)</label><input id="fi-lc" type="number" placeholder="200"></div>
+    <div class="mfg"><label>Responsável</label><input id="fi-rp" value="${esc(sessao?.nome||'')}" placeholder="Técnico de campo"></div>
+    <div class="mfg"><label>Descrição / Observação</label><textarea id="fi-ob" placeholder="Detalhe: local, causa, estrutura próxima, referências, lote do cabo lançado..."></textarea></div>
+    <div id="fi-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 r" onclick="salvarInc()">🚨 Registrar</button></div>`;
   }else if(tipo==='rota'){
     titulo='Nova rota / anel';
-    body=`<div class="fg"><label>Nome <span class="req">*</span></label><input id="f0" placeholder="ANEL BH-10 / ROTA SAG-BHF-LUE"></div>
-    <div class="fgr"><div class="fg"><label>Tipo</label><select id="f1"><option>anel</option><option>rota_principal</option><option>rota_protecao</option></select></div>
-    <div class="fg"><label>Camada</label><select id="f2"><option>backbone</option><option>metro_alta</option><option>metro_dist</option></select></div></div>
-    <div class="fgr"><div class="fg"><label>Site A</label><input id="f3" placeholder="SAG"></div>
-    <div class="fg"><label>Site B</label><input id="f4" placeholder="JCT"></div></div>
-    <div class="fgr"><div class="fg"><label>Distância total (m)</label><input id="f5" type="number"></div>
-    <div class="fg"><label>Nº emendas</label><input id="f6" type="number"></div></div>
-    <div class="fg"><label>Hierarquias</label><input id="f7" placeholder="DWDM, HL4, OLT, DATACOM"></div>
-    <div class="fg"><label>Trechos</label><textarea id="f8" placeholder="SAG → E119 → BMJ → BSR → RAP"></textarea></div>
-    <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="saveM()">Salvar</button></div>`;
+    body=`<div class="mfg"><label>Nome *</label><input id="fr-nm" placeholder="ANEL BH-10 / ROTA SAG-ESL-LUE"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="fr-tp"><option>anel</option><option>rota_principal</option><option>rota_protecao</option></select></div>
+    <div class="mfg"><label>Camada</label><select id="fr-cm"><option>backbone</option><option>metro_alta</option><option>metro_dist</option></select></div></div>
+    <div class="mfgr"><div class="mfg"><label>Site A</label><input id="fr-a" placeholder="SAG"></div>
+    <div class="mfg"><label>Site B</label><input id="fr-b" placeholder="JCT"></div></div>
+    <div class="mfgr"><div class="mfg"><label>Distância total (m)</label><input id="fr-dt" type="number" placeholder="36500"></div>
+    <div class="mfg"><label>Nº emendas</label><input id="fr-ne" type="number" placeholder="12"></div></div>
+    <div class="mfg"><label>Hierarquias</label><input id="fr-hi" placeholder="DWDM, HL4, OLT, DATACOM"></div>
+    <div class="mfg"><label>Trechos / Sequência</label><textarea id="fr-sq" placeholder="SAG → E119 → BMJ → BSR → RAP → JCT"></textarea></div>
+    <div id="fr-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarRotaM()">💾 Salvar</button></div>`;
   }else if(tipo==='usuario'){
     titulo='Novo colaborador';
-    body=`<div class="fg"><label>Nome <span class="req">*</span></label><input id="f0" placeholder="João Silva"></div>
-    <div class="fg"><label>E-mail <span class="req">*</span></label><input id="f1" type="email" placeholder="joao@redeop.com.br"></div>
-    <div class="fgr"><div class="fg"><label>Perfil</label><select id="f2"><option>colaborador</option><option>supervisor</option><option>leitura</option><option>admin</option></select></div>
-    <div class="fg"><label>Senha inicial</label><input id="f3" value="rede2026"></div></div>
-    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--t2)">
-      Senha padrão: <b style="color:var(--am)">rede2026</b> — pedir para trocar após primeiro acesso.
+    body=`<div class="mfg"><label>Nome *</label><input id="fu-nm" placeholder="João Silva"></div>
+    <div class="mfg"><label>E-mail *</label><input id="fu-em" type="email" placeholder="joao@redeop.com.br"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Perfil</label><select id="fu-pf"><option>colaborador</option><option>supervisor</option><option>leitura</option><option>admin</option></select></div>
+      <div class="mfg"><label>Senha inicial</label><input id="fu-pw" type="password" value="rede2026"></div>
     </div>
-    <div class="bbs"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="saveM()">Criar</button></div>`;
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2);margin-bottom:10px">Senha padrão: <b style="color:var(--am)">rede2026</b> — orientar trocar no primeiro acesso.</div>
+    <div id="fu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarUsuarioM()">✓ Criar</button></div>`;
+  }else if(tipo==='cabo'&&!id){
+    titulo='Novo cabo';
+    body=`<div class="mfg"><label>Nome *</label><input id="nc-nm" placeholder="JFA-UBA-144FO"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="nc-tp"><option>distribuicao</option><option>backbone</option><option>drop</option><option>interligacao</option></select></div>
+    <div class="mfg"><label>Status</label><select id="nc-st"><option>ativo</option><option>inativo</option><option>previsto</option></select></div></div>
+    ${dlen?`<div class="mfg" style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.25);border-radius:7px;padding:9px"><label style="color:var(--gr)">Trajeto desenhado</label><div style="font-size:12px;color:var(--t2);margin-top:3px">${dpts?.length||0} pontos • ${km(dlen)}</div></div>`:''}
+    <div class="mfg"><label>Comprimento (m)</label><input id="nc-cp" type="number" value="${dlen||''}"></div>
+    <div class="mfg"><label>Lote / Fabricante</label><input id="nc-lt" placeholder="LOT-2023-JFA / Corning 2019"></div>
+    <div class="mfg"><label>Observação</label><textarea id="nc-ob" placeholder="Informe: nº de fibras, tipo, hierarquias que passam, emendas no trajeto..."></textarea></div>
+    <div id="nc-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarCaboM()">💾 Salvar</button></div>`;
   }
   $('mtt').textContent=titulo;$('mbd').innerHTML=body;$('mbg').classList.add('show');
 }
 function closeM(){$('mbg').classList.remove('show');}
-async function saveM(){
-  const fv=id=>$(id)?.value?.trim()||null;
-  const ff=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n;};
-  if(_mt==='site'){
-    const nome=fv('f0');if(!nome){toast('Nome obrigatório','er');return;}
-    const lat=ff('f5'),lng=ff('f6');
-    const reg={nome,tipo:fv('f1'),camada:fv('f2'),municipio:fv('f3'),uf:fv('f4')||'MG',status:fv('f7'),responsavel:fv('f8'),observacao:fv('f9')};
-    if(lat&&lng)reg.localizacao=`SRID=4326;POINT(${lng} ${lat})`;
-    Object.keys(reg).forEach(k=>!reg[k]&&delete reg[k]);
-    const r=await fetch(_mi?`${SU}/rest/v1/sites?id=eq.${_mi}`:`${SU}/rest/v1/sites`,{method:_mi?'PATCH':'POST',headers:WH,body:JSON.stringify(reg)});
-    if([200,201,204].includes(r.status)){toast(_mi?'Atualizado!':'Site salvo!');closeM();loadMap();}else toast('Erro ao salvar','er');
-  }else if(_mt==='cabo'){
-    const nome=fv('f0');if(!nome){toast('Nome obrigatório','er');return;}
-    const reg={nome,tipo:fv('f1'),status:fv('f2'),comprimento:ff('f3'),observacao:fv('f8')};
-    if(_dp?.length>=2){const coords=_dp.map(p=>`${p.lng} ${p.lat}`).join(',');reg.trajeto=`SRID=4326;LINESTRING(${coords})`;}
-    Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
-    const r=await fetch(_mi?`${SU}/rest/v1/cabos?id=eq.${_mi}`:`${SU}/rest/v1/cabos`,{method:_mi?'PATCH':'POST',headers:WH,body:JSON.stringify(reg)});
-    if([200,201,204].includes(r.status)){toast(_mi?'Atualizado!':'Cabo salvo!');closeM();_dp=null;loadMap();}else toast('Erro ao salvar','er');
-  }else if(_mt==='incidente'){
-    const titulo=fv('f0');if(!titulo){toast('Título obrigatório','er');return;}
-    const reg={titulo,tipo:fv('f1'),severidade:fv('f2'),site_afetado:fv('f3'),lat_falha:ff('f4'),lng_falha:ff('f5'),distancia_otdr_m:ff('f6'),responsavel:fv('f7'),descricao:fv('f8'),status:'aberto',sla_horas:5};
-    Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
-    const r=await fetch(`${SU}/rest/v1/incidentes`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-    if(r.status===201){toast('🚨 Incidente registrado!','er');closeM();loadIncidentes();}else toast('Erro ao registrar','er');
-  }else if(_mt==='rota'){
-    const nome=fv('f0');if(!nome){toast('Nome obrigatório','er');return;}
-    const hier=fv('f7');
-    const reg={nome,tipo:fv('f1'),camada:fv('f2'),site_a:fv('f3'),site_b:fv('f4'),distancia_total_m:ff('f5'),n_emendas:ff('f6'),hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,observacao:fv('f8'),status:'ativo'};
-    Object.keys(reg).forEach(k=>reg[k]===null&&delete reg[k]);
-    const r=await fetch(`${SU}/rest/v1/rotas`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-    if(r.status===201){toast('Rota salva!');closeM();loadRotas();}else toast('Erro ao salvar','er');
-  }else if(_mt==='usuario'){
-    const nome=fv('f0'),email=fv('f1');if(!nome||!email){toast('Nome e e-mail obrigatórios','er');return;}
-    const reg={nome,email:email.toLowerCase(),senha_texto:fv('f3')||'rede2026',perfil:fv('f2'),ativo:true};
-    const r=await fetch(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-    if(r.status===201){toast('✓ Usuário criado!');closeM();loadUsuarios();}else toast('Erro — e-mail já existe?','er');
-  }
+
+async function salvarInc(){
+  const titulo=($('fi-t')?.value||'').trim();
+  if(!titulo){const m=$('fi-msg');m.textContent='Título obrigatório';m.style.color='var(--rd)';return;}
+  const reg={titulo,tipo:$('fi-tp')?.value,severidade:$('fi-sv')?.value,site_afetado:($('fi-sa')?.value||'').trim()||null,lat_falha:parseFloat($('fi-la')?.value)||null,lng_falha:parseFloat($('fi-lo')?.value)||null,distancia_otdr_m:parseFloat($('fi-od')?.value)||null,responsavel:($('fi-rp')?.value||'').trim(),descricao:($('fi-ob')?.value||'').trim()||null,status:'aberto',sla_horas:5};
+  if($('fi-lc')?.value)reg.descricao=(reg.descricao?reg.descricao+' | ':'')+'Cabo lançado: '+$('fi-lc').value+'m';
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/incidentes`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('🚨 Incidente registrado!','er');closeM();loadIncidentes();loadRompimentosNoMapa();}
+  else{const err=await r.json().catch(()=>({}));const m=$('fi-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function salvarRotaM(){
+  const nome=($('fr-nm')?.value||'').trim();
+  if(!nome){const m=$('fr-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const hier=($('fr-hi')?.value||'').trim();
+  const reg={nome,tipo:$('fr-tp')?.value,camada:$('fr-cm')?.value,site_a:($('fr-a')?.value||'').trim()||null,site_b:($('fr-b')?.value||'').trim()||null,distancia_total_m:Math.round(parseFloat($('fr-dt')?.value))||null,n_emendas:Math.round(parseFloat($('fr-ne')?.value))||null,hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,observacao:($('fr-sq')?.value||'').trim()||null,status:'ativo'};
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/rotas`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('✓ Rota salva!');closeM();loadRotas();}
+  else{const err=await r.json().catch(()=>({}));const m=$('fr-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function salvarUsuarioM(){
+  const nome=($('fu-nm')?.value||'').trim(),email=($('fu-em')?.value||'').trim().toLowerCase(),perfil=$('fu-pf')?.value,senha=($('fu-pw')?.value||'rede2026').trim();
+  if(!nome||!email){const m=$('fu-msg');m.textContent='Nome e e-mail são obrigatórios';m.style.color='var(--rd)';return;}
+  if(!email.includes('@')){const m=$('fu-msg');m.textContent='E-mail inválido';m.style.color='var(--rd)';return;}
+  const reg={nome,email,senha_texto:senha,perfil,ativo:true};
+  const r=await fetch(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('✓ Usuário criado!');closeM();loadUsuarios();}
+  else{const err=await r.json().catch(()=>({}));const m=$('fu-msg');m.textContent='Erro: '+(err.message||err.details||'E-mail já cadastrado?');m.style.color='var(--rd)';}
+}
+async function salvarCaboM(){
+  const nome=($('nc-nm')?.value||'').trim();
+  if(!nome){const m=$('nc-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const reg={nome,tipo:$('nc-tp')?.value,status:$('nc-st')?.value,comprimento:Math.round(parseFloat($('nc-cp')?.value))||null,observacao:[($('nc-lt')?.value||''),($('nc-ob')?.value||'')].filter(Boolean).join(' | ')||null};
+  if(_dp?.length>=2){const coords=_dp.map(p=>`${p.lng} ${p.lat}`).join(',');reg.trajeto=`SRID=4326;LINESTRING(${coords})`;}
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/cabos`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('✓ Cabo salvo!');closeM();_dp=null;loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('nc-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
 }
 
 // INIT
 $('le').addEventListener('keydown',e=>{if(e.key==='Enter')$('lp').focus();});
 $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 loadPref();aplicarTema();
-if(checkSessao()){iniciarApp();initMapObj();}else{$('le').focus();setTimeout(initMapObj,100);}
+if(checkSessao()){iniciarApp();}else{$('le').focus();}
 </script>
 </body>
 </html>
