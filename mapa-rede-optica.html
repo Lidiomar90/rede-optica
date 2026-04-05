@@ -1092,6 +1092,66 @@ function renderSB(q=''){
   });
   el.innerHTML=h;
 }
+function renderSBv2(q=''){
+  const el=$('sbl');q=(q||'').toLowerCase();
+  let data=sbMode==='cabos'?allC:allS;
+  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
+  if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
+  if(sbMode==='sites'){
+    try{
+      const byCn={};
+      data.forEach(i=>{
+        const cn=normText(i.cn)||normText(i.science?.cn)||'Sem CN';
+        const loc=normText(i.localidade)||normText(i.science?.localidade)||normText(i.municipio)||'Sem localidade';
+        if(!byCn[cn])byCn[cn]={};
+        if(!byCn[cn][loc])byCn[cn][loc]=[];
+        byCn[cn][loc].push(i);
+      });
+      let h='';
+      Object.keys(byCn).sort(cnSort).forEach(cn=>{
+        const localMap=byCn[cn];
+        const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
+        h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
+        Object.keys(localMap).sort((a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR')).forEach(loc=>{
+          const arr=localMap[loc].sort((a,b)=>String(a.nome||a.codigo||'').localeCompare(String(b.nome||b.codigo||''),'pt-BR'));
+          h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
+          arr.slice(0,120).forEach(i=>{
+            const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+            const sub=[i.municipio,i.codigo&&`Código ${i.codigo}`,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+          });
+          if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
+        });
+      });
+      el.innerHTML=h||'<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum site agrupado</div>';
+      return;
+    }catch(err){
+      console.error('renderSB sites falhou',err);
+      const fallback=data.slice(0,200).map(i=>{
+        const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+        const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.codigo].filter(Boolean).join(' • ');
+        return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
+      }).join('');
+      el.innerHTML=`<div style="padding:8px 10px;font-size:10px;color:var(--am);font-weight:800">Agrupamento CN/localidade falhou. Exibindo lista simples.</div>${fallback}`;
+      return;
+    }
+  }
+  const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
+  let h='';
+  Object.entries(G).sort().forEach(([g,arr])=>{
+    h+=`<div class="gh"><span>${g}</span><span>${arr.length}</span></div>`;
+    arr.slice(0,80).forEach(i=>{
+      const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+      const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
+      const sub=i.municipio||km(i.comprimento)||'';
+      const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
+      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+    });
+    if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} refine a busca</div>`;
+  });
+  el.innerHTML=h;
+}
+renderSB=renderSBv2;
 function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
 function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
 function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
@@ -1473,17 +1533,19 @@ function auditMetrics(){
   const store=getInvStore();
   const sciOnly=allS.filter(s=>s.fonte==='science').length;
   const merged=allS.filter(s=>s.fonte==='supabase+science').length;
+  const cnReady=allS.filter(s=>normText(s.cn)||normText(s.science?.cn)).length;
   const semGeo=allS.filter(s=>!PP(s.localizacao)).length;
   const segBroken=store.segmentos.filter(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b)).length;
   const dgoResolved=store.dgos.filter(d=>findDraftPoint(d.site||'')).length;
-  return{store,sciOnly,merged,semGeo,segBroken,dgoResolved};
+  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved};
 }
 function collectAuditIssues(){
-  const {store,sciOnly,semGeo,segBroken,dgoResolved}=auditMetrics();
+  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved}=auditMetrics();
   const issues=[];
   if(!allS.length)issues.push({severity:'critico',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
   if(!allC.length)issues.push({severity:'alto',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
   if(!scienceSites.length)issues.push({severity:'alto',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
+  if(scienceSites.length && !cnReady)issues.push({severity:'alto',title:'Agrupamento CN/localidade indisponível',detail:'A base Science existe, mas os sites do mapa não ficaram enriquecidos com CN/localidade.',action:'Validar mescla Science + Supabase antes de publicar.'});
   if(semGeo>0)issues.push({severity:'medio',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
   if(sciOnly>0)issues.push({severity:'medio',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
   if(segBroken>0)issues.push({severity:'alto',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.'});

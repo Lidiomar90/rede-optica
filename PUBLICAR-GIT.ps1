@@ -16,7 +16,8 @@ $ARQUIVOS = @(
     "mapa-rede-optica.html",
     "dashboard.html",
     "ia-assistente.html",
-    "auditoria-revisao.html"
+    "auditoria-revisao.html",
+    "science_sites_mg.json"
 )
 
 Write-Host ""
@@ -104,7 +105,7 @@ if ($faltando.Count -gt 0) {
 # --- Adicionar e commitar ---
 Write-Host ""
 Write-Host "Adicionando arquivos..." -ForegroundColor Cyan
-git add .gitignore index.html mapa-rede-optica.html dashboard.html ia-assistente.html auditoria-revisao.html .nojekyll 2>$null
+git add .gitignore index.html mapa-rede-optica.html dashboard.html ia-assistente.html auditoria-revisao.html science_sites_mg.json .nojekyll 2>$null
 git add -u 2>$null
 
 $DATA = Get-Date -Format "dd/MM/yyyy HH:mm"
