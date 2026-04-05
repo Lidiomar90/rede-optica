@@ -268,6 +268,12 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .ctx-a:hover{background:rgba(255,255,255,.05);color:var(--t)}
 .ctx-a:first-of-type{border-top:none}
 .ctx-off{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:rgba(255,182,72,.12);border:1px solid rgba(255,182,72,.26);font-size:9px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.12em}
+@media(max-width:680px){
+  .mb{width:48px;height:48px;border-radius:16px}
+  .tb{min-height:42px}
+  .btn2{min-height:44px}
+  .pac{min-height:42px}
+}
 #toast.wn{color:var(--am);border-color:var(--am)}
 #toast.in{color:var(--bl);border-color:var(--bl)}
 </style>
@@ -558,6 +564,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <div class="fc">
         <div class="fct">📏 Segmento físico de cabo</div>
         <input id="sg-edit-id" type="hidden">
+        <input id="sg-geo" type="hidden">
         <div class="fg"><label>Cabo <span class="req">*</span></label><input id="sg-cabo" placeholder="JCT-ESL-144FO"></div>
         <div class="fgr">
           <div class="fg"><label>Ponto A</label><div class="bbs"><input id="sg-a" placeholder="site/caixa/dgo origem"><button type="button" class="tb" style="padding:9px 10px" onclick="armarSelecaoPonto('sg-a')">🎯</button></div></div>
@@ -573,7 +580,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
         </div>
         <div class="fg"><label>Lote</label><input id="sg-lote" placeholder="LOT-2023-001"></div>
         <div class="fg"><label>Observação</label><textarea id="sg-obs" placeholder="Carona, caixas intermediárias, tipo de sustentação, subterrâneo em duto, aéreo em poste, misto..."></textarea></div>
-        <div class="bbs"><button class="btn2 s" onclick="limpar('sg')">Limpar</button><button class="btn2 p" onclick="salvarSegmento()">💾 Salvar rascunho</button></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('sg')">Limpar</button><button class="btn2 s" onclick="redesenharSegmentoAtual()">🧭 Desenhar</button><button class="btn2 p" onclick="salvarSegmento()">💾 Salvar rascunho</button></div>
         <div id="sg-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
       <div class="fc">
@@ -756,6 +763,7 @@ let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
 let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null;
 let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
+let touchHoldTimer=null;
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:false,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -966,7 +974,22 @@ function initMapObj(){
   pendingLayer=L.layerGroup().addTo(map);
   map.on('click',()=>hideContextMenu());
   map.on('contextmenu',ev=>openContextMenu(ev));
-  map.getContainer().addEventListener('contextmenu',ev=>ev.preventDefault());
+  const mapEl=map.getContainer();
+  mapEl.addEventListener('contextmenu',ev=>ev.preventDefault());
+  mapEl.addEventListener('touchstart',ev=>{
+    if(!ev.touches||ev.touches.length!==1)return;
+    clearTimeout(touchHoldTimer);
+    const touch=ev.touches[0];
+    touchHoldTimer=setTimeout(()=>{
+      try{
+        const latlng=map.mouseEventToLatLng(touch);
+        openContextMenu({latlng,originalEvent:{clientX:touch.clientX,clientY:touch.clientY}});
+        toast('Menu de campo aberto por toque longo','in');
+      }catch{}
+    },650);
+  },{passive:true});
+  mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
+  mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
 }
 
 async function loadMap(){
@@ -1315,11 +1338,56 @@ function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circ
 function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
 function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
 function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
-function startDraw(){if(drawMode){cancelDraw();return;}drawMode=true;drawPts=[];$('bdc').classList.add('on-g');$('h-draw').style.display='block';clearDrawLines();map.on('click',addDrawPt);map.on('dblclick',finishDraw);toast('Trace o segmento físico','in');}
+function startDraw(seedPts=[]){
+  if(drawMode){cancelDraw();return;}
+  drawMode=true;
+  drawPts=[];
+  $('bdc').classList.add('on-g');
+  $('h-draw').style.display='block';
+  clearDrawLines();
+  map.on('click',addDrawPt);
+  map.on('dblclick',finishDraw);
+  if(Array.isArray(seedPts)&&seedPts.length){
+    seedPts.forEach(p=>{
+      const latlng=Array.isArray(p)?L.latLng(p[0],p[1]):L.latLng(p.lat,p.lng);
+      drawPts.push(latlng);
+      drawMks.push(L.circleMarker(latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));
+    });
+    if(drawPts.length>=2){
+      drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);
+      const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);
+      $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;
+    }
+    toast('Ajuste a linha e finalize com duplo clique','in');
+    return;
+  }
+  toast('Trace o segmento físico','in');
+}
 function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}}
-function finishDraw(e){L.DomEvent.stopPropagation(e);if(drawPts.length<2)return;const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));const pts=[...drawPts];cancelDraw();goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));if($('sg-metr'))$('sg-metr').value=d;if($('sg-obs'))$('sg-obs').value=(($('sg-obs').value||'').trim()?$('sg-obs').value.trim()+' | ':'')+`Trajeto desenhado com ${pts.length} ponto(s)`;toast('Preencha os pontos A/B e salve o segmento físico','ok');}
+function finishDraw(e){
+  L.DomEvent.stopPropagation(e);
+  if(drawPts.length<2)return;
+  const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));
+  const pts=drawPts.map(p=>[Number(p.lat.toFixed(6)),Number(p.lng.toFixed(6))]);
+  cancelDraw();
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if($('sg-metr'))$('sg-metr').value=d;
+  if($('sg-geo'))$('sg-geo').value=JSON.stringify(pts);
+  if($('sg-obs'))$('sg-obs').value=(($('sg-obs').value||'').trim()?$('sg-obs').value.trim()+' | ':'')+`Trajeto desenhado com ${pts.length} ponto(s)`;
+  msgField('sg-msg','Geometria do segmento pronta. Revise A/B e salve.','ok');
+  toast('Preencha os pontos A/B e salve o segmento físico','ok');
+}
 function cancelDraw(){drawMode=false;map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
+function redesenharSegmentoAtual(){
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  let seed=[];
+  try{
+    const raw=$('sg-geo')?.value||'';
+    if(raw)seed=JSON.parse(raw);
+  }catch{}
+  startDraw(seed);
+}
 function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
 function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
 function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);openM('incidente',null,lat,lng,null,null,site);}
@@ -1596,10 +1664,12 @@ function auditMetrics(){
   const semGeo=allS.filter(s=>!PP(s.localizacao)).length;
   const segBroken=store.segmentos.filter(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b)).length;
   const dgoResolved=store.dgos.filter(d=>findDraftPoint(d.site||'')).length;
-  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved};
+  const activeVis=Object.values(VIS).filter(Boolean).length;
+  const cacheReady=!!loadMapCache();
+  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady};
 }
 function collectAuditIssues(){
-  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved}=auditMetrics();
+  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady}=auditMetrics();
   const issues=[];
   if(!allS.length)issues.push({severity:'critico',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
   if(!allC.length)issues.push({severity:'alto',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
@@ -1611,11 +1681,13 @@ function collectAuditIssues(){
   if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.'});
   const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
   if(dgoPend)issues.push({severity:'medio',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.'});
+  if(activeVis>6)issues.push({severity:'medio',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.'});
+  if(!cacheReady)issues.push({severity:'medio',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
   if(!issues.length)issues.push({severity:'baixo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
   return issues;
 }
 function renderAuditUI(issues){
-  const {store,sciOnly,merged,segBroken,dgoResolved}=auditMetrics();
+  const {store,sciOnly,merged,segBroken,dgoResolved,activeVis,cacheReady}=auditMetrics();
   const crit=issues.filter(i=>i.severity==='critico').length;
   const alto=issues.filter(i=>i.severity==='alto').length;
   const medio=issues.filter(i=>i.severity==='medio').length;
@@ -1628,7 +1700,8 @@ function renderAuditUI(issues){
   $('aud-resumo').innerHTML=[
     auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
     auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
-    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn')
+    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
+    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn')
   ].join('');
   $('aud-acoes').innerHTML=[
     auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),
@@ -2003,10 +2076,12 @@ function salvarDgo(){
 function salvarSegmento(){
   const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
   const editId=$('sg-edit-id')?.value||'';
+  let geometriaPts=null;
+  try{geometriaPts=JSON.parse($('sg-geo')?.value||'null');}catch{}
   const payload={
     cabo,ponto_a:pontoA,ponto_b:pontoB,tipo_lancamento:gv('sg-tipo'),
     metragem_m:gf('sg-metr'),fabricante:gv('sg-fab'),modelo:gv('sg-modelo'),
-    lote:gv('sg-lote'),observacao:gv('sg-obs')
+    lote:gv('sg-lote'),observacao:gv('sg-obs'),geometria_pts:Array.isArray(geometriaPts)&&geometriaPts.length>=2?geometriaPts:null
   };
   if(editId){
     updateInvItem('segmentos',editId,payload);
@@ -2085,12 +2160,13 @@ function showPanSegmentoDraft(seg){
     <div class="pr"><span class="pl">Ponto B</span><span class="pv">${esc(seg.ponto_b||'—')}</span></div>
     <div class="pr"><span class="pl">Lançamento</span><span class="pv">${esc(seg.tipo_lancamento||'—')}</span></div>
     <div class="pr"><span class="pl">Metragem</span><span class="pv">${km(seg.metragem_m)}</span></div>
+    <div class="pr"><span class="pl">Geometria</span><span class="pv">${Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?`${seg.geometria_pts.length} ponto(s)`:'reta simples entre A/B'}</span></div>
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(seg.fabricante||'—')}</span></div>
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(seg.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
     ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button>`;
   $('pan').style.display='block';
 }
 function editarSegmentoDraft(id){
@@ -2107,8 +2183,24 @@ function editarSegmentoDraft(id){
   $('sg-modelo').value=seg.modelo||'';
   $('sg-lote').value=seg.lote||'';
   $('sg-obs').value=seg.observacao||'';
+  $('sg-geo').value=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?JSON.stringify(seg.geometria_pts):'';
   msgField('sg-msg','Editando segmento existente. Salve para atualizar.','in');
   closePan();
+}
+function redefinirPontoSegmento(id,target){
+  editarSegmentoDraft(id);
+  armarSelecaoPonto(target);
+  toast(`Selecione no mapa o novo ${target==='sg-a'?'Ponto A':'Ponto B'}`,'in');
+}
+function redesenharSegmentoDraft(id){
+  editarSegmentoDraft(id);
+  let seed=[];
+  try{
+    const seg=getInvStore().segmentos.find(x=>x.id===id);
+    if(Array.isArray(seg?.geometria_pts))seed=seg.geometria_pts;
+  }catch{}
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  startDraw(seed);
 }
 function editarCaixaDraft(id){
   const cx=getInvStore().caixas.find(x=>x.id===id);
@@ -2201,8 +2293,11 @@ function renderInventarioDraftsV2(){
   });
   store.segmentos.forEach(seg=>{
     const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b);
-    if(a?.lat&&a?.lng&&b?.lat&&b?.lng){
-      addCableVisual(draftInvLayer,[[a.lat,a.lng],[b.lat,b.lng]],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
+    const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
+      ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(p=>p&&p.length===2)
+      : (a?.lat&&a?.lng&&b?.lat&&b?.lng?[[a.lat,a.lng],[b.lat,b.lng]]:null);
+    if(path&&path.length>=2){
+      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
     }
   });
   store.rupturas.forEach(rp=>{

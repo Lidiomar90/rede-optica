@@ -288,3 +288,49 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - qualidade funcional
   - lacunas do projeto
   - o que ainda esta incompleto ou meia-boca
+
+---
+
+## ATUALIZACAO LOCAL — 05/04/2026 18:xx
+
+### Melhorias recentes no front local (`mapa-rede-optica.html`)
+
+- mapa agora abre mais leve:
+  - camadas principais desligadas por padrao
+  - operador decide o que ativar
+  - preferencia continua salva em `localStorage`
+- leitura operacional priorizada:
+  - sigla/codigo do site vem antes do nome
+  - listas e painéis usam `codigo — nome`
+- rascunhos locais agora editam melhor:
+  - `caixa_emenda` pode ser editada
+  - `DGO` pode ser editado
+  - `segmento_cabo` pode ser editado, reatribuir Ponto A/B e redesenhar geometria
+- geometria de segmento em rascunho:
+  - `segmento` agora pode guardar `geometria_pts`
+  - renderizacao usa a geometria desenhada quando existir
+  - se nao existir, cai na reta simples entre A/B
+- clique direito / toque longo no mapa:
+  - criar caixa aqui
+  - registrar ruptura aqui
+  - criar DGO com site proximo
+  - copiar coordenadas
+- uso em campo:
+  - cache local do mapa (`sites`, `cabos`, `science`)
+  - fallback offline quando a rede falhar
+  - indicador de `modo offline`
+  - controles mobile ficaram maiores
+
+### Auditoria IA local agora verifica tambem
+
+- excesso de camadas ligadas ao mesmo tempo
+- ausencia de cache offline
+- DGO sem site resolvido
+- segmentos quebrados
+
+### O que ainda falta no front local
+
+- persistir caixa/DGO/segmento/ruptura no Supabase real
+- editar cabos oficiais existentes com geometria real, nao so rascunho local
+- mais acoes mobile de campo (ex.: fluxo de toque longo por elemento e nao so no mapa)
+- diagrama completo de continuidade/fusao/tubo loose
