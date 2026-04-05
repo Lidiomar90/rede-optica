@@ -1061,10 +1061,25 @@ function mkSegmentoMenu(seg,path){
   };
 }
 // Marcador de rompimento — vermelho pulsante
-const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
-// Marcador de nova caixa após lançamento
-const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
-const mkDraftCaixa=()=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚</div>`});
+function mkSyncIndicator(synced){
+  if(synced) return `<div style="position:absolute;top:-6px;right:-6px;width:12px;height:12px;background:var(--bl);border:1px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3)">☁</div>`;
+  return `<div style="position:absolute;top:-6px;right:-6px;width:12px;height:12px;background:var(--am);border:1px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#000;box-shadow:0 2px 4px rgba(0,0,0,.3)">!</div>`;
+}
+const mkDraftCaixa=(synced)=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚${mkSyncIndicator(synced)}</div>`});
+const mkRomp=(synced)=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div>${mkSyncIndicator(synced)}</div>`});
+
+function parseGeom(g){
+  if(!g)return null;
+  // Se já for objeto GeoJSON
+  if(typeof g === 'object' && g.type==='LineString') return g.coordinates.map(p=>[p[1],p[0]]);
+  // Se for string (WKB/HEX) - Fallback simplificado ou erro
+  if(typeof g === 'string' && g.startsWith('0102')){
+     // PostGIS WKB Hex para LineString (muito simplificado, ideal é usar biblioteca como wkb-raster ou confiar no GeoJSON do RPC)
+     toast('Geometria WKB detectada. Use GeoJSON no RPC para melhor suporte.','wn');
+     return null;
+  }
+  return null;
+}
 const mkSuggestNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ffb648;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,182,72,.16),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#251200">!</div>`});
 const mkPendNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ff5a68;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,90,104,.14),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#24060b">?</div>`});
 function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,contextmenu=null,className=''}={}){
@@ -2215,12 +2230,29 @@ function auditIssueCard(issue){
   return `<div style="border:1px solid rgba(255,255,255,.08);border-left:4px solid ${tone};border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px">
       <div style="font-size:11px;font-weight:800;color:var(--t)">${esc(issue.title)}</div>
-      <span class="stg ${issue.severity==='critico'?'ter':issue.severity==='alto'?'twn':'tok'}">${esc(issue.severity)}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        ${issue.domain?`<span class="stg tok">${esc(issue.domain)}</span>`:''}
+        ${issue.kind?`<span class="stg tok">${esc(issue.kind)}</span>`:''}
+        <span class="stg ${issue.severity==='critico'?'ter':issue.severity==='alto'?'twn':'tok'}">${esc(issue.severity)}</span>
+      </div>
     </div>
     <div style="font-size:10px;color:var(--t2);line-height:1.65">${esc(issue.detail)}</div>
     <div style="margin-top:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">${esc(issue.action)}</div>
     ${issue.fn?`<div style="margin-top:8px"><button class="pac ${issue.severity==='critico'||issue.severity==='alto'?'a':'b'}" style="width:100%" onclick="${issue.fn}">${esc(issue.fnLabel||'Abrir correção')}</button></div>`:''}
   </div>`;
+}
+function auditPriority(issue){
+  const sev={critico:400,alto:300,medio:200,baixo:100}[issue.severity]||0;
+  const kind={campo:40,continuidade:35,ruptura:35,topologia:30,dados:20,ux:10}[issue.kind]||0;
+  const domain={mapa:30,segmento:28,ativo:26,cabo:24,dgo:22,science:18,performance:16,offline:14}[issue.domain]||0;
+  return sev+kind+domain;
+}
+function sortAuditIssues(issues){
+  return [...issues].sort((a,b)=>{
+    const diff=auditPriority(b)-auditPriority(a);
+    if(diff!==0)return diff;
+    return String(a.title||'').localeCompare(String(b.title||''),'pt-BR');
+  });
 }
 function openFirstBrokenSegment(){
   const seg=getInvStore().segmentos.find(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b));
@@ -2307,25 +2339,25 @@ function auditMetrics(){
 function collectAuditIssues(){
   const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,segReady,segPendingGeo,cabNoInventory,cabWithRupture}=auditMetrics();
   const issues=[];
-  if(!allS.length)issues.push({severity:'critico',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
-  if(!allC.length)issues.push({severity:'alto',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
-  if(!scienceSites.length)issues.push({severity:'alto',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
-  if(scienceSites.length && !cnReady)issues.push({severity:'alto',title:'Agrupamento CN/localidade indisponível',detail:'A base Science existe, mas os sites do mapa não ficaram enriquecidos com CN/localidade.',action:'Validar mescla Science + Supabase antes de publicar.'});
-  if(semGeo>0)issues.push({severity:'medio',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
-  if(sciOnly>0)issues.push({severity:'medio',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
-  if(segBroken>0)issues.push({severity:'alto',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.',fn:'openFirstBrokenSegment()',fnLabel:'Abrir primeiro segmento quebrado'});
-  if(pointBroken>0)issues.push({severity:'alto',title:'Ativos operacionais quebrados',detail:`Há ${pointBroken} ativo(s) locais classificados como quebrados ou sem continuidade.`,action:'Usar o resumo operacional e as pendências para fechar continuidade antes de consolidar.',fn:'openFirstBrokenPoint()',fnLabel:'Ir para primeiro ativo quebrado'});
-  if(pointPending>0)issues.push({severity:'medio',title:'Ativos ainda pendentes',detail:`Existem ${pointPending} ativo(s) em montagem ou com continuidade parcial.`,action:'Validar em campo e confirmar conexões para reduzir pendências.',fn:'openFirstPendingPoint()',fnLabel:'Ir para primeiro ativo pendente'});
-  if(segPendingGeo>0)issues.push({severity:'medio',title:'Segmentos sem geometria suficiente',detail:`Há ${segPendingGeo} segmento(s) com pontas definidas, mas sem geometria desenhada.`,action:'Redesenhar os segmentos antes de usar em campo.',fn:'openFirstSegmentPendingGeometry()',fnLabel:'Abrir primeiro segmento sem geometria'});
-  if(cabWithRupture>0)issues.push({severity:'alto',title:'Cabos com ruptura local associada',detail:`Foram detectados ${cabWithRupture} cabo(s) com ruptura local registrada.`,action:'Revisar rapidamente os cabos com OTDR/ruptura antes de publicação operacional.',fn:'openFirstCableWithRupture()',fnLabel:'Abrir primeira ruptura ligada'});
-  if(cabNoInventory>0)issues.push({severity:'medio',title:'Cabos sem inventário local',detail:`Pelo menos ${cabNoInventory} cabo(s) avaliados ainda não têm segmento local associado.`,action:'Tratar isso como lacuna de inventário, não necessariamente falha do mapa.'});
-  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.',fn:'openFirstDgoUnresolved()',fnLabel:'Abrir primeiro DGO pendente'});
+  if(!allS.length)issues.push({severity:'critico',domain:'mapa',kind:'campo',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
+  if(!allC.length)issues.push({severity:'alto',domain:'mapa',kind:'continuidade',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
+  if(!scienceSites.length)issues.push({severity:'alto',domain:'science',kind:'dados',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
+  if(scienceSites.length && !cnReady)issues.push({severity:'alto',domain:'science',kind:'dados',title:'Agrupamento CN/localidade indisponível',detail:'A base Science existe, mas os sites do mapa não ficaram enriquecidos com CN/localidade.',action:'Validar mescla Science + Supabase antes de publicar.'});
+  if(semGeo>0)issues.push({severity:'medio',domain:'mapa',kind:'dados',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
+  if(sciOnly>0)issues.push({severity:'medio',domain:'science',kind:'dados',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
+  if(segBroken>0)issues.push({severity:'alto',domain:'segmento',kind:'continuidade',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.',fn:'openFirstBrokenSegment()',fnLabel:'Abrir primeiro segmento quebrado'});
+  if(pointBroken>0)issues.push({severity:'alto',domain:'ativo',kind:'continuidade',title:'Ativos operacionais quebrados',detail:`Há ${pointBroken} ativo(s) locais classificados como quebrados ou sem continuidade.`,action:'Usar o resumo operacional e as pendências para fechar continuidade antes de consolidar.',fn:'openFirstBrokenPoint()',fnLabel:'Ir para primeiro ativo quebrado'});
+  if(pointPending>0)issues.push({severity:'medio',domain:'ativo',kind:'campo',title:'Ativos ainda pendentes',detail:`Existem ${pointPending} ativo(s) em montagem ou com continuidade parcial.`,action:'Validar em campo e confirmar conexões para reduzir pendências.',fn:'openFirstPendingPoint()',fnLabel:'Ir para primeiro ativo pendente'});
+  if(segPendingGeo>0)issues.push({severity:'medio',domain:'segmento',kind:'campo',title:'Segmentos sem geometria suficiente',detail:`Há ${segPendingGeo} segmento(s) com pontas definidas, mas sem geometria desenhada.`,action:'Redesenhar os segmentos antes de usar em campo.',fn:'openFirstSegmentPendingGeometry()',fnLabel:'Abrir primeiro segmento sem geometria'});
+  if(cabWithRupture>0)issues.push({severity:'alto',domain:'cabo',kind:'ruptura',title:'Cabos com ruptura local associada',detail:`Foram detectados ${cabWithRupture} cabo(s) com ruptura local registrada.`,action:'Revisar rapidamente os cabos com OTDR/ruptura antes de publicação operacional.',fn:'openFirstCableWithRupture()',fnLabel:'Abrir primeira ruptura ligada'});
+  if(cabNoInventory>0)issues.push({severity:'medio',domain:'cabo',kind:'dados',title:'Cabos sem inventário local',detail:`Pelo menos ${cabNoInventory} cabo(s) avaliados ainda não têm segmento local associado.`,action:'Tratar isso como lacuna de inventário, não necessariamente falha do mapa.'});
+  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',domain:'dgo',kind:'continuidade',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.',fn:'openFirstDgoUnresolved()',fnLabel:'Abrir primeiro DGO pendente'});
   const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
-  if(dgoPend)issues.push({severity:'medio',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.',fn:'openFirstDgoPendencia()',fnLabel:'Abrir primeira pendência de DGO'});
-  if(activeVis>6)issues.push({severity:'medio',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.',fn:'activateFieldPreset()',fnLabel:'Ativar preset de campo'});
-  if(!cacheReady)issues.push({severity:'medio',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
-  if(!issues.length)issues.push({severity:'baixo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
-  return issues;
+  if(dgoPend)issues.push({severity:'medio',domain:'dgo',kind:'continuidade',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.',fn:'openFirstDgoPendencia()',fnLabel:'Abrir primeira pendência de DGO'});
+  if(activeVis>6)issues.push({severity:'medio',domain:'performance',kind:'campo',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.',fn:'activateFieldPreset()',fnLabel:'Ativar preset de campo'});
+  if(!cacheReady)issues.push({severity:'medio',domain:'offline',kind:'campo',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
+  if(!issues.length)issues.push({severity:'baixo',domain:'mapa',kind:'campo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
+  return sortAuditIssues(issues);
 }
 function renderAuditUI(issues){
   const {store,sciOnly,merged,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,pointReady,segReady,segPendingGeo,cabNoInventory}=auditMetrics();
@@ -2335,6 +2367,7 @@ function renderAuditUI(issues){
   let score=100-(crit*25+alto*12+medio*6);
   if(score<0)score=0;
   const scoreTone=score>=85?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+  const topIssues=issues.slice(0,3);
   $('aud-score').textContent=score;
   $('aud-score').style.color=scoreTone;
   $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
@@ -2358,7 +2391,15 @@ function renderAuditUI(issues){
     {title:'Correções sugeridas por IA',detail:'Transformar achados auditados em sugestões executáveis para o usuário.',priority:'Média'}
   ];
   $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
-  $('aud-achados').innerHTML=issues.map(auditIssueCard).join('');
+  $('aud-achados').innerHTML=`
+    <div style="border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Prioridade operacional agora</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${topIssues.map((issue,idx)=>`<div style="display:flex;gap:8px;align-items:flex-start"><div style="min-width:20px;height:20px;border-radius:999px;background:${idx===0?'rgba(232,68,85,.18)':idx===1?'rgba(240,165,0,.16)':'rgba(77,166,255,.16)'};color:${idx===0?'#e84455':idx===1?'#f0a500':'#4da6ff'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800">${idx+1}</div><div style="flex:1"><div style="font-size:11px;font-weight:800;color:var(--t)">${esc(issue.title)}</div><div style="font-size:10px;color:var(--t2);margin-top:2px">${esc(issue.domain||'mapa')} • ${esc(issue.kind||'campo')} • ${esc(issue.severity)}</div></div></div>`).join('')}
+      </div>
+    </div>
+    ${issues.map(auditIssueCard).join('')}
+  `;
 }
 async function rodarAuditoriaIA(silent=false){
   if(!silent)toast('Rodando auditoria operacional...','in');
@@ -3083,7 +3124,7 @@ function renderInventarioDrafts(){
   const store=getInvStore();
   store.caixas.forEach(cx=>{
     if(cx.lat&&cx.lng){
-      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
+      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(!!cx._synced),zIndexOffset:3600})
         .bindPopup(`<b>🧰 ${esc(cx.codigo||'Caixa')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}<br>${cx.precisa_troca?'⚠ Precisa troca<br>':''}${cx.vistoriada?'✓ Vistoriada<br>':''}${esc(cx.observacao||'')}`)
         .on('click',()=>showPanCaixaDraft(cx))
         .addTo(draftInvLayer);
@@ -3094,12 +3135,12 @@ function renderInventarioDrafts(){
     const b=allS.find(s=>((s.nome||'').toUpperCase()===(seg.ponto_b||'').toUpperCase())||((s.codigo||'').toUpperCase()===(seg.ponto_b||'').toUpperCase()));
     const pa=PP(a?.localizacao),pb=PP(b?.localizacao);
     if(pa&&pb){
-      addCableVisual(draftInvLayer,[pa,pb],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>📏 ${esc(seg.cabo||'Segmento')}</b><br>${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
+      addCableVisual(draftInvLayer,[pa,pb],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:seg._synced?0.92:0.6,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>📏 ${esc(seg.cabo||'Segmento')}</b><br>${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
     }
   });
   store.rupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
+      L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
         .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'—')}<br>${esc(rp.observacao||'')}`)
         .addTo(draftInvLayer);
       if(rp.metragem_lancada_m){
@@ -3114,7 +3155,7 @@ function renderInventarioDraftsV2(){
   const store=getInvStore();
   store.caixas.forEach(cx=>{
     if(cx.lat&&cx.lng){
-      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
+      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(!!cx._synced),zIndexOffset:3600})
         .bindPopup(`<b>Caixa ${esc(cx.codigo||'Rascunho')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'-')} | ${esc(cx.modelo||'-')}<br>${cx.precisa_troca?'Precisa troca<br>':''}${cx.vistoriada?'Vistoriada<br>':''}${esc(cx.observacao||'')}`)
         .on('click',()=>showPanCaixaDraft(cx))
         .addTo(draftInvLayer);
@@ -3124,7 +3165,7 @@ function renderInventarioDraftsV2(){
   store.dgos.forEach(dg=>{
     const site=findDraftPoint(dg.site||'');
     if(site?.lat&&site?.lng){
-      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D</div>`});
+      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D${mkSyncIndicator(!!dg._synced)}</div>`});
       const mk=L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3650})
         .bindPopup(`<b>DGO ${esc(dg.codigo||'Rascunho')}</b><br>Site: ${esc(dg.site||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')}`)
         .on('click',()=>showPanDgoDraft(dg))
@@ -3138,7 +3179,7 @@ function renderInventarioDraftsV2(){
       ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(p=>p&&p.length===2)
       : (a?.lat&&a?.lng&&b?.lat&&b?.lng?[[a.lat,a.lng],[b.lat,b.lng]]:null);
     if(path&&path.length>=2){
-      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg),contextmenu:ev=>{
+      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:seg._synced?0.92:0.6,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg),contextmenu:ev=>{
         L.DomEvent.stopPropagation(ev);
         const oe=ev.originalEvent||{};
         openActionMenu({...mkSegmentoMenu(seg,path),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
@@ -3147,7 +3188,7 @@ function renderInventarioDraftsV2(){
   });
   store.rupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
         .bindPopup(`<b>Ruptura ${esc(rp.cabo_segmento||'-')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'-')}<br>${esc(rp.observacao||'')}`)
         .on('click',()=>showPanRupturaDraft(rp))
         .addTo(draftInvLayer);

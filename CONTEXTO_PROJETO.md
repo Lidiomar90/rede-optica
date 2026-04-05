@@ -361,6 +361,12 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - primeira ruptura ligada
   - primeiro DGO pendente
   - ativar preset de campo
+- auditoria agora prioriza e ordena os achados por impacto operacional:
+  - campo
+  - continuidade
+  - ruptura
+  - dados
+  - performance/offline
 
 ### O que ainda falta no front local
 
