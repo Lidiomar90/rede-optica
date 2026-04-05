@@ -292,7 +292,7 @@ class DB:
         """Fallback REST para carregar sites sem psycopg2."""
         try:
             import urllib.request
-            url = f"{SB_URL}/rest/v1/sites?select=id,codigo,nome,camada,municipio,uf&localizacao=not.is.null&limit=60000"
+            url = f"{SB_URL}/rest/v1/vw_sites_lookup?select=id,codigo,nome,nome_norm,camada,municipio,uf&limit=20000&order=codigo.asc"
             req = urllib.request.Request(url, headers={
                 "apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}"
             })
@@ -1126,70 +1126,4 @@ def main():
     conectado = db.connect()
     if not conectado and not USE_REST:
         log.error("Sem conexão ao banco. Defina DB_PASS ou use --dry-run.")
-        sys.exit(1)
-    if USE_REST and not SB_KEY:
-        log.error("SB_KEY ausente. Defina a variável de ambiente antes de usar o modo REST.")
-        sys.exit(1)
-    db.load_sites_cache()
-
-    try:
-        if args.piloto:
-            rodar_piloto(db)
-            return
-
-        if args.rollback:
-            n = db.rollback_batch(args.rollback, args.usuario)
-            log.info(f"Rollback concluído: {n} enlaces inativados")
-            return
-
-        if args.promote:
-            n = db.promote_batch(args.promote, args.usuario)
-            db.commit()
-            log.info(f"Promoção concluída: {n} enlaces criados em produção")
-            return
-
-        if not args.input:
-            log.error("Informe --input para o arquivo JSON ou --piloto para teste.")
-            parser.print_help()
-            sys.exit(1)
-
-        if not Path(args.input).exists():
-            log.error(f"Arquivo não encontrado: {args.input}")
-            sys.exit(1)
-
-        dry = args.dry_run or (not args.commit)
-        if dry:
-            log.info("MODO: DRY-RUN — nada será gravado no banco")
-        else:
-            log.info("MODO: COMMIT — dados serão gravados no staging")
-
-        res = processar_arquivo(
-            caminho=args.input, db=db, dry_run=dry,
-            usuario=args.usuario, batch_id=batch_id,
-            arquivo_origem=Path(args.input).name
-        )
-
-        relatorio_path = LOG_DIR / f"relatorio_etl_{run_ts}.txt"
-        gerar_relatorio(res, str(relatorio_path))
-
-        if not dry and res.total_valido > 0:
-            log.info("")
-            log.info(f"Para promover os {res.total_valido} enlace(s) válido(s) para produção:")
-            log.info(f"  python etl_telegram_rede_optica.py --promote {batch_id}")
-            log.info("")
-            log.info(f"Para reverter este lote:")
-            log.info(f"  python etl_telegram_rede_optica.py --rollback {batch_id}")
-
-    except KeyboardInterrupt:
-        log.info("Interrompido pelo usuário")
-        db.rollback_tx()
-    except Exception as e:
-        log.exception(f"Erro fatal: {e}")
-        db.rollback_tx()
-        sys.exit(1)
-    finally:
-        db.close()
-        log.info(f"Log salvo em: {log_file}")
-
-if __name__ == "__main__":
-    main()
+        s
