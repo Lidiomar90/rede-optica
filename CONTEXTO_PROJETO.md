@@ -307,7 +307,8 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - paineis agora mostram resumo operacional rapido de segmentos/conexoes/pendencias
 - paineis agora permitem navegar rapidamente para ativos relacionados (site/caixa/DGO/segmento)
 - pendencias e rupturas locais agora tambem viram pontos navegaveis no fluxo de tratamento
-  - pendencias e rupturas agora podem pre-preencher formularios de correcao no cadastro
+- pendencias e rupturas agora podem pre-preencher formularios de correcao no cadastro
+  - site, caixa, DGO e segmento agora possuem acoes rapidas para virar `Ponto A/B` ou abrir ruptura contextual
 - rascunhos locais agora editam melhor:
   - `caixa_emenda` pode ser editada
   - `DGO` pode ser editado
@@ -332,6 +333,7 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - controles mobile ficaram maiores
   - barra de desenho no mapa com `desfazer`, `finalizar` e `cancelar`
   - desenho de linha agora fica viável no mobile sem depender de duplo clique
+  - barra de campo mobile com atalhos para `camadas`, `GPS`, `nova caixa`, `nova ruptura` e `auditoria`
 
 ### Auditoria IA local agora verifica tambem
 

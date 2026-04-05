@@ -175,6 +175,12 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .dbtn.warn{background:rgba(255,182,72,.14);border-color:rgba(255,182,72,.26);color:var(--am)}
 .dbtn.danger{background:rgba(255,90,104,.14);border-color:rgba(255,90,104,.26);color:var(--rd)}
 @media(max-width:680px){#drawbar{left:10px;right:10px;bottom:12px;transform:none;justify-content:space-between}.dbtn{min-width:0;flex:1}}
+#fieldbar{display:none}
+@media(max-width:680px){
+  #fieldbar{position:absolute;left:10px;right:10px;bottom:72px;z-index:419;display:flex;gap:8px;padding:8px;background:rgba(9,18,31,.88);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 16px 36px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
+  .fbtn{flex:1;min-width:0;padding:10px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;text-align:center}
+  .fbtn:active{transform:scale(.98)}
+}
 
 /* LEGENDA */
 #leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:none;transition:background .25s;backdrop-filter:blur(16px)}
@@ -407,6 +413,13 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <button class="dbtn warn" onclick="undoDrawPt()">↶ Desfazer</button>
       <button class="dbtn ok" onclick="finishDrawManual()">✓ Finalizar</button>
       <button class="dbtn danger" onclick="cancelDraw()">✕ Cancelar</button>
+    </div>
+    <div id="fieldbar">
+      <button class="fbtn" onclick="toggleSB()">☰ Camadas</button>
+      <button class="fbtn" onclick="goLoc()">📍 GPS</button>
+      <button class="fbtn" onclick="novaCaixaNoCentro()">🧰 Caixa</button>
+      <button class="fbtn" onclick="novaRupturaNoCentro()">🚨 Ruptura</button>
+      <button class="fbtn" onclick="goTab('auditoria',document.querySelector('.nt[onclick*=&quot;auditoria&quot;]'))">🤖 IA</button>
     </div>
     <div id="mt">
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
@@ -2252,6 +2265,27 @@ async function contextCopiarCoord(){
   try{await navigator.clipboard.writeText(txt);toast('Coordenadas copiadas','ok');}
   catch{toast(txt,'wn');}
   hideContextMenu();
+}
+function getMapCenterLatLng(){
+  if(!map)return null;
+  const c=map.getCenter();
+  return {lat:c.lat,lng:c.lng};
+}
+function novaCaixaNoCentro(){
+  const c=getMapCenterLatLng(); if(!c)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-lat').value=Number(c.lat).toFixed(6);
+  $('cx-lng').value=Number(c.lng).toFixed(6);
+  msgField('cx-msg','Centro do mapa aplicado no cadastro da caixa.','ok');
+  toast('Centro do mapa aplicado para nova caixa','ok');
+}
+function novaRupturaNoCentro(){
+  const c=getMapCenterLatLng(); if(!c)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-lat').value=Number(c.lat).toFixed(6);
+  $('rp-lng').value=Number(c.lng).toFixed(6);
+  msgField('rp-msg','Centro do mapa aplicado no cadastro da ruptura.','ok');
+  toast('Centro do mapa aplicado para nova ruptura','ok');
 }
 window.addEventListener('offline',()=>setOfflineState(true,'Sem rede. O app vai tentar usar o último cache local.'));
 window.addEventListener('online',()=>setOfflineState(false,'Conexão restabelecida.'));
