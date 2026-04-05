@@ -1461,6 +1461,63 @@ function limparInventarioRascunho(){
   msgField('inv-msg','Rascunhos locais removidos.','ok');
 }
 function getConexoesCaixa(codigo){return getInvStore().conexoes.filter(x=>(x.caixa_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function getConexoesDgo(codigo){return getInvStore().conexoes.filter(x=>(x.dgo_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function findDraftPoint(ref){
+  const key=(ref||'').toUpperCase().trim();
+  if(!key)return null;
+  const store=getInvStore();
+  const cx=store.caixas.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(cx&&cx.lat&&cx.lng)return{tipo:'caixa',codigo:cx.codigo||cx.nome,lat:cx.lat,lng:cx.lng,item:cx};
+  const dg=store.dgos.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(dg){
+    const site=allS.find(s=>((s.codigo||'').toUpperCase()===((dg.site||'').toUpperCase()))||((s.nome||'').toUpperCase()===((dg.site||'').toUpperCase())));
+    const pt=PP(site?.localizacao);
+    if(pt)return{tipo:'dgo',codigo:dg.codigo||dg.nome,lat:pt[0],lng:pt[1],item:dg,site};
+  }
+  const st=allS.find(s=>((s.codigo||'').toUpperCase()===key)||((s.nome||'').toUpperCase()===key));
+  const pt=PP(st?.localizacao);
+  if(pt)return{tipo:'site',codigo:st.codigo||st.nome,lat:pt[0],lng:pt[1],item:st};
+  return null;
+}
+function buildDgoConnectionDiagram(codigo){
+  const segs=getInvStore().segmentos.filter(s=>((s.ponto_a||'').toUpperCase()===(codigo||'').toUpperCase())||((s.ponto_b||'').toUpperCase()===(codigo||'').toUpperCase()));
+  if(!segs.length)return'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhum segmento ligado a este DGO.</div>';
+  return `<div style="display:flex;flex-direction:column;gap:8px">${segs.map(s=>`
+    <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03)">
+      <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(s.ponto_a||'—')} <span style="color:var(--t3)">→</span> ${esc(s.ponto_b||'—')}</div>
+      <div style="margin-top:5px;font-size:10px;color:var(--t3)">${esc(s.tipo_lancamento||'—')} | ${km(s.metragem_m)}${s.lote?` | lote ${esc(s.lote)}`:''}</div>
+    </div>`).join('')}</div>`;
+}
+function showPanDgoDraft(dg){
+  if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
+  closePan();
+  const conexoes=getConexoesDgo(dg.codigo);
+  $('pt').textContent=`DGO ${dg.codigo||'Rascunho'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site||'—')}</span></div>
+    <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
+    <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
+    <div class="pr"><span class="pl">Bastidor</span><span class="pv">${esc(dg.bastidor||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(dg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(dg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(dg.status||'—')}</span></div>
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Continuidade</div>
+      ${buildDgoConnectionDiagram(dg.codigo)}
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Conexões registradas</div>
+      ${conexoes.length?conexoes.map(c=>`<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03);margin-bottom:6px">
+        <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(c.cabo_entrada||'—')} <span style="color:var(--t3)">→</span> ${esc(c.cabo_saida||'—')}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.tipo||'pendente_confirmacao')}</div>
+        ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
+      </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma conexão registrada.</div>'}
+    </div>
+    ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
+  $('pan').style.display='block';
+}
 function getNearbyCabos(lat,lng,maxDist=35){
   const out=[];
   allC.forEach(c=>{
