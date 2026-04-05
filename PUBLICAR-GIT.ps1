@@ -116,11 +116,18 @@ if ($LASTEXITCODE -ne 0) {
 # --- Push com token ---
 Write-Host "Publicando no GitHub..." -ForegroundColor Cyan
 $URL_TOKEN = "https://Lidiomar90:$TOKEN@github.com/Lidiomar90/rede-optica.git"
-$pushOutput = git push $URL_TOKEN main --force 2>&1
-if ($LASTEXITCODE -ne 0) { throw ($pushOutput | Out-String) }
-$pushOutput | Out-Host
+$pushStdOut = Join-Path $env:TEMP "rede-optica-push.out"
+$pushStdErr = Join-Path $env:TEMP "rede-optica-push.err"
+if (Test-Path $pushStdOut) { Remove-Item -LiteralPath $pushStdOut -Force }
+if (Test-Path $pushStdErr) { Remove-Item -LiteralPath $pushStdErr -Force }
+$pushProc = Start-Process -FilePath "git" -ArgumentList @("push", $URL_TOKEN, "main", "--force") -NoNewWindow -Wait -PassThru -RedirectStandardOutput $pushStdOut -RedirectStandardError $pushStdErr
+$pushOutput = @()
+if (Test-Path $pushStdOut) { $pushOutput += Get-Content -LiteralPath $pushStdOut }
+if (Test-Path $pushStdErr) { $pushOutput += Get-Content -LiteralPath $pushStdErr }
+if ($pushProc.ExitCode -ne 0) { throw ($pushOutput | Out-String) }
+if ($pushOutput.Count -gt 0) { $pushOutput | Out-Host }
 
-if ($LASTEXITCODE -eq 0) {
+if ($pushProc.ExitCode -eq 0) {
     Write-Host ""
     Write-Host "======================================" -ForegroundColor Green
     Write-Host "  PUBLICADO COM SUCESSO!" -ForegroundColor Green
