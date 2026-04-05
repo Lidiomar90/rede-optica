@@ -1556,6 +1556,23 @@ function recomputePendencias(){
       pend.push({id:`pend_${seg.id}_incompleto`,tipo:'segmento_incompleto',referencia:seg.cabo||seg.id,observacao:'Segmento sem ponto A ou ponto B definido.'});
     }
   });
+  store.dgos.forEach(dg=>{
+    const code=(dg.codigo||'').toUpperCase();
+    const qtd=refs.get(code)||0;
+    const site=findDraftPoint(dg.site||'');
+    if(!site){
+      pend.push({id:`pend_${code}_site`,tipo:'dgo_sem_site_resolvido',referencia:dg.codigo,observacao:'DGO sem site/localizacao resolvida para continuidade.'});
+      return;
+    }
+    if(qtd===0){
+      pend.push({id:`pend_${code}_sem_conexao`,tipo:'dgo_sem_conexao',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO cadastrado sem segmento ligado. Completar terminacao ou continuidade.'});
+    }else if(qtd===1){
+      pend.push({id:`pend_${code}_incompleto`,tipo:'dgo_incompleto',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO possui apenas um lado conectado. Revisar entrada, saida ou passagem.'});
+    }
+    if((dg.status||'').toLowerCase()!=='ativo'){
+      pend.push({id:`pend_${code}_status`,tipo:'dgo_pendente',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO marcado com status pendente de campo ou vistoria.'});
+    }
+  });
   store.pendencias=pend;
   localStorage.setItem(INV_KEY,JSON.stringify(store));
   return pend;
@@ -1615,6 +1632,35 @@ function salvarConexaoCaixa(codigo,lat,lng){
   });
   msgField('ac-msg','✓ Pré-conexão salva como pendente de confirmação.','ok');
   setTimeout(()=>{closeM();showPanCaixaDraft(getInvStore().caixas.find(c=>(c.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
+}
+function abrirAssistenteConexaoDgo(codigo){
+  const dg=getInvStore().dgos.find(x=>(x.codigo||'').toUpperCase()===String(codigo||'').toUpperCase());
+  if(!dg){toast('DGO nao encontrado','er');return;}
+  const site=findDraftPoint(dg.site||'');
+  const cabos=site?getNearbyCabos(site.lat,site.lng,45):[];
+  const opts='<option value="">-- selecione --</option>'+cabos.map(c=>`<option value="${esc(c.nome||c.id)}">${esc(c.nome||c.id)}${c.tipo?` (${esc(c.tipo)})`:''}</option>`).join('');
+  $('mtt').textContent=`Conexao do DGO - ${codigo}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(124,147,255,.08);border:1px solid rgba(124,147,255,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      O sistema usou o site <b>${esc(dg.site||'—')}</b> como referencia de posicao para sugerir cabos proximos. Confirme em campo antes de consolidar.
+    </div>
+    <div class="mfg"><label>Cabo entrada</label><select id="ad-in">${opts}</select></div>
+    <div class="mfg"><label>Cabo saida</label><select id="ad-out">${opts}</select></div>
+    <div class="mfg"><label>Tipo</label><select id="ad-tipo"><option>terminacao</option><option>passagem</option><option>carona</option><option>pendente_confirmacao</option></select></div>
+    <div class="mfg"><label>Observacao</label><textarea id="ad-obs" placeholder="Descreva a terminacao, fila, bandeja, fibras e pendencias de campo."></textarea></div>
+    <div id="ad-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarConexaoDgo('${codigo.replace(/'/g,"\\'")}')">Salvar conexao</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+function salvarConexaoDgo(codigo){
+  const caboIn=gv('ad-in'),caboOut=gv('ad-out');
+  if(!caboIn&&!caboOut){msgField('ad-msg','Escolha ao menos um cabo para registrar a conexao.');return;}
+  addInvItem('conexoes',{dgo_codigo:codigo,cabo_entrada:caboIn,cabo_saida:caboOut,tipo:gv('ad-tipo'),observacao:gv('ad-obs')});
+  msgField('ad-msg','Conexao do DGO salva como pendente de confirmacao.','ok');
+  setTimeout(()=>{closeM();showPanDgoDraft(getInvStore().dgos.find(d=>(d.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
 }
 
 function salvarCaixa(){
