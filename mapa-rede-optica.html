@@ -2219,7 +2219,64 @@ function auditIssueCard(issue){
     </div>
     <div style="font-size:10px;color:var(--t2);line-height:1.65">${esc(issue.detail)}</div>
     <div style="margin-top:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">${esc(issue.action)}</div>
+    ${issue.fn?`<div style="margin-top:8px"><button class="pac ${issue.severity==='critico'||issue.severity==='alto'?'a':'b'}" style="width:100%" onclick="${issue.fn}">${esc(issue.fnLabel||'Abrir correção')}</button></div>`:''}
   </div>`;
+}
+function openFirstBrokenSegment(){
+  const seg=getInvStore().segmentos.find(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b));
+  if(!seg){toast('Nenhum segmento quebrado encontrado','wn');return;}
+  jumpToSegmentDraft(seg.id);
+}
+function openFirstBrokenPoint(){
+  const refs=[
+    ...getInvStore().caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...getInvStore().dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const found=refs.find(ref=>{
+    const st=getPointOperationalState(ref);
+    return st&&(st.status==='quebrado'||st.status==='sem continuidade');
+  });
+  if(!found){toast('Nenhum ativo quebrado encontrado','wn');return;}
+  jumpToRef(found);
+}
+function openFirstPendingPoint(){
+  const refs=[
+    ...getInvStore().caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...getInvStore().dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const found=refs.find(ref=>{
+    const st=getPointOperationalState(ref);
+    return st&&(st.status==='pendente'||st.status==='em montagem');
+  });
+  if(!found){toast('Nenhum ativo pendente encontrado','wn');return;}
+  jumpToRef(found);
+}
+function openFirstSegmentPendingGeometry(){
+  const seg=getInvStore().segmentos.find(s=>getSegmentOperationalState(s).status==='pendente geometria');
+  if(!seg){toast('Nenhum segmento pendente de geometria','wn');return;}
+  showPanSegmentoDraft(seg);
+}
+function openFirstCableWithRupture(){
+  const found=allC.find(c=>getCableOperationalState(c,c.comprimento||0).status==='com ruptura');
+  if(!found){toast('Nenhum cabo com ruptura local encontrado','wn');return;}
+  const rel=getCableDraftRelations(found.nome||'');
+  if(rel.rupts[0])jumpToRupturaDraft(rel.rupts[0].id);
+  else showPanCabo(found,PL(found.trajeto)||[],found.comprimento||0);
+}
+function openFirstDgoUnresolved(){
+  const dg=getInvStore().dgos.find(d=>!findDraftPoint(d.site||''));
+  if(!dg){toast('Nenhum DGO pendente de site encontrado','wn');return;}
+  editarDgoDraft(dg.id);
+}
+function openFirstDgoPendencia(){
+  const p=getInvStore().pendencias.find(x=>String(x.tipo||'').startsWith('dgo_'));
+  if(!p){toast('Nenhuma pendência de DGO encontrada','wn');return;}
+  showPanPendencia(p);
+}
+function activateFieldPreset(){
+  applyPreset('campo');
+  if(!fieldMode)applyFieldMode(true,'Preset de campo ativado pela auditoria.');
+  else toast('Preset de campo reforçado para uso operacional','ok');
 }
 function auditMetrics(){
   const store=getInvStore();
@@ -2231,10 +2288,24 @@ function auditMetrics(){
   const dgoResolved=store.dgos.filter(d=>findDraftPoint(d.site||'')).length;
   const activeVis=Object.values(VIS).filter(Boolean).length;
   const cacheReady=!!loadMapCache();
-  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady};
+  const pointRefs=[
+    ...store.caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...store.dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const pointStates=pointRefs.map(ref=>getPointOperationalState(ref)).filter(Boolean);
+  const pointBroken=pointStates.filter(s=>s.status==='quebrado'||s.status==='sem continuidade').length;
+  const pointPending=pointStates.filter(s=>s.status==='pendente'||s.status==='em montagem').length;
+  const pointReady=pointStates.filter(s=>s.status==='confirmado').length;
+  const segStates=store.segmentos.map(getSegmentOperationalState);
+  const segReady=segStates.filter(s=>s.status==='pronto para campo').length;
+  const segPendingGeo=segStates.filter(s=>s.status==='pendente geometria').length;
+  const cabStates=allC.slice(0,300).map(c=>getCableOperationalState(c,c.comprimento||0));
+  const cabNoInventory=cabStates.filter(s=>s.status==='sem inventário local').length;
+  const cabWithRupture=cabStates.filter(s=>s.status==='com ruptura').length;
+  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,pointReady,segReady,segPendingGeo,cabNoInventory,cabWithRupture};
 }
 function collectAuditIssues(){
-  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady}=auditMetrics();
+  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,segReady,segPendingGeo,cabNoInventory,cabWithRupture}=auditMetrics();
   const issues=[];
   if(!allS.length)issues.push({severity:'critico',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
   if(!allC.length)issues.push({severity:'alto',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
@@ -2242,17 +2313,22 @@ function collectAuditIssues(){
   if(scienceSites.length && !cnReady)issues.push({severity:'alto',title:'Agrupamento CN/localidade indisponível',detail:'A base Science existe, mas os sites do mapa não ficaram enriquecidos com CN/localidade.',action:'Validar mescla Science + Supabase antes de publicar.'});
   if(semGeo>0)issues.push({severity:'medio',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
   if(sciOnly>0)issues.push({severity:'medio',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
-  if(segBroken>0)issues.push({severity:'alto',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.'});
-  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.'});
+  if(segBroken>0)issues.push({severity:'alto',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.',fn:'openFirstBrokenSegment()',fnLabel:'Abrir primeiro segmento quebrado'});
+  if(pointBroken>0)issues.push({severity:'alto',title:'Ativos operacionais quebrados',detail:`Há ${pointBroken} ativo(s) locais classificados como quebrados ou sem continuidade.`,action:'Usar o resumo operacional e as pendências para fechar continuidade antes de consolidar.',fn:'openFirstBrokenPoint()',fnLabel:'Ir para primeiro ativo quebrado'});
+  if(pointPending>0)issues.push({severity:'medio',title:'Ativos ainda pendentes',detail:`Existem ${pointPending} ativo(s) em montagem ou com continuidade parcial.`,action:'Validar em campo e confirmar conexões para reduzir pendências.',fn:'openFirstPendingPoint()',fnLabel:'Ir para primeiro ativo pendente'});
+  if(segPendingGeo>0)issues.push({severity:'medio',title:'Segmentos sem geometria suficiente',detail:`Há ${segPendingGeo} segmento(s) com pontas definidas, mas sem geometria desenhada.`,action:'Redesenhar os segmentos antes de usar em campo.',fn:'openFirstSegmentPendingGeometry()',fnLabel:'Abrir primeiro segmento sem geometria'});
+  if(cabWithRupture>0)issues.push({severity:'alto',title:'Cabos com ruptura local associada',detail:`Foram detectados ${cabWithRupture} cabo(s) com ruptura local registrada.`,action:'Revisar rapidamente os cabos com OTDR/ruptura antes de publicação operacional.',fn:'openFirstCableWithRupture()',fnLabel:'Abrir primeira ruptura ligada'});
+  if(cabNoInventory>0)issues.push({severity:'medio',title:'Cabos sem inventário local',detail:`Pelo menos ${cabNoInventory} cabo(s) avaliados ainda não têm segmento local associado.`,action:'Tratar isso como lacuna de inventário, não necessariamente falha do mapa.'});
+  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.',fn:'openFirstDgoUnresolved()',fnLabel:'Abrir primeiro DGO pendente'});
   const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
-  if(dgoPend)issues.push({severity:'medio',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.'});
-  if(activeVis>6)issues.push({severity:'medio',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.'});
+  if(dgoPend)issues.push({severity:'medio',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.',fn:'openFirstDgoPendencia()',fnLabel:'Abrir primeira pendência de DGO'});
+  if(activeVis>6)issues.push({severity:'medio',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.',fn:'activateFieldPreset()',fnLabel:'Ativar preset de campo'});
   if(!cacheReady)issues.push({severity:'medio',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
   if(!issues.length)issues.push({severity:'baixo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
   return issues;
 }
 function renderAuditUI(issues){
-  const {store,sciOnly,merged,segBroken,dgoResolved,activeVis,cacheReady}=auditMetrics();
+  const {store,sciOnly,merged,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,pointReady,segReady,segPendingGeo,cabNoInventory}=auditMetrics();
   const crit=issues.filter(i=>i.severity==='critico').length;
   const alto=issues.filter(i=>i.severity==='alto').length;
   const medio=issues.filter(i=>i.severity==='medio').length;
@@ -2266,7 +2342,9 @@ function renderAuditUI(issues){
     auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
     auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
     auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
-    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn')
+    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
+    auditCard('Estados operacionais',`Confirmados ${pointReady} | Pendentes ${pointPending} | Quebrados ${pointBroken}`,pointBroken?'wn':'ok'),
+    auditCard('Pronto para campo',`Segmentos prontos ${segReady} | sem geometria ${segPendingGeo} | cabos sem inventário ${cabNoInventory}`,segPendingGeo?'wn':'ok')
   ].join('');
   $('aud-acoes').innerHTML=[
     auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),

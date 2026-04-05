@@ -347,6 +347,12 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - ausencia de cache offline
 - DGO sem site resolvido
 - segmentos quebrados
+- estados operacionais dos ativos locais:
+  - confirmados
+  - pendentes
+  - quebrados / sem continuidade
+  - segmentos prontos para campo
+  - cabos sem inventario local
 
 ### O que ainda falta no front local
 

@@ -317,23 +317,51 @@ class DB:
             log.error(f"Falha ao carregar sites via REST: {e}")
 
     def lookup_site(self, sigla: str) -> Optional[dict]:
-        """Busca um site pelo código. Retorna dict ou None."""
+        """Busca um site pelo código ou nome similar. Retorna dict ou None."""
         if not sigla:
             return None
         s = sigla.strip().upper()
+        
+        # 1. Busca exata (código ou alias direto MG/MGSIGLA)
         if s in self._site_aliases:
             return self._site_aliases[s]
-        # Tentar com sufixo MG
+            
+        # 2. Tentar com sufixo MG
         if not s.endswith("MG"):
             s2 = s + "MG"
             if s2 in self._site_aliases:
                 return self._site_aliases[s2]
-        # Tentar com prefixo MG
+                
+        # 3. Tentar com prefixo MG
         if not s.startswith("MG"):
             s3 = "MG" + s
             if s3 in self._site_aliases:
                 return self._site_aliases[s3]
+                
+        # 4. Fuzzy Match por Sigla (difflib)
+        # Só tenta se a sigla tiver um tamanho razoável para evitar colisões absurdas
+        if len(s) >= 4:
+            matches = difflib.get_close_matches(s, self._site_aliases.keys(), n=1, cutoff=0.85)
+            if matches:
+                # log.debug(f"Fuzzy sigla match: {s} -> {matches[0]}")
+                return self._site_aliases[matches[0]]
+
+        # 5. Busca por nome (nome_norm ou nome original)
+        # Lento, mas útil como último recurso
+        s_norm = self.normalizar_nome(s)
+        if len(s_norm) > 5:
+            for cod, reg in self._sites_cache.items():
+                nome = reg.get("nome", "").upper()
+                if s in nome or s_norm in self.normalizar_nome(nome):
+                    return reg
+                    
         return None
+
+    def normalizar_nome(self, texto: str) -> str:
+        """Remove acentos e caracteres especiais para comparação."""
+        if not texto: return ""
+        t = "".join(c for c in unicodedata.normalize('NFD', texto) if unicodedata.category(c) != 'Mn')
+        return re.sub(r'[^A-Z0-9]', '', t.upper())
 
     def check_duplicata(self, pa: str, pb: str, tipo: str) -> Optional[str]:
         """Verifica se já existe enlace com estas pontas (em qualquer ordem)."""
