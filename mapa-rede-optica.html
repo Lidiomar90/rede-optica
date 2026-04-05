@@ -315,6 +315,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   <div class="nt" onclick="goTab('rotas',this)">🔗 Rotas</div>
   <div class="nt" onclick="goTab('incidentes',this)">🚨 Incidentes<span class="nbadge" id="ibadge" style="display:none">0</span></div>
   <div class="nt" onclick="goTab('cadastro',this)">✏ Cadastrar</div>
+  <div class="nt" onclick="goTab('auditoria',this)">🤖 Auditoria IA</div>
   <div class="nt adm" style="display:none" onclick="goTab('usuarios',this)">👥 Usuários</div>
 </div>
 
@@ -593,6 +594,42 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   </div>
 </div>
 
+<!-- AUDITORIA -->
+<div class="pg" id="pg-auditoria" style="flex-direction:column">
+  <div class="pgc">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
+      <b style="font-size:13px">Auditoria inteligente operacional</b>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Rodar auditoria</button>
+        <button class="tb" onclick="abrirFilaAuditoria()">📋 Ver esteira</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+      <div class="fc">
+        <div class="fct">Score operacional</div>
+        <div id="aud-score" style="font-size:42px;font-weight:900;color:var(--gr);margin-bottom:8px">—</div>
+        <div id="aud-score-txt" style="font-size:11px;color:var(--t2);line-height:1.7">Aguardando execução da auditoria.</div>
+      </div>
+      <div class="fc">
+        <div class="fct">Resumo</div>
+        <div id="aud-resumo" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">Ações seguras</div>
+        <div id="aud-acoes" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">Fila de implementação</div>
+        <div id="aud-fila" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
+      </div>
+    </div>
+    <div style="margin-top:12px" class="fc">
+      <div class="fct">Achados da auditoria</div>
+      <div id="aud-achados" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- USUÁRIOS -->
 <div class="pg" id="pg-usuarios" style="flex-direction:column">
   <div class="pgc">
@@ -677,6 +714,7 @@ function iniciarApp(){
   if(sessao.perfil==='admin')document.querySelectorAll('.adm').forEach(e=>e.style.display='');
   buildLayerPanel();loadMap();loadIncidentes();loadRotas();
   if(sessao.perfil==='admin')loadUsuarios();
+  setTimeout(()=>rodarAuditoriaIA(true),250);
   aplicarTema();
 }
 
@@ -1306,7 +1344,7 @@ function goTab(tab,el){
   document.querySelectorAll('.nt').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   if(el)el.classList.add('on');$('pg-'+tab).classList.add('on');
-  if(tab==='rotas')loadRotas();if(tab==='incidentes')loadIncidentes();if(tab==='usuarios')loadUsuarios();
+  if(tab==='rotas')loadRotas();if(tab==='incidentes')loadIncidentes();if(tab==='usuarios')loadUsuarios();if(tab==='auditoria')rodarAuditoriaIA(true);
 }
 
 // INCIDENTES
@@ -1415,6 +1453,88 @@ async function toggleUsuario(id,ativo){
   if([200,204].includes(r.status)){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast('Erro','er');
 }
 
+function auditCard(title,detail,tone='in'){
+  const bd=tone==='ok'?'rgba(62,207,142,.22)':tone==='wn'?'rgba(240,165,0,.24)':'rgba(77,166,255,.22)';
+  const bg=tone==='ok'?'rgba(62,207,142,.08)':tone==='wn'?'rgba(240,165,0,.08)':'rgba(77,166,255,.08)';
+  return `<div style="border:1px solid ${bd};background:${bg};border-radius:10px;padding:10px 12px"><div style="font-size:11px;font-weight:800;color:var(--t);margin-bottom:4px">${esc(title)}</div><div style="font-size:10px;color:var(--t2);line-height:1.6">${esc(detail)}</div></div>`;
+}
+function auditIssueCard(issue){
+  const tone=issue.severity==='critico'?'#e84455':issue.severity==='alto'?'#f0a500':'#4da6ff';
+  return `<div style="border:1px solid rgba(255,255,255,.08);border-left:4px solid ${tone};border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:800;color:var(--t)">${esc(issue.title)}</div>
+      <span class="stg ${issue.severity==='critico'?'ter':issue.severity==='alto'?'twn':'tok'}">${esc(issue.severity)}</span>
+    </div>
+    <div style="font-size:10px;color:var(--t2);line-height:1.65">${esc(issue.detail)}</div>
+    <div style="margin-top:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">${esc(issue.action)}</div>
+  </div>`;
+}
+function auditMetrics(){
+  const store=getInvStore();
+  const sciOnly=allS.filter(s=>s.fonte==='science').length;
+  const merged=allS.filter(s=>s.fonte==='supabase+science').length;
+  const semGeo=allS.filter(s=>!PP(s.localizacao)).length;
+  const segBroken=store.segmentos.filter(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b)).length;
+  const dgoResolved=store.dgos.filter(d=>findDraftPoint(d.site||'')).length;
+  return{store,sciOnly,merged,semGeo,segBroken,dgoResolved};
+}
+function collectAuditIssues(){
+  const {store,sciOnly,semGeo,segBroken,dgoResolved}=auditMetrics();
+  const issues=[];
+  if(!allS.length)issues.push({severity:'critico',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
+  if(!allC.length)issues.push({severity:'alto',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
+  if(!scienceSites.length)issues.push({severity:'alto',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
+  if(semGeo>0)issues.push({severity:'medio',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
+  if(sciOnly>0)issues.push({severity:'medio',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
+  if(segBroken>0)issues.push({severity:'alto',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.'});
+  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.'});
+  const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
+  if(dgoPend)issues.push({severity:'medio',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.'});
+  if(!issues.length)issues.push({severity:'baixo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
+  return issues;
+}
+function renderAuditUI(issues){
+  const {store,sciOnly,merged,segBroken,dgoResolved}=auditMetrics();
+  const crit=issues.filter(i=>i.severity==='critico').length;
+  const alto=issues.filter(i=>i.severity==='alto').length;
+  const medio=issues.filter(i=>i.severity==='medio').length;
+  let score=100-(crit*25+alto*12+medio*6);
+  if(score<0)score=0;
+  const scoreTone=score>=85?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+  $('aud-score').textContent=score;
+  $('aud-score').style.color=scoreTone;
+  $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
+  $('aud-resumo').innerHTML=[
+    auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
+    auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
+    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn')
+  ].join('');
+  $('aud-acoes').innerHTML=[
+    auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),
+    auditCard('Pode publicar incrementalmente',crit||alto?'Ainda não. Corrija os itens altos primeiro.':'Sim, como versão incremental com auditoria local ativa.',crit||alto?'wn':'ok'),
+    auditCard('DGOs já auditáveis',`${dgoResolved}/${store.dgos.length||0} DGO(s) resolvidos via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'ok')
+  ].join('');
+  const fila=[
+    {title:'Persistir DGO no banco',detail:'Criar tabela/view REST para DGO e plugar o painel local.',priority:'Alta'},
+    {title:'Consolidar segmentos físicos',detail:'Salvar segmento_cabo real em vez de só rascunho local.',priority:'Alta'},
+    {title:'Auditoria automática agendada',detail:'Rodar checklist local antes de cada publish e gerar snapshot.',priority:'Média'},
+    {title:'Correções sugeridas por IA',detail:'Transformar achados auditados em sugestões executáveis para o usuário.',priority:'Média'}
+  ];
+  $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
+  $('aud-achados').innerHTML=issues.map(auditIssueCard).join('');
+}
+async function rodarAuditoriaIA(silent=false){
+  if(!silent)toast('Rodando auditoria operacional...','in');
+  renderInventarioResumo();
+  renderPendencias();
+  const issues=collectAuditIssues();
+  renderAuditUI(issues);
+  if(!silent)toast('Auditoria atualizada.','ok');
+}
+function abrirFilaAuditoria(){
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  toast('Fila de implementação aberta.','in');
+}
 // SALVAR FORMS INLINE
 const gv=id=>$(id)?.value?.trim()||null;
 const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
