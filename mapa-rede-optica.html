@@ -603,6 +603,7 @@ function aplicarTema(){
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
+let cableFx={},activeCableId=null;
 let editMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
 let rastLayer=null,otdrLayer=null,rompLayer=null;
@@ -646,6 +647,22 @@ function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popu
   group.addTo(layer);
   return {group,halo,line};
 }
+function resetCableSelection(){
+  activeCableId=null;
+  Object.values(cableFx).forEach(v=>{
+    if(!v?.line||!v?.halo)return;
+    v.line.setStyle({weight:v.baseWeight,opacity:v.baseOpacity,color:v.baseColor,dashArray:v.baseDashArray||null});
+    v.halo.setStyle({weight:v.baseWeight+3,opacity:v.baseHaloOpacity,color:'#ffffff'});
+  });
+}
+function highlightCable(id){
+  if(!id||!cableFx[id])return;
+  resetCableSelection();
+  activeCableId=id;
+  const fx=cableFx[id];
+  fx.line.setStyle({weight:fx.baseWeight+2.2,opacity:1,color:fx.baseColor});
+  fx.halo.setStyle({weight:fx.baseWeight+7,opacity:.42,color:fx.baseColor});
+}
 
 function initMapObj(){
   if(map)return;
@@ -664,7 +681,7 @@ async function loadMap(){
   initMapObj();
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
-  allS=[];allC=[];fmap={};
+  allS=[];allC=[];fmap={};cableFx={};activeCableId=null;
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
     const[sites,cabos]=await Promise.all([
@@ -713,6 +730,7 @@ async function loadMap(){
         L.DomEvent.stopPropagation(ev);if(drawMode||medMode)return;
         showPanCabo(c,p2,lenCalc);
       }});
+      cableFx[c.id]={...vis,baseColor:cor,baseWeight:peso,baseOpacity:t==='backbone'?.96:.88,baseHaloOpacity:Math.min((t==='backbone'?.96:.88)*.22,.32),baseDashArray:null};
       fmap['c-'+c.id]=()=>map.fitBounds(vis.line.getBounds(),{padding:[50,50]});
     });
     // Carregar incidentes abertos com rompimento no mapa
@@ -794,7 +812,7 @@ function renderSB(q=''){
   });
   el.innerHTML=h;
 }
-function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(fmap[id])fmap[id]();closeSB();}
+function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
 function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
 function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
 
@@ -819,6 +837,7 @@ function showPanSite(s,pt){
 }
 function showPanCabo(c,pts,lenCalc){
   closePan();
+  highlightCable(c.id);
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
   showPan(c.nome||'Cabo',[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
