@@ -7,6 +7,8 @@
 $PASTA   = "C:\FIBRA CADASTRO"
 $REPO    = "https://github.com/Lidiomar90/rede-optica.git"
 $TOKEN_F = "$PASTA\.github_token"
+$TOKEN_ALT = "$PASTA\privado\.github_token"
+$GITIGNORE = "$PASTA\.gitignore"
 
 # Arquivos que serao publicados (precisam estar na pasta)
 $ARQUIVOS = @(
@@ -27,8 +29,11 @@ Write-Host ""
 if (Test-Path $TOKEN_F) {
     $TOKEN = (Get-Content $TOKEN_F -Raw).Trim()
     Write-Host "Token encontrado." -ForegroundColor Green
+} elseif (Test-Path $TOKEN_ALT) {
+    $TOKEN = (Get-Content $TOKEN_ALT -Raw).Trim()
+    Write-Host "Token encontrado." -ForegroundColor Green
 } else {
-    Write-Host "ERRO: arquivo .github_token nao encontrado em $PASTA" -ForegroundColor Red
+    Write-Host "ERRO: arquivo .github_token nao encontrado em $PASTA ou $PASTA\privado" -ForegroundColor Red
     Write-Host "Crie o arquivo .github_token com seu token do GitHub dentro." -ForegroundColor Yellow
     Write-Host ""
     pause
@@ -37,6 +42,23 @@ if (Test-Path $TOKEN_F) {
 
 # --- Ir para a pasta ---
 Set-Location $PASTA
+
+# --- Garantir .gitignore essencial ---
+$ignorePatterns = @(
+    "telegram/",
+    "*.dwg",
+    "privado/"
+)
+if (-not (Test-Path $GITIGNORE)) {
+    New-Item -ItemType File -Path $GITIGNORE -Force | Out-Null
+}
+$gitignoreAtual = Get-Content $GITIGNORE -ErrorAction SilentlyContinue
+foreach ($pattern in $ignorePatterns) {
+    if ($gitignoreAtual -notcontains $pattern) {
+        Add-Content -Path $GITIGNORE -Value $pattern
+        Write-Host "Adicionado ao .gitignore: $pattern" -ForegroundColor Yellow
+    }
+}
 
 # --- Verificar se .git existe ---
 if (-not (Test-Path "$PASTA\.git")) {
@@ -54,6 +76,7 @@ if (-not (Test-Path "$PASTA\.git")) {
 # --- Configurar usuario git ---
 git config user.email "lidiomar@redeop.com.br"
 git config user.name "Lidiomar90"
+git config --global --add safe.directory $PASTA 2>$null
 
 # --- Verificar arquivos ---
 Write-Host ""
@@ -80,7 +103,7 @@ if ($faltando.Count -gt 0) {
 # --- Adicionar e commitar ---
 Write-Host ""
 Write-Host "Adicionando arquivos..." -ForegroundColor Cyan
-git add index.html mapa-rede-optica.html dashboard.html ia-assistente.html auditoria-revisao.html .nojekyll 2>$null
+git add .gitignore index.html mapa-rede-optica.html dashboard.html ia-assistente.html auditoria-revisao.html .nojekyll 2>$null
 git add -u 2>$null
 
 $DATA = Get-Date -Format "dd/MM/yyyy HH:mm"
@@ -92,9 +115,7 @@ if ($LASTEXITCODE -ne 0) {
 # --- Push com token ---
 Write-Host "Publicando no GitHub..." -ForegroundColor Cyan
 $URL_TOKEN = "https://Lidiomar90:$TOKEN@github.com/Lidiomar90/rede-optica.git"
-$pushOutput = $pushOutput = git push $URL_TOKEN main --force 2>&1
-if ($LASTEXITCODE -ne 0) { throw ($pushOutput | Out-String) }
-$pushOutput | Out-Host
+$pushOutput = git push $URL_TOKEN main --force 2>&1
 if ($LASTEXITCODE -ne 0) { throw ($pushOutput | Out-String) }
 $pushOutput | Out-Host
 

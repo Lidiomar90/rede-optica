@@ -47,7 +47,9 @@ DB_USER     = os.getenv("DB_USER",     "postgres")
 DB_PASS     = os.getenv("DB_PASS",     "")  # Definir via env: set DB_PASS=suasenha
 
 SB_URL      = "https://xmqxhzmjxprhvyqwlqvz.supabase.co"
-SB_KEY      = os.getenv("SB_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtcXhoem1qeHByaHZ5cXdscXZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MzYxMzcsImV4cCI6MjA5MDMxMjEzN30.ohD97pPgtpxyHmCjWYKz-OWpcqVtDBXuQZSc1BJQngo")
+SB_KEY      = os.getenv("SB_KEY", "")
+if not SB_KEY:
+    print("AVISO: SB_KEY não definida. Defina: $env:SB_KEY='sua-chave-anon'")
 
 # ── Fallback: conexão via REST API do Supabase (sem psycopg2)
 USE_REST    = not HAS_PG or not DB_PASS
@@ -1029,6 +1031,9 @@ def main():
     conectado = db.connect()
     if not conectado and not USE_REST:
         log.error("Sem conexão ao banco. Defina DB_PASS ou use --dry-run.")
+        sys.exit(1)
+    if USE_REST and not SB_KEY:
+        log.error("SB_KEY ausente. Defina a variável de ambiente antes de usar o modo REST.")
         sys.exit(1)
     db.load_sites_cache()
 
