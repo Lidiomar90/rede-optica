@@ -5,3 +5,12 @@
 *.rar
 *.7z
 logs/
+.env
+.env.*
+.github_token
+.openai_api_key
+.claude_api_key
+.supabase_key
+*.key
+telegram/
+privado/
