@@ -698,7 +698,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
+let map,allS=[],allC=[],allR=[],scienceSites=[],sbMode='camadas',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -726,6 +726,10 @@ function camVis(c,t){const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();if(
 function getSiteLayer(cv){return{backbone:'bb_site',metro_alta:'m4_equip',metro_dist:'m5_equip',ERB:'ac_erb',caixa:'ac_caixa',acesso:'ac_site',b2b:'b2b_site'}[cv]||'outros';}
 const PP=g=>g?.type==='Point'?[g.coordinates[1],g.coordinates[0]]:null;
 const PL=g=>g?.type==='LineString'?g.coordinates.map(c=>[c[1],c[0]]):null;
+const normCode=v=>String(v||'').trim().toUpperCase();
+const normText=v=>String(v||'').trim();
+const sciencePoint=(lat,lng)=>({type:'Point',coordinates:[lng,lat]});
+const cnSort=(a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR',{numeric:true});
 const mkD=(c,s=9)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
 const mkSq=(c,s=8)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:2px;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
 const mkDia=(c,s=13)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s*.7}px;height:${s*.7}px;margin:${s*.15}px;background:${c};border:2px solid rgba(255,255,255,.6);transform:rotate(45deg);border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.9)"></div>`});
@@ -745,6 +749,94 @@ function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popu
   if(click)line.on('click',click);
   group.addTo(layer);
   return {group,halo,line};
+}
+async function loadScienceSites(){
+  try{
+    const r=await fetch('./science_sites_mg.json',{cache:'no-store'});
+    if(!r.ok)return[];
+    const payload=await r.json();
+    const sites=Array.isArray(payload?.sites)?payload.sites:[];
+    return sites.map(s=>({
+      ...s,
+      codigo:normCode(s.codigo),
+      nome:normText(s.nome)||normCode(s.codigo),
+      municipio:normText(s.municipio),
+      localidade:normText(s.localidade),
+      cn:normText(s.cn),
+      uf:normText(s.uf)||'MG',
+      status:(s.status||'ativo').toLowerCase(),
+      tipo:'site',
+      camada:'acesso',
+      localizacao:s.localizacao||sciencePoint(Number(s.latitude),Number(s.longitude)),
+      fonte:'science',
+      somente_science:true,
+    })).filter(s=>s.codigo&&PP(s.localizacao));
+  }catch{return[];}
+}
+function mergeSitesData(baseSites,scienceList){
+  const sciMap=new Map(scienceList.map(s=>[normCode(s.codigo),s]));
+  const merged=[],seen=new Set();
+  baseSites.forEach(site=>{
+    const codigo=normCode(site.codigo||site.nome);
+    const sci=sciMap.get(codigo);
+    const item={
+      ...site,
+      codigo:codigo||site.codigo,
+      science:sci||null,
+      cn:sci?.cn||site.cn||null,
+      localidade:sci?.localidade||site.localidade||null,
+      supervisor:sci?.supervisor||site.supervisor||null,
+      seq_site:sci?.seq_site||site.seq_site||null,
+      endereco:sci?.endereco||site.endereco||null,
+      endereco_ssi:sci?.endereco_ssi||site.endereco_ssi||null,
+      tipo_site:sci?.tipo_site||site.tipo_site||null,
+      descricao_tipo_site:sci?.descricao_tipo_site||site.descricao_tipo_site||null,
+      categoria_site:sci?.categoria_site||site.categoria_site||null,
+      subcategoria_site:sci?.subcategoria_site||site.subcategoria_site||null,
+      tipo_estrutura:sci?.tipo_estrutura||site.tipo_estrutura||null,
+      id_financeiro:sci?.id_financeiro||site.id_financeiro||null,
+      site_vip:sci?.site_vip||site.site_vip||null,
+      restricao_acesso:sci?.restricao_acesso||site.restricao_acesso||null,
+      fonte:sci?'supabase+science':'supabase',
+    };
+    if(!PP(item.localizacao) && sci?.localizacao)item.localizacao=sci.localizacao;
+    if(!seen.has(item.codigo) && PP(item.localizacao)){merged.push(item);seen.add(item.codigo);}
+  });
+  scienceList.forEach(site=>{
+    if(seen.has(site.codigo))return;
+    merged.push({
+      id:'science-'+site.codigo,
+      codigo:site.codigo,
+      nome:site.nome,
+      tipo:'site',
+      camada:'acesso',
+      status:site.status,
+      municipio:site.municipio,
+      uf:site.uf||'MG',
+      observacao:`Science CN ${site.cn||'—'} | ${site.localidade||site.municipio||'—'}`,
+      responsavel:site.supervisor||null,
+      localizacao:site.localizacao,
+      science:site,
+      cn:site.cn,
+      localidade:site.localidade,
+      supervisor:site.supervisor,
+      seq_site:site.seq_site,
+      endereco:site.endereco,
+      endereco_ssi:site.endereco_ssi,
+      tipo_site:site.tipo_site,
+      descricao_tipo_site:site.descricao_tipo_site,
+      categoria_site:site.categoria_site,
+      subcategoria_site:site.subcategoria_site,
+      tipo_estrutura:site.tipo_estrutura,
+      id_financeiro:site.id_financeiro,
+      site_vip:site.site_vip,
+      restricao_acesso:site.restricao_acesso,
+      fonte:'science',
+      somente_science:true,
+    });
+    seen.add(site.codigo);
+  });
+  return merged;
 }
 function resetCableSelection(){
   activeCableId=null;
@@ -796,14 +888,17 @@ async function loadMap(){
   initMapObj();
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
-  allS=[];allC=[];fmap={};cableFx={};activeCableId=null;
+  allS=[];allC=[];scienceSites=[];fmap={};cableFx={};activeCableId=null;
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
-    const[sites,cabos]=await Promise.all([
+    const[sites,cabos,science]=await Promise.all([
       fetch(`${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`,{headers:RH}).then(r=>r.json()),
       fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`,{headers:RH}).then(r=>r.json()),
+      loadScienceSites(),
     ]);
-    allS=Array.isArray(sites)?sites:[];allC=Array.isArray(cabos)?cabos:[];
+    scienceSites=Array.isArray(science)?science:[];
+    allS=mergeSitesData(Array.isArray(sites)?sites:[],scienceSites);
+    allC=Array.isArray(cabos)?cabos:[];
     const totalSites=allS.length.toLocaleString('pt-BR');
     const totalCabos=allC.length.toLocaleString('pt-BR');
     $('ce').textContent=totalSites;
@@ -914,8 +1009,36 @@ function filterSB(q){if(sbMode!=='camadas')renderSB(q);}
 function renderSB(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
   let data=sbMode==='cabos'?allC:allS;
-  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')).toLowerCase().includes(q));
+  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
   if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
+  if(sbMode==='sites'){
+    const byCn={};
+    data.forEach(i=>{
+      const cn=normText(i.cn)||'Sem CN';
+      const loc=normText(i.localidade)||normText(i.municipio)||'Sem localidade';
+      if(!byCn[cn])byCn[cn]={};
+      if(!byCn[cn][loc])byCn[cn][loc]=[];
+      byCn[cn][loc].push(i);
+    });
+    let h='';
+    Object.keys(byCn).sort(cnSort).forEach(cn=>{
+      const localMap=byCn[cn];
+      const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
+      h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
+      Object.keys(localMap).sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(loc=>{
+        const arr=localMap[loc].sort((a,b)=>(a.nome||a.codigo||'').localeCompare(b.nome||b.codigo||'','pt-BR'));
+        h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--ta);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
+        arr.slice(0,120).forEach(i=>{
+          const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+          const sub=[i.municipio,i.codigo&&`Código ${i.codigo}`,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+          h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+        });
+        if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
   const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
   let h='';
   Object.entries(G).sort().forEach(([g,arr])=>{
@@ -938,6 +1061,7 @@ function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='n
 // PAINEL
 function showPanSite(s,pt){
   closePan();
+  const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
   showPan(s.nome||s.codigo||'Site',[
     s.codigo&&['Código',s.codigo],
     ['Tipo',s.tipo||'—'],['Camada',s.camada||'—'],
@@ -951,6 +1075,40 @@ function showPanSite(s,pt){
     sessao.perfil!=='leitura'&&{l:'🚨 Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
     {l:'🔍 Rota',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
     sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('sites','${s.id}')`},
+  ].filter(Boolean));
+  focI('s-'+s.id);
+}
+function showPanSite(s,pt){
+  closePan();
+  const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
+  showPan(s.nome||s.codigo||'Site',[
+    s.codigo&&['Codigo',s.codigo],
+    ['Tipo',s.tipo||'-'],['Camada',s.camada||'-'],
+    s.cn&&['CN / DDD',s.cn],
+    s.localidade&&['Localidade',s.localidade],
+    s.municipio&&['Municipio',(s.municipio||'')+(s.uf?'/'+s.uf:'')],
+    s.seq_site&&['SEQ Site',s.seq_site],
+    s.id_financeiro&&['ID financeiro',s.id_financeiro],
+    s.endereco&&['Endereco',s.endereco],
+    s.endereco_ssi&&['Endereco SSI',s.endereco_ssi],
+    s.tipo_site&&['Tipo Science',s.tipo_site],
+    s.descricao_tipo_site&&['Descricao',s.descricao_tipo_site],
+    s.tipo_estrutura&&['Estrutura',s.tipo_estrutura],
+    s.categoria_site&&['Categoria',s.categoria_site],
+    s.subcategoria_site&&['Subcategoria',s.subcategoria_site],
+    s.supervisor&&['Supervisor',s.supervisor],
+    s.site_vip&&['Site VIP',s.site_vip],
+    s.restricao_acesso&&['Restricao acesso',s.restricao_acesso],
+    s.fonte&&['Fonte',s.fonte],
+    s.responsavel&&['Responsavel',s.responsavel],
+    s.status&&['Status',s.status,TC(s.status)],
+    s.observacao&&['Obs',s.observacao.substring(0,200)],
+  ],[
+    sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
+    sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    {l:'Rota',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil==='admin'&&canEdit&&{l:'Excluir',c:'r',fn:`del('sites','${s.id}')`},
   ].filter(Boolean));
   focI('s-'+s.id);
 }
