@@ -306,7 +306,8 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - listas e painéis usam `codigo — nome`
 - paineis agora mostram resumo operacional rapido de segmentos/conexoes/pendencias
 - paineis agora permitem navegar rapidamente para ativos relacionados (site/caixa/DGO/segmento)
-  - pendencias e rupturas locais agora tambem viram pontos navegaveis no fluxo de tratamento
+- pendencias e rupturas locais agora tambem viram pontos navegaveis no fluxo de tratamento
+  - pendencias e rupturas agora podem pre-preencher formularios de correcao no cadastro
 - rascunhos locais agora editam melhor:
   - `caixa_emenda` pode ser editada
   - `DGO` pode ser editado

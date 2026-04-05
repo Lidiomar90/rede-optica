@@ -1437,8 +1437,11 @@ function showPanSite(s,pt){
   ].filter(Boolean);
   showPan(codeFirstLabel(s),rows,[
     sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
+    {l:'Ponto A',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-a')`},
+    {l:'Ponto B',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-b')`},
     sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
     sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
+    {l:'Nova ruptura',c:'a',fn:`abrirNovaRupturaContextual('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}',${pt[0]},${pt[1]})`},
     {l:'Rota',fn:`abrirRastreamento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
     sessao.perfil==='admin'&&canEdit&&{l:'Excluir',c:'r',fn:`del('sites','${s.id}')`},
   ].filter(Boolean));
@@ -2030,7 +2033,7 @@ function showPanDgoDraft(dg){
     ${buildRefLinksHtml(dg.codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -2106,13 +2109,15 @@ function renderPendencias(){
 function showPanPendencia(p){
   closePan();
   const relatedRef=String(p.referencia||'');
+  const isDgo=String(p.tipo||'').startsWith('dgo_');
+  const isCaixa=String(p.tipo||'').includes('caixa')||String(p.tipo||'').includes('ponta_solta')||String(p.tipo||'').includes('vistoria');
   $('pt').textContent='⚠ Pendência operacional';
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Tipo</span><span class="pv">${esc(p.tipo||'—')}</span></div>
     <div class="pr"><span class="pl">Referência</span><span class="pv">${esc(p.referencia||'—')}</span></div>
     <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(p.observacao||'Pendência sem descrição')}</div>
   `;
-  $('pa').innerHTML=`${relatedRef?`<button class="pac b" onclick="jumpToRef('${relatedRef.replace(/'/g,"\\'")}')">🔎 Ir para referência</button>`:''}<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
+  $('pa').innerHTML=`${relatedRef?`<button class="pac b" onclick="jumpToRef('${relatedRef.replace(/'/g,"\\'")}')">🔎 Ir para referência</button>`:''}${isCaixa?`<button class="pac g" onclick="abrirCaixaPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🧰 Corrigir caixa</button>`:''}${isDgo?`<button class="pac g" onclick="abrirDgoPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🗄 Corrigir DGO</button>`:''}<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
   $('pan').style.display='block';
 }
 function showPanRupturaDraft(rp){
@@ -2129,7 +2134,7 @@ function showPanRupturaDraft(rp){
     ${rp.nova_caixa?buildRefLinksHtml(rp.nova_caixa):''}
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`${rp.nova_caixa?`<button class="pac b" onclick="jumpToRef('${String(rp.nova_caixa).replace(/'/g,"\\'")}')">🧰 Ir para nova caixa</button>`:''}<button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar ruptura</button>`;
+  $('pa').innerHTML=`${rp.nova_caixa?`<button class="pac b" onclick="jumpToRef('${String(rp.nova_caixa).replace(/'/g,"\\'")}')">🧰 Ir para nova caixa</button>`:''}<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar ruptura</button>`;
   $('pan').style.display='block';
 }
 function abrirAssistenteConexaoCaixa(codigo,lat,lng){
@@ -2250,6 +2255,64 @@ async function contextCopiarCoord(){
 }
 window.addEventListener('offline',()=>setOfflineState(true,'Sem rede. O app vai tentar usar o último cache local.'));
 window.addEventListener('online',()=>setOfflineState(false,'Conexão restabelecida.'));
+function abrirCaixaPorPendencia(p){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const ref=String(p.referencia||'');
+  const cx=getInvStore().caixas.find(x=>String(x.codigo||'').toUpperCase()===ref.toUpperCase());
+  if(cx)editarCaixaDraft(cx.id);
+  else{
+    $('cx-codigo').value=ref||$('cx-codigo').value;
+    if(p.lat&&p.lng){$('cx-lat').value=Number(p.lat).toFixed(6);$('cx-lng').value=Number(p.lng).toFixed(6);}
+    $('cx-obs').value=(gv('cx-obs')?gv('cx-obs')+'\n':'')+`Abertura por pendência: ${p.tipo||'pendencia'} — ${p.observacao||''}`;
+    msgField('cx-msg','Pendência carregada no cadastro da caixa.','ok');
+  }
+}
+function abrirDgoPorPendencia(p){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const ref=String(p.referencia||'');
+  const dg=getInvStore().dgos.find(x=>String(x.codigo||'').toUpperCase()===ref.toUpperCase());
+  if(dg)editarDgoDraft(dg.id);
+  else{
+    $('dg-codigo').value=ref||$('dg-codigo').value;
+    $('dg-obs').value=(gv('dg-obs')?gv('dg-obs')+'\n':'')+`Abertura por pendência: ${p.tipo||'pendencia'} — ${p.observacao||''}`;
+    msgField('dg-msg','Pendência carregada no cadastro do DGO.','ok');
+  }
+}
+function abrirRupturaPorContexto(rp){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-cabo').value=rp.cabo_segmento||'';
+  $('rp-otdr').value=rp.distancia_otdr_m||'';
+  $('rp-lanc').value=rp.metragem_lancada_m||'';
+  $('rp-caixa').value=rp.nova_caixa||'';
+  $('rp-reparo').value=rp.tipo_reparo||'fusao';
+  $('rp-lat').value=rp.lat||'';
+  $('rp-lng').value=rp.lng||'';
+  $('rp-obs').value=rp.observacao||'';
+  msgField('rp-msg','Ruptura carregada no formulário para ajuste.','ok');
+}
+function usarComoPontoSegmento(ref,target){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const el=$(target);
+  if(el)el.value=ref||'';
+  msgField('sg-msg',`${target==='sg-a'?'Ponto A':'Ponto B'} definido como ${ref}`,'ok');
+  toast(`${target==='sg-a'?'Ponto A':'Ponto B'} = ${ref}`,'ok');
+}
+function abrirNovaRupturaContextual(caboOuRef,lat,lng){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(caboOuRef)$('rp-cabo').value=caboOuRef;
+  if(lat&&lng){$('rp-lat').value=Number(lat).toFixed(6);$('rp-lng').value=Number(lng).toFixed(6);}
+  msgField('rp-msg','Contexto aplicado para nova ruptura.','ok');
+}
+function abrirCaixaPorPendenciaId(id){
+  const p=getInvStore().pendencias.find(x=>x.id===id);
+  if(!p){toast('Pendência não encontrada','wn');return;}
+  abrirCaixaPorPendencia(p);
+}
+function abrirDgoPorPendenciaId(id){
+  const p=getInvStore().pendencias.find(x=>x.id===id);
+  if(!p){toast('Pendência não encontrada','wn');return;}
+  abrirDgoPorPendencia(p);
+}
 
 function salvarCaixa(){
   const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
@@ -2362,7 +2425,7 @@ function showPanCaixaDraft(cx){
     ${buildRefLinksHtml(cx.codigo||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){
@@ -2381,7 +2444,7 @@ function showPanSegmentoDraft(seg){
     ${buildSegmentLinksHtml(seg)}
     ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button><button class="pac a" onclick="abrirNovaRupturaContextual('${String(seg.cabo||'').replace(/'/g,"\\'")}')">🚨 Nova ruptura</button>`;
   $('pan').style.display='block';
 }
 function editarSegmentoDraft(id){
