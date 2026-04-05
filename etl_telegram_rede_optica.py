@@ -22,7 +22,7 @@ Requisitos:
   pip install psycopg2-binary python-dateutil
 """
 
-import os, sys, re, json, uuid, logging, argparse, unicodedata
+import os, sys, re, json, uuid, logging, argparse, unicodedata, difflib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional

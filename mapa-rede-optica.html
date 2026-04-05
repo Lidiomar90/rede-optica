@@ -667,8 +667,10 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
       <b style="font-size:13px">Auditoria inteligente operacional</b>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Rodar auditoria</button>
-        <button class="tb" onclick="abrirFilaAuditoria()">📋 Ver esteira</button>
+        <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Auditoria</button>
+        <button class="tb g" onclick="syncLocalDrafts()">☁ Sincronizar Tudo</button>
+        <button class="tb a" onclick="syncGraphRPC()">🔗 Sincronizar Grafo</button>
+        <button class="tb" onclick="abrirFilaAuditoria()">📋 Esteira</button>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
@@ -1231,18 +1233,36 @@ function initMapObj(){
   mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
 }
 
+function getBBoxString(){
+  if(!map)return'';
+  const b=map.getBounds();
+  return `BOX(${b.getWest()} ${b.getSouth()}, ${b.getEast()} ${b.getNorth()})`;
+}
+
 async function loadMap(){
   initMapObj();
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
   allS=[];allC=[];scienceSites=[];fmap={};cableFx={};activeCableId=null;
+  
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
     let sites,cabos,science;
     try{
+      const zoom = map.getZoom();
+      let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
+      let caboUrl = `${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`;
+      
+      // Se estiver com zoom alto, filtra por BBOX para carregar apenas o necessário mais rápido
+      if(zoom > 10){
+        const bbox = getBBoxString();
+        siteUrl += `&localizacao=ov.${bbox}`;
+        caboUrl += `&trajeto=ov.${bbox}`;
+      }
+
       [sites,cabos,science]=await Promise.all([
-        fetch(`${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
-        fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
+        fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
+        fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
       ]);
       saveMapCache(sites,cabos,science);
@@ -1329,6 +1349,15 @@ async function loadRompimentosNoMapa(){
     if(!i.lat_falha||!i.lng_falha)return;
     const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp(),zIndexOffset:5000})
       .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`);
+    attachMarkerFieldActions(mk,()=>({
+      title:`Rompimento ${normText(i.titulo)||'ativo'}`,
+      subtitle:`${esc(i.site_afetado||'—')}<br>${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}`,
+      actions:[
+        {label:'📋 Abrir popup',action:()=>mk.openPopup()},
+        {label:'📍 Centralizar no mapa',action:()=>map.setView([i.lat_falha,i.lng_falha],17)},
+        {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(i.lat_falha),Number(i.lng_falha))},
+      ]
+    }));
     // Se tem cabo lançado, mostrar indicativo
     if(i.distancia_otdr_m){
       const sub=`+${i.distancia_otdr_m}m cabo lançado`;
@@ -1402,6 +1431,77 @@ function applyPreset(name){
 }
 function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));}
 function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}}
+
+async function syncGraphRPC(){
+  toast('Sincronizando grafos no banco...','in');
+  try {
+    const r1 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos`, {method:'POST', headers:RH});
+    const r2 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos_dgo`, {method:'POST', headers:RH});
+    if(r1.ok && r2.ok) toast('✓ Grafos sincronizados com sucesso!','ok');
+    else toast('⚠ Falha parcial na sincronização do grafo.','wn');
+  } catch (e) {
+    toast('Erro ao conectar para sincronizar grafo.','er');
+  }
+}
+
+async function syncLocalDrafts(){
+  const store = getInvStore();
+  let total = 0, ok = 0;
+  toast('Iniciando sincronização de rascunhos...','in');
+
+  // Sincronizar Caixas
+  for(const cx of store.caixas){
+    if(cx._synced) continue; total++;
+    const payload = {
+      codigo: cx.codigo, nome: cx.nome, tipo_instalacao: cx.tipo_instalacao,
+      modelo: cx.modelo, fabricante: cx.fabricante, status: cx.status,
+      vistoriada: !!cx.vistoriada, precisa_troca: !!cx.precisa_troca,
+      localizacao: cx.lat && cx.lng ? `SRID=4326;POINT(${cx.lng} ${cx.lat})` : null,
+      observacao: cx.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/caixa_emenda`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ cx._synced = true; ok++; }
+  }
+
+  // Sincronizar DGOs
+  for(const dg of store.dgos){
+    if(dg._synced) continue; total++;
+    const site = allS.find(s=>s.codigo===dg.site || s.nome===dg.site);
+    if(site && site.id && String(site.id).indexOf('science-')!==0){
+      const payload = {
+        codigo: dg.codigo, nome: dg.nome, site_id: site.id,
+        rack: dg.rack, fila: dg.fila, bastidor: dg.bastidor,
+        modelo: dg.modelo, fabricante: dg.fabricante, status: dg.status,
+        observacao: dg.observacao
+      };
+      const res = await fetch(`${SU}/rest/v1/dgo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+      if(res.ok){ dg._synced = true; ok++; }
+    }
+  }
+
+  // Sincronizar Segmentos
+  for(const seg of store.segmentos){
+    if(seg._synced) continue; total++;
+    let trajeto = null;
+    if(Array.isArray(seg.geometria_pts)){
+       const coords = seg.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
+       trajeto = `SRID=4326;LINESTRING(${coords})`;
+    }
+    const payload = {
+      cabo: seg.cabo, ponto_a: seg.ponto_a, ponto_b: seg.ponto_b,
+      tipo_lancamento: seg.tipo_lancamento, metragem_m: seg.metragem_m,
+      fabricante: seg.fabricante, modelo: seg.modelo, lote: seg.lote,
+      trajeto: trajeto, observacao: seg.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/segmento_cabo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ seg._synced = true; ok++; }
+  }
+
+  saveInvStore(store);
+  if(total===0) toast('Nada novo para sincronizar.','in');
+  else toast(`✓ Sincronizados ${ok} de ${total} itens.` , ok===total?'ok':'wn');
+  if(ok > 0) loadMap();
+}
 
 // SIDEBAR
 function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';if(m!=='camadas')renderSB($('si').value);}
@@ -1530,15 +1630,63 @@ function getPointSummary(ref){
 function buildOperationalBadges(items){
   return items.filter(Boolean).map(([label,tone='var(--bl)'])=>`<span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:9px;font-weight:800;color:${tone};text-transform:uppercase;letter-spacing:.08em">${esc(label)}</span>`).join('');
 }
+function getPointOperationalState(ref){
+  const sum=getPointSummary(ref);
+  if(!sum)return null;
+  if(sum.segs===0&&sum.conns===0){
+    return {status:'sem continuidade',tone:'var(--rd)',detail:'Nenhum segmento ou conexão registrado.'};
+  }
+  if(sum.pend>0&&sum.conns===0){
+    return {status:'quebrado',tone:'var(--rd)',detail:'Há pendências abertas e nenhuma conexão confirmada.'};
+  }
+  if(sum.pend>0){
+    return {status:'pendente',tone:'var(--am)',detail:'Existe continuidade parcial, mas ainda há pendências.'};
+  }
+  if(sum.segs>0&&sum.conns>0){
+    return {status:'confirmado',tone:'var(--gr)',detail:'Há segmentos e conexões registradas sem pendências locais.'};
+  }
+  if(sum.segs>0){
+    return {status:'em montagem',tone:'var(--bl)',detail:'Há segmentos ligados, mas falta confirmar conexão operacional.'};
+  }
+  return {status:'indefinido',tone:'var(--t2)',detail:'Sem dados suficientes para classificar este ativo.'};
+}
+function getCableOperationalState(c,lenCalc){
+  const rel=getCableDraftRelations(c.nome||'');
+  const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):0;
+  if(rel.rupts.length){
+    return {status:'com ruptura',tone:'var(--rd)',detail:`${rel.rupts.length} ruptura(s) local(is) associada(s).`,rel,diff};
+  }
+  if(!rel.segs.length){
+    return {status:'sem inventário local',tone:'var(--am)',detail:'Ainda não há segmentos locais conectados a este cabo.',rel,diff};
+  }
+  if(diff>1000){
+    return {status:'revisar metragem',tone:'var(--am)',detail:'Diferença alta entre o comprimento cadastrado e o calculado.',rel,diff};
+  }
+  return {status:'operacional',tone:'var(--gr)',detail:'Cabo com segmentos locais e sem ruptura local registrada.',rel,diff};
+}
+function getSegmentOperationalState(seg){
+  const hasA=!!String(seg.ponto_a||'').trim();
+  const hasB=!!String(seg.ponto_b||'').trim();
+  const hasGeo=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2;
+  if(!hasA||!hasB){
+    return {status:'quebrado',tone:'var(--rd)',detail:'Segmento sem ponto A ou ponto B definido.'};
+  }
+  if(!hasGeo){
+    return {status:'pendente geometria',tone:'var(--am)',detail:'Segmento com A/B definidos, mas ainda sem geometria desenhada.'};
+  }
+  return {status:'pronto para campo',tone:'var(--gr)',detail:'Segmento com pontas definidas e geometria disponível para navegação.'};
+}
 function operationalSummaryHtml(ref){
   const sum=getPointSummary(ref);
   if(!sum)return '';
+  const state=getPointOperationalState(ref);
   const badges=buildOperationalBadges([
     [`${sum.segs} segmento(s)`,'var(--bl)'],
     [sum.conns?`${sum.conns} conexão(ões)`:'sem conexão',sum.conns?'var(--gr)':'var(--am)'],
     [sum.pend?`${sum.pend} pendência(s)`:'sem pendência',sum.pend?'var(--rd)':'var(--gr)'],
+    state&&[state.status,state.tone],
   ]);
-  return `<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Resumo operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${badges}</div></div>`;
+  return `<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Resumo operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${badges}</div>${state?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${state.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(state.status)}</b><br>${esc(state.detail)}</div>`:''}</div>`;
 }
 function getCableDraftRelations(name){
   const store=getInvStore();
@@ -1637,7 +1785,8 @@ function showPanCabo(c,pts,lenCalc){
   closePan();
   highlightCable(c.id);
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
-  const rel=getCableDraftRelations(c.nome||'');
+  const cableState=getCableOperationalState(c,lenCalc);
+  const rel=cableState.rel;
   showPan(codeFirstLabel(c),[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
     ['Comprimento cad.',km(c.comprimento)],
@@ -1651,9 +1800,10 @@ function showPanCabo(c,pts,lenCalc){
     sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
   ].filter(Boolean));
   $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+    [cableState.status,cableState.tone],
     [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
     [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
-  ])}</div></div>`;
+  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${cableState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(cableState.status)}</b><br>${esc(cableState.detail)}</div></div>`;
   if(rel.segs.length){
     $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
   }
@@ -1785,38 +1935,76 @@ function abrirRastreamento(siteNome){
     <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="limparRast()">Limpar</button><button class="btn2 p" onclick="execRast()">🔍 Rastrear</button></div>`;
   $('mbg').classList.add('show');
 }
+async function findNodeId(ref){
+  const key=String(ref||'').trim().toUpperCase();
+  if(!key)return null;
+  // Busca em network_nodes por sigla ou nome
+  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(sigla.ilike.*${key}*,nome.ilike.*${key}*)&limit=1`,{headers:RH});
+  if(!r.ok)return null;
+  const d=await r.json();
+  return d?.[0]?.id || null;
+}
+
 async function execRast(){
   const orig=($('rt-a')?.value||'').trim().toUpperCase();
   const dest=($('rt-b')?.value||'').trim().toUpperCase();
   const cam=$('rt-c')?.value||'';
   if(!orig||!dest){toast('Informe origem e destino','er');return;}
-  const el=$('rt-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando...</div>';
-  const sA=allS.find(s=>(s.nome||'').toUpperCase().includes(orig)||(s.codigo||'').toUpperCase()===orig);
-  const sB=allS.find(s=>(s.nome||'').toUpperCase().includes(dest)||(s.codigo||'').toUpperCase()===dest);
+  
+  const el=$('rt-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Buscando nós no grafo...</div>';
+  
+  const [idA, idB] = await Promise.all([findNodeId(orig), findNodeId(dest)]);
+  if(!idA || !idB){
+    el.innerHTML=`<div style="color:var(--rd);padding:8px">Nó(s) não localizado(s) no grafo: ${!idA?orig:''} ${!idB?dest:''}</div>`;
+    return;
+  }
+
+  el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando rota (BFS)...</div>';
   limparRast();rastLayer=L.layerGroup().addTo(map);
-  const mA=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="width:14px;height:14px;margin:1px;border-radius:50%;background:#3ecf8e;border:3px solid #fff;box-shadow:0 0 12px rgba(62,207,142,.8)"></div>'});
-  const mB=L.divIcon({className:'',iconSize:[16,16],iconAnchor:[8,8],html:'<div style="width:14px;height:14px;margin:1px;border-radius:50%;background:#e84455;border:3px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.8)"></div>'});
-  const ptA=sA?.localizacao?.coordinates;const ptB=sB?.localizacao?.coordinates;
-  if(ptA)L.marker([ptA[1],ptA[0]],{icon:mA,zIndexOffset:3000}).bindPopup(`<b>Origem: ${orig}</b>`).addTo(rastLayer);
-  if(ptB)L.marker([ptB[1],ptB[0]],{icon:mB,zIndexOffset:3000}).bindPopup(`<b>Destino: ${dest}</b>`).addTo(rastLayer);
-  let filtro='trajeto=not.is.null';if(cam)filtro+='&camada=eq.'+cam;
-  const cabosAll=await fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,comprimento,trajeto&${filtro}&limit=3000`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
-  const laMin=ptA&&ptB?Math.min(ptA[1],ptB[1])-0.6:-90;
-  const laMax=ptA&&ptB?Math.max(ptA[1],ptB[1])+0.6:90;
-  const loMin=ptA&&ptB?Math.min(ptA[0],ptB[0])-0.6:-180;
-  const loMax=ptA&&ptB?Math.max(ptA[0],ptB[0])+0.6:180;
-  const bounds=[];let dist=0,nc=0;
-  cabosAll.forEach(c=>{
-    const pts=c.trajeto?.type==='LineString'?c.trajeto.coordinates.map(p=>[p[1],p[0]]):null;
-    if(!pts||pts.length<2)return;
-    const pm=pts[Math.floor(pts.length/2)];
-    if(pm[0]<laMin||pm[0]>laMax||pm[1]<loMin||pm[1]>loMax)return;
-    const cor=c.camada==='backbone'?'#f0a500':c.camada==='metro_alta'?'#f97316':c.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
-    addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`});
-    pts.forEach(p=>bounds.push(p));dist+=Number(c.comprimento)||0;nc++;
-  });
-  if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
-  closeM();toast(`🔍 ${orig}→${dest}: ${nc} cabos | ${km(dist)}`,'in');
+
+  try {
+    const r=await fetch(`${SU}/rest/v1/rpc/fn_tracer_bfs`,{
+      method:'POST',
+      headers:{...RH,'Content-Type':'application/json'},
+      body:JSON.stringify({p_node_inicio:idA, p_node_fim:idB, p_max_hops:50})
+    });
+    
+    if(!r.ok){
+      const err=await r.json();
+      el.innerHTML=`<div style="color:var(--rd);padding:8px">Erro no tracer: ${err.message||r.status}</div>`;
+      return;
+    }
+    
+    const path = await r.json();
+    if(!path || path.length===0){
+      el.innerHTML='<div style="color:var(--am);padding:8px">Nenhum caminho encontrado entre os pontos.</div>';
+      return;
+    }
+
+    const bounds=[]; let dist=0, nc=0;
+    // O retorno do BFS costuma ser uma lista de 'passos' (nodes/edges)
+    // Vamos iterar e desenhar as geometrias das edges
+    path.forEach(step => {
+      if(step.edge_geom){
+        // Converter PostGIS hex/EWKB ou GeoJSON para Leaflet (assumindo que o RPC retorne algo tratável)
+        // Se o RPC retornar GeoJSON direto na edge_geom:
+        const pts = step.edge_geom.type === 'LineString' ? step.edge_geom.coordinates.map(p=>[p[1],p[0]]) : null;
+        if(pts){
+          const cor = step.camada==='backbone'?'#f0a500':step.camada==='metro_alta'?'#f97316':step.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
+          addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${step.ativo_nome||'Cabo'}</b><br>${step.ativo_tabela||'—'} | ${km(step.peso_distancia_m)}`});
+          pts.forEach(p=>bounds.push(p));
+          dist += Number(step.peso_distancia_m)||0; nc++;
+        }
+      }
+    });
+
+    if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
+    el.innerHTML=`<div style="color:var(--gr);padding:8px;font-size:11px">✓ <b>Caminho encontrado!</b><br>${nc} saltos | ${km(dist)}</div>`;
+    closeM(); toast(`🔍 Rota: ${nc} saltos | ${km(dist)}`,'ok');
+
+  } catch (err) {
+    el.innerHTML=`<div style="color:var(--rd);padding:8px">Falha na requisição: ${err.message}</div>`;
+  }
 }
 function limparRast(){if(rastLayer){map.removeLayer(rastLayer);rastLayer=null;}}
 
@@ -2518,41 +2706,105 @@ function abrirDgoPorPendenciaId(id){
   abrirDgoPorPendencia(p);
 }
 
-function salvarCaixa(){
+async function pushToSupabase(tbl, payload, msgId){
+  try {
+    const r = await fetch(`${SU}/rest/v1/${tbl}`, {
+      method: 'POST',
+      headers: { ...WH, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(payload)
+    });
+    if([200, 201].includes(r.status)){
+      msgField(msgId, '✓ Sincronizado com a nuvem.', 'ok');
+      return true;
+    } else {
+      const err = await r.json();
+      msgField(msgId, '⚠ Erro nuvem: ' + (err.message || r.status));
+      return false;
+    }
+  } catch (e) {
+    msgField(msgId, '⚠ Sem conexão para sincronizar agora.');
+    return false;
+  }
+}
+
+async function salvarCaixa(){
   const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
   const editId=$('cx-edit-id')?.value||'';
+  const lat=gf('cx-lat'), lng=gf('cx-lng');
   const payload={
     codigo,nome:gv('cx-nome'),tipo_instalacao:gv('cx-inst'),modelo:gv('cx-modelo'),
     fabricante:gv('cx-fab'),status:gv('cx-status'),vistoriada:$('cx-vist')?.checked||false,
-    precisa_troca:$('cx-troca')?.checked||false,lat:gf('cx-lat'),lng:gf('cx-lng'),observacao:gv('cx-obs')
+    precisa_troca:$('cx-troca')?.checked||false,lat,lng,observacao:gv('cx-obs')
   };
+  
   if(editId){
     updateInvItem('caixas',editId,payload);
     msgField('cx-msg','✓ Caixa atualizada em rascunho local.','ok');
   }else{
     addInvItem('caixas',payload);
     msgField('cx-msg','✓ Caixa salva em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela caixa_emenda)
+    const dbPayload = {
+      codigo: payload.codigo,
+      nome: payload.nome,
+      tipo_instalacao: payload.tipo_instalacao,
+      modelo: payload.modelo,
+      fabricante: payload.fabricante,
+      status: payload.status,
+      vistoriada: payload.vistoriada,
+      precisa_troca: payload.precisa_troca,
+      localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
+      observacao: payload.observacao
+    };
+    await pushToSupabase('caixa_emenda', dbPayload, 'cx-msg');
   }
   limpar('cx');
 }
-function salvarDgo(){
-  const codigo=gv('dg-codigo'),site=gv('dg-site'); if(!codigo||!site){msgField('dg-msg','Código e site são obrigatórios');return;}
+
+async function salvarDgo(){
+  const codigo=gv('dg-codigo'),siteRef=gv('dg-site'); 
+  if(!codigo||!siteRef){msgField('dg-msg','Código e site são obrigatórios');return;}
   const editId=$('dg-edit-id')?.value||'';
   const payload={
-    codigo,site,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
+    codigo,site:siteRef,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
     modelo:gv('dg-modelo'),fabricante:gv('dg-fab'),status:gv('dg-status'),observacao:gv('dg-obs')
   };
+  
   if(editId){
     updateInvItem('dgos',editId,payload);
     msgField('dg-msg','✓ DGO atualizado em rascunho local.','ok');
   }else{
     addInvItem('dgos',payload);
     msgField('dg-msg','✓ DGO salvo em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela dgo)
+    // Precisa do site_id (UUID)
+    const site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
+    if(site && site.id && String(site.id).indexOf('science-')!==0){
+      const dbPayload = {
+        codigo: payload.codigo,
+        nome: payload.nome,
+        site_id: site.id,
+        rack: payload.rack,
+        fila: payload.fila,
+        bastidor: payload.bastidor,
+        modelo: payload.modelo,
+        fabricante: payload.fabricante,
+        status: payload.status,
+        observacao: payload.observacao
+      };
+      await pushToSupabase('dgo', dbPayload, 'dg-msg');
+    } else {
+      msgField('dg-msg', '✓ Salvo local. Site não localizado no banco para sincronizar.', 'wn');
+    }
   }
   limpar('dg');
 }
-function salvarSegmento(){
-  const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
+
+async function salvarSegmento(){
+  const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); 
+  if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
   const editId=$('sg-edit-id')?.value||'';
   let geometriaPts=null;
   try{geometriaPts=JSON.parse($('sg-geo')?.value||'null');}catch{}
@@ -2561,12 +2813,33 @@ function salvarSegmento(){
     metragem_m:gf('sg-metr'),fabricante:gv('sg-fab'),modelo:gv('sg-modelo'),
     lote:gv('sg-lote'),observacao:gv('sg-obs'),geometria_pts:Array.isArray(geometriaPts)&&geometriaPts.length>=2?geometriaPts:null
   };
+  
   if(editId){
     updateInvItem('segmentos',editId,payload);
     msgField('sg-msg','✓ Segmento atualizado em rascunho local.','ok');
   }else{
     addInvItem('segmentos',payload);
     msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela segmento_cabo)
+    let trajeto = null;
+    if(Array.isArray(payload.geometria_pts)){
+       const coords = payload.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
+       trajeto = `SRID=4326;LINESTRING(${coords})`;
+    }
+    const dbPayload = {
+      cabo: payload.cabo,
+      ponto_a: payload.ponto_a,
+      ponto_b: payload.ponto_b,
+      tipo_lancamento: payload.tipo_lancamento,
+      metragem_m: payload.metragem_m,
+      fabricante: payload.fabricante,
+      modelo: payload.modelo,
+      lote: payload.lote,
+      trajeto: trajeto,
+      observacao: payload.observacao
+    };
+    await pushToSupabase('segmento_cabo', dbPayload, 'sg-msg');
   }
   limpar('sg');
   if($('sg-edit-id'))$('sg-edit-id').value='';
@@ -2635,6 +2908,7 @@ function showPanCaixaDraft(cx){
 function showPanSegmentoDraft(seg){
   if(mapPointTarget)return;
   closePan();
+  const segState=getSegmentOperationalState(seg);
   $('pt').textContent=`📏 ${seg.cabo||'Segmento físico'}`;
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Ponto A</span><span class="pv">${esc(seg.ponto_a||'—')}</span></div>
@@ -2645,6 +2919,11 @@ function showPanSegmentoDraft(seg){
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(seg.fabricante||'—')}</span></div>
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(seg.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([[segState.status,segState.tone]])}</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${segState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(segState.status)}</b><br>${esc(segState.detail)}</div>
+    </div>
     ${buildSegmentLinksHtml(seg)}
     ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
   `;
@@ -2757,20 +3036,22 @@ function renderInventarioDraftsV2(){
   const store=getInvStore();
   store.caixas.forEach(cx=>{
     if(cx.lat&&cx.lng){
-      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
+      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
         .bindPopup(`<b>Caixa ${esc(cx.codigo||'Rascunho')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'-')} | ${esc(cx.modelo||'-')}<br>${cx.precisa_troca?'Precisa troca<br>':''}${cx.vistoriada?'Vistoriada<br>':''}${esc(cx.observacao||'')}`)
         .on('click',()=>showPanCaixaDraft(cx))
         .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
     }
   });
   store.dgos.forEach(dg=>{
     const site=findDraftPoint(dg.site||'');
     if(site?.lat&&site?.lng){
       const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D</div>`});
-      L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3650})
+      const mk=L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3650})
         .bindPopup(`<b>DGO ${esc(dg.codigo||'Rascunho')}</b><br>Site: ${esc(dg.site||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')}`)
         .on('click',()=>showPanDgoDraft(dg))
         .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkDgoMenu(dg,site));
     }
   });
   store.segmentos.forEach(seg=>{
@@ -2779,15 +3060,20 @@ function renderInventarioDraftsV2(){
       ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(p=>p&&p.length===2)
       : (a?.lat&&a?.lng&&b?.lat&&b?.lng?[[a.lat,a.lng],[b.lat,b.lng]]:null);
     if(path&&path.length>=2){
-      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
+      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg),contextmenu:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        const oe=ev.originalEvent||{};
+        openActionMenu({...mkSegmentoMenu(seg,path),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
+      }});
     }
   });
   store.rupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
         .bindPopup(`<b>Ruptura ${esc(rp.cabo_segmento||'-')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'-')}<br>${esc(rp.observacao||'')}`)
         .on('click',()=>showPanRupturaDraft(rp))
         .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
       if(rp.metragem_lancada_m){
         L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
       }

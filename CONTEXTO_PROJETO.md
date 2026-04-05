@@ -305,6 +305,11 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - sigla/codigo do site vem antes do nome
   - listas e painéis usam `codigo — nome`
 - paineis agora mostram resumo operacional rapido de segmentos/conexoes/pendencias
+- paineis agora tambem classificam melhor o estado operacional:
+  - confirmado
+  - pendente
+  - quebrado
+  - em montagem / pronto para campo
 - paineis agora permitem navegar rapidamente para ativos relacionados (site/caixa/DGO/segmento)
 - pendencias e rupturas locais agora tambem viram pontos navegaveis no fluxo de tratamento
 - pendencias e rupturas agora podem pre-preencher formularios de correcao no cadastro
@@ -347,8 +352,36 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 
 - persistir caixa/DGO/segmento/ruptura no Supabase real
 - editar cabos oficiais existentes com geometria real, nao so rascunho local
-- mais acoes mobile de campo (ex.: fluxo de toque longo por elemento e nao so no mapa)
+- mais acoes mobile de campo por elemento ainda podem crescer, mas toque longo por ativo ja foi iniciado
 - diagrama completo de continuidade/fusao/tubo loose
+
+### Melhoria recente adicional — toque longo por ativo
+
+- menu contextual agora tambem pode abrir por ativo, nao so no mapa vazio
+- site no mapa:
+  - ver detalhes
+  - usar como Ponto A/B
+  - abrir ruptura contextual
+  - copiar coordenadas
+- caixa em rascunho:
+  - ver detalhes
+  - editar
+  - usar como Ponto A/B
+  - abrir assistente de conexao
+- DGO em rascunho:
+  - ver detalhes
+  - editar
+  - usar como Ponto A/B
+  - abrir assistente de conexao
+- ruptura local:
+  - ver detalhes
+  - ajustar
+  - copiar coordenadas
+- cabo oficial e segmento em rascunho:
+  - clique direito abre acoes rapidas
+  - editar / redesenhar / abrir ruptura contextual
+- mobile:
+  - toque longo em marcador abre acoes rapidas do ativo
 
 ### Automacao multiagente local
 
