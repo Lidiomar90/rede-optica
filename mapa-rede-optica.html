@@ -702,7 +702,7 @@ let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
-let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null;
+let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null;
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:true,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -736,6 +736,7 @@ const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],htm
 const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
 const mkDraftCaixa=()=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚</div>`});
 const mkSuggestNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ffb648;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,182,72,.16),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#251200">!</div>`});
+const mkPendNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ff5a68;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,90,104,.14),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#24060b">?</div>`});
 function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,className=''}={}){
   const halo=L.polyline(pts,{color:'#ffffff',weight:weight+3,opacity:Math.min(opacity*.22,.32),lineCap:'round',lineJoin:'round',interactive:false,className});
   const line=L.polyline(pts,{color,weight,opacity,dashArray,lineCap:'round',lineJoin:'round',className});
@@ -788,6 +789,7 @@ function initMapObj(){
   rompLayer=L.layerGroup().addTo(map);
   draftInvLayer=L.layerGroup().addTo(map);
   suggestLayer=L.layerGroup().addTo(map);
+  pendingLayer=L.layerGroup().addTo(map);
 }
 
 async function loadMap(){
@@ -851,6 +853,7 @@ async function loadMap(){
     loadRompimentosNoMapa();
     renderInventarioDrafts();
     sugerirConexoesCabos();
+    renderPendencias();
     applyVis();renderSB();
     if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:11});
     $('load').style.display='none';setProg(0);
@@ -1261,7 +1264,7 @@ function gpsF(li,lo){navigator.geolocation.getCurrentPosition(p=>{$(li).value=p.
 function limpar(pre){document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});$(pre+'-msg').textContent='';}
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
-function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]};}}
+function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
 function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
@@ -1279,11 +1282,15 @@ function renderInventarioResumo(){
     `DGOs: ${store.dgos.length}`,
     `Segmentos: ${store.segmentos.length}`,
     `Rupturas: ${store.rupturas.length}`,
+    `Conexões: ${store.conexoes.length}`,
+    `Pendências: ${store.pendencias.length}`,
     '',
     ...store.caixas.slice(-3).map(x=>`CX ${x.codigo} | ${x.tipo_instalacao} | ${x.status}`),
     ...store.dgos.slice(-3).map(x=>`DGO ${x.codigo} | site ${x.site}`),
     ...store.segmentos.slice(-3).map(x=>`SEG ${x.cabo} | ${x.ponto_a} -> ${x.ponto_b}`),
-    ...store.rupturas.slice(-3).map(x=>`RUP ${x.cabo_segmento} | OTDR ${x.distancia_otdr_m||0}m | lanc ${x.metragem_lancada_m||0}m`)
+    ...store.rupturas.slice(-3).map(x=>`RUP ${x.cabo_segmento} | OTDR ${x.distancia_otdr_m||0}m | lanc ${x.metragem_lancada_m||0}m`),
+    ...store.conexoes.slice(-3).map(x=>`CON ${x.caixa_codigo} | ${x.cabo_entrada||'—'} -> ${x.cabo_saida||'—'}`),
+    ...store.pendencias.slice(-3).map(x=>`PEND ${x.tipo} | ${x.referencia||'—'}`)
   ];
   if($('inv-resumo'))$('inv-resumo').value=linhas.join('\n').trim();
   renderInventarioDrafts();
@@ -1292,7 +1299,107 @@ function limparInventarioRascunho(){
   if(!confirm('Limpar todos os rascunhos locais do inventário?'))return;
   localStorage.removeItem(INV_KEY);
   renderInventarioResumo();
+  renderPendencias();
   msgField('inv-msg','Rascunhos locais removidos.','ok');
+}
+function getConexoesCaixa(codigo){return getInvStore().conexoes.filter(x=>(x.caixa_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function getNearbyCabos(lat,lng,maxDist=35){
+  const out=[];
+  allC.forEach(c=>{
+    const pts=PL(c.trajeto); if(!pts||pts.length<2)return;
+    const near=pts.some(p=>map.distance([lat,lng],p)<=maxDist);
+    if(near)out.push(c);
+  });
+  return out;
+}
+function recomputePendencias(){
+  const store=getInvStore();
+  const pend=[];
+  const refs=new Map();
+  store.segmentos.forEach(seg=>{
+    const a=(seg.ponto_a||'').toUpperCase(),b=(seg.ponto_b||'').toUpperCase();
+    if(a){if(!refs.has(a))refs.set(a,0);refs.set(a,refs.get(a)+1);}
+    if(b){if(!refs.has(b))refs.set(b,0);refs.set(b,refs.get(b)+1);}
+  });
+  store.caixas.forEach(cx=>{
+    const code=(cx.codigo||'').toUpperCase();
+    const qtd=refs.get(code)||0;
+    if(qtd===0){
+      pend.push({id:`pend_${code}_sem_conexao`,tipo:'caixa_sem_conexao',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa cadastrada sem segmento ligado. Confirmar em campo ou completar continuidade.'});
+    }else if(qtd===1){
+      pend.push({id:`pend_${code}_ponta_solta`,tipo:'ponta_solta',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'A caixa possui apenas um lado conectado. Revisar continuidade, emenda ou saída pendente.'});
+    }
+    if(cx.vistoriada!==true){
+      pend.push({id:`pend_${code}_vistoria`,tipo:'vistoria_pendente',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa ainda não marcada como vistoriada.'});
+    }
+    if(cx.precisa_troca===true){
+      pend.push({id:`pend_${code}_troca`,tipo:'caixa_precisa_troca',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa marcada para substituição ou correção física.'});
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    if(!seg.ponto_a||!seg.ponto_b){
+      pend.push({id:`pend_${seg.id}_incompleto`,tipo:'segmento_incompleto',referencia:seg.cabo||seg.id,observacao:'Segmento sem ponto A ou ponto B definido.'});
+    }
+  });
+  store.pendencias=pend;
+  localStorage.setItem(INV_KEY,JSON.stringify(store));
+  return pend;
+}
+function renderPendencias(){
+  if(!pendingLayer)return;
+  pendingLayer.clearLayers();
+  const pend=recomputePendencias();
+  pend.filter(p=>p.lat&&p.lng).slice(0,300).forEach(p=>{
+    L.marker([p.lat,p.lng],{icon:mkPendNode(),zIndexOffset:3800})
+      .bindPopup(`<b>⚠ ${esc(p.tipo)}</b><br>${esc(p.referencia||'—')}<br>${esc(p.observacao||'')}`)
+      .on('click',()=>showPanPendencia(p))
+      .addTo(pendingLayer);
+  });
+}
+function showPanPendencia(p){
+  closePan();
+  $('pt').textContent='⚠ Pendência operacional';
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Tipo</span><span class="pv">${esc(p.tipo||'—')}</span></div>
+    <div class="pr"><span class="pl">Referência</span><span class="pv">${esc(p.referencia||'—')}</span></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(p.observacao||'Pendência sem descrição')}</div>
+  `;
+  $('pa').innerHTML=`<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
+  $('pan').style.display='block';
+}
+function abrirAssistenteConexaoCaixa(codigo,lat,lng){
+  const cabos=getNearbyCabos(lat,lng,45);
+  const opts='<option value="">-- selecione --</option>'+cabos.map(c=>`<option value="${esc(c.nome||c.id)}">${esc(c.nome||c.id)}${c.tipo?` (${esc(c.tipo)})`:''}</option>`).join('');
+  $('mtt').textContent=`Assistente de conexão — ${codigo}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      O sistema encontrou <b>${cabos.length}</b> cabo(s) próximo(s) desta caixa. Use isso como sugestão operacional e confirme em campo antes de consolidar.
+    </div>
+    <div class="mfg"><label>Cabo entrada</label><select id="ac-in">${opts}</select></div>
+    <div class="mfg"><label>Cabo saída</label><select id="ac-out">${opts}</select></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Fibra / tubo entrada</label><input id="ac-fin" placeholder="T1 F21-22"></div>
+      <div class="mfg"><label>Fibra / tubo saída</label><input id="ac-fout" placeholder="T2 F15-16"></div>
+    </div>
+    <div class="mfg"><label>Tipo</label><select id="ac-tipo"><option>emenda</option><option>carona</option><option>passagem</option><option>pendente_confirmacao</option></select></div>
+    <div class="mfg"><label>Observação</label><textarea id="ac-obs" placeholder="Descreva a continuidade, carona, necessidade de campo, DGO relacionado, ponta solta, etc."></textarea></div>
+    <div id="ac-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarConexaoCaixa('${codigo.replace(/'/g,"\\'")}',${lat},${lng})">💾 Salvar pré-conexão</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+function salvarConexaoCaixa(codigo,lat,lng){
+  const caboIn=gv('ac-in'),caboOut=gv('ac-out');
+  if(!caboIn&&!caboOut){msgField('ac-msg','Escolha ao menos um cabo para registrar a conexão.');return;}
+  addInvItem('conexoes',{
+    caixa_codigo:codigo,lat,lng,cabo_entrada:caboIn,cabo_saida:caboOut,
+    fibra_entrada:gv('ac-fin'),fibra_saida:gv('ac-fout'),
+    tipo:gv('ac-tipo'),observacao:gv('ac-obs')
+  });
+  msgField('ac-msg','✓ Pré-conexão salva como pendente de confirmação.','ok');
+  setTimeout(()=>{closeM();showPanCaixaDraft(getInvStore().caixas.find(c=>(c.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
 }
 
 function salvarCaixa(){
@@ -1360,6 +1467,7 @@ function buildDraftConnectionDiagram(ref){
 function showPanCaixaDraft(cx){
   if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
   closePan();
+  const conexoes=getConexoesCaixa(cx.codigo);
   $('pt').textContent=`🧰 ${cx.codigo||'Caixa'}`;
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
@@ -1373,9 +1481,17 @@ function showPanCaixaDraft(cx){
       <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Diagrama de conexão</div>
       ${buildDraftConnectionDiagram(cx.codigo)}
     </div>
+    <div style="margin-top:12px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Pré-conexões registradas</div>
+      ${conexoes.length?conexoes.map(c=>`<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03);margin-bottom:6px">
+        <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(c.cabo_entrada||'—')} <span style="color:var(--t3)">→</span> ${esc(c.cabo_saida||'—')}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.tipo||'pendente_confirmacao')}${c.fibra_entrada||c.fibra_saida?` | ${esc((c.fibra_entrada||'—')+' → '+(c.fibra_saida||'—'))}`:''}</div>
+        ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
+      </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma pré-conexão registrada.</div>'}
+    </div>
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML='';
+  $('pa').innerHTML=`<button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){
