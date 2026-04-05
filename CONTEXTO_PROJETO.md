@@ -276,3 +276,15 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - Chave anon Supabase: publica por design (pode estar no JS)
 - DB_PASS: nunca hardcoded — somente variavel de ambiente
 - Site GitHub Pages: apenas HTMLs — Python e PS1 ficam so local
+
+---
+
+## QA E VALIDACAO
+
+- Checklist mestre criado em `CHECKLIST_QUALIDADE_E_PUBLICACAO.md`
+- Pilotos E2E criados em `PILOTOS_E2E_OPERACIONAIS.md`
+- Esses dois arquivos agora sao a referencia para validar:
+  - publicacao
+  - qualidade funcional
+  - lacunas do projeto
+  - o que ainda esta incompleto ou meia-boca

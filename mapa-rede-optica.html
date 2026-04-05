@@ -1042,7 +1042,7 @@ function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));}
 function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}}
 
 // SIDEBAR
-function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'':'none';if(m!=='camadas')renderSB($('si').value);}
+function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){if(sbMode!=='camadas')renderSB(q);}
 function renderSB(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
