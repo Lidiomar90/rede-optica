@@ -223,6 +223,26 @@ class DB:
         self.cur  = None
         self._sites_cache = {}   # codigo → (id, nome, camada)
         self._siglas_set  = set()
+        self._site_aliases = {}  # alias → registro canônico
+
+    def _aliases_site(self, codigo: str) -> set[str]:
+        """Gera aliases úteis para lookup de siglas no texto."""
+        cod = (codigo or "").strip().upper()
+        aliases = {cod} if cod else set()
+        if cod.startswith("MG") and len(cod) > 4:
+            aliases.add(cod[2:])
+        if cod.endswith("MG") and len(cod) > 4:
+            aliases.add(cod[:-2])
+        return {a for a in aliases if a and a not in SIGLA_STOPWORDS}
+
+    def _registrar_site(self, registro: dict):
+        cod = (registro.get("codigo") or "").strip().upper()
+        if not cod:
+            return
+        self._sites_cache[cod] = registro
+        for alias in self._aliases_site(cod):
+            self._site_aliases[alias] = registro
+            self._siglas_set.add(alias)
 
     def connect(self):
         if not HAS_PG or not DB_PASS:
@@ -258,12 +278,13 @@ class DB:
         rows = self.cur.fetchall()
         for r in rows:
             cod = r["codigo"].strip().upper()
-            self._sites_cache[cod] = {
+            registro = {
                 "id": r["id"], "nome": r["nome"],
+                "codigo": cod,
                 "nome_norm": r["nome_norm"] or "",
                 "camada": r["camada"], "municipio": r["municipio"], "uf": r["uf"]
             }
-            self._siglas_set.add(cod)
+            self._registrar_site(registro)
         log.info(f"Cache de sites: {len(self._sites_cache)} registros únicos")
 
     def _load_sites_rest(self):
@@ -281,12 +302,13 @@ class DB:
                 cod = (r.get("codigo") or "").strip().upper()
                 if cod and cod not in seen:
                     seen.add(cod)
-                    self._sites_cache[cod] = {
+                    registro = {
                         "id": r["id"], "nome": r.get("nome",""),
+                        "codigo": cod,
                         "nome_norm": "", "camada": r.get("camada",""),
                         "municipio": r.get("municipio",""), "uf": r.get("uf","")
                     }
-                    self._siglas_set.add(cod)
+                    self._registrar_site(registro)
             log.info(f"Cache REST sites: {len(self._sites_cache)} registros")
         except Exception as e:
             log.error(f"Falha ao carregar sites via REST: {e}")
@@ -296,13 +318,18 @@ class DB:
         if not sigla:
             return None
         s = sigla.strip().upper()
-        if s in self._sites_cache:
-            return self._sites_cache[s]
+        if s in self._site_aliases:
+            return self._site_aliases[s]
         # Tentar com sufixo MG
         if not s.endswith("MG"):
             s2 = s + "MG"
-            if s2 in self._sites_cache:
-                return self._sites_cache[s2]
+            if s2 in self._site_aliases:
+                return self._site_aliases[s2]
+        # Tentar com prefixo MG
+        if not s.startswith("MG"):
+            s3 = "MG" + s
+            if s3 in self._site_aliases:
+                return self._site_aliases[s3]
         return None
 
     def check_duplicata(self, pa: str, pb: str, tipo: str) -> Optional[str]:
@@ -620,11 +647,11 @@ def parse_mensagem(msg: dict, db: DB) -> Optional[MsgParseado]:
     if len(siglas) >= 2:
         p.ponta_a_raw  = siglas[0]
         p.ponta_b_raw  = siglas[1]
-        p.ponta_a_norm = siglas[0].upper()
-        p.ponta_b_norm = siglas[1].upper()
         # Resolver IDs
         sa = db.lookup_site(siglas[0])
         sb = db.lookup_site(siglas[1])
+        p.ponta_a_norm = (sa or {}).get("codigo", siglas[0].upper())
+        p.ponta_b_norm = (sb or {}).get("codigo", siglas[1].upper())
         if sa:
             p.ponta_a_site_id = sa["id"]
         if sb:
@@ -638,8 +665,8 @@ def parse_mensagem(msg: dict, db: DB) -> Optional[MsgParseado]:
                 p.tipo_enlace_norm, p.camada_norm = "hl4", "metro_alta"
     elif len(siglas) == 1:
         p.ponta_a_raw  = siglas[0]
-        p.ponta_a_norm = siglas[0].upper()
         sa = db.lookup_site(siglas[0])
+        p.ponta_a_norm = (sa or {}).get("codigo", siglas[0].upper())
         if sa:
             p.ponta_a_site_id = sa["id"]
         p.alertas.append(f"Apenas 1 sigla encontrada: {siglas[0]}")
@@ -739,6 +766,8 @@ def deduplicar_lote(parseados: list[MsgParseado]) -> list[MsgParseado]:
             continue
         pa = p.ponta_a_norm or ""
         pb = p.ponta_b_norm or ""
+        if not pa or not pb or not p.tipo_enlace_norm:
+            continue
         chave = (min(pa,pb), max(pa,pb), p.tipo_enlace_norm)
         if chave not in seen:
             seen[chave] = p
