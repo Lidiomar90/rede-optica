@@ -259,6 +259,16 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 #toast.ok{color:var(--gr);border-color:var(--gr)}
 #toast.er{color:var(--rd);border-color:var(--rd)}
 #toast.wn{color:var(--am);border-color:var(--am)}
+
+/* MENU CONTEXTUAL */
+#ctxm{position:fixed;z-index:9998;display:none;min-width:220px;background:rgba(9,18,31,.96);border:1px solid rgba(255,255,255,.08);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.45);backdrop-filter:blur(16px);overflow:hidden}
+.ctx-h{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.16em}
+.ctx-sb{padding:0 12px 10px;font-size:10px;color:var(--t3);line-height:1.5}
+.ctx-a{width:100%;padding:10px 12px;background:none;border:none;border-top:1px solid rgba(255,255,255,.05);text-align:left;color:var(--t2);font-size:11px;font-family:inherit;font-weight:700;cursor:pointer}
+.ctx-a:hover{background:rgba(255,255,255,.05);color:var(--t)}
+.ctx-a:first-of-type{border-top:none}
+.ctx-off{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:rgba(255,182,72,.12);border:1px solid rgba(255,182,72,.26);font-size:9px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.12em}
+#toast.wn{color:var(--am);border-color:var(--am)}
 #toast.in{color:var(--bl);border-color:var(--bl)}
 </style>
 </head>
@@ -355,7 +365,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     <div id="maphead">
       <div class="mhk">Mapa operacional</div>
       <div class="mht">Rotas, falhas, OTDR e cadastro em uma única superfície</div>
-      <div class="mhs">Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.</div>
+      <div class="mhs" id="mapsub">Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.</div>
     </div>
     <div id="map"></div>
     <button id="mobb" class="mb" onclick="toggleSB()">☰</button>
@@ -520,6 +530,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
         </div>
         <div class="fg"><button type="button" class="tb" style="width:100%;padding:8px" onclick="gpsF('cx-lat','cx-lng')">📍 GPS atual</button></div>
         <div class="fg"><label>Observação rica</label><textarea id="cx-obs" placeholder="Acesso, estado físico, tampa, ferragens, reserva técnica, necessidade de troca, referência visual..."></textarea></div>
+        <input id="cx-edit-id" type="hidden">
         <div class="bbs"><button class="btn2 s" onclick="limpar('cx')">Limpar</button><button class="btn2 p" onclick="salvarCaixa()">💾 Salvar rascunho</button></div>
         <div id="cx-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
@@ -540,6 +551,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
           <div class="fg"><label>Status</label><select id="dg-status"><option>ativo</option><option>vistoriar</option><option>pendente</option></select></div>
         </div>
         <div class="fg"><label>Observação</label><textarea id="dg-obs" placeholder="Posições, bandeja, porta, observações do levantamento, pendências..."></textarea></div>
+        <input id="dg-edit-id" type="hidden">
         <div class="bbs"><button class="btn2 s" onclick="limpar('dg')">Limpar</button><button class="btn2 p" onclick="salvarDgo()">💾 Salvar rascunho</button></div>
         <div id="dg-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
@@ -650,6 +662,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   </div>
 </div>
 <div id="toast"></div>
+<div id="ctxm"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -741,12 +754,14 @@ let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
 let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null;
+let mapOffline=false,ctxLatLng=null;
+const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
 
 const LAYERS=[
-  {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:true,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
-  {id:'metro_alta',label:'HL4 / Metro alta',cor:'#f97316',vis:true,sub:[{id:'m4_equip',label:'Equipamentos HL4',cor:'#f97316'}]},
-  {id:'metro_dist',label:'HL5 / Metro dist',cor:'#4da6ff',vis:true,sub:[{id:'m5_equip',label:'Equipamentos HL5',cor:'#4da6ff'}]},
-  {id:'acesso',label:'Acesso / OLT',cor:'#3ecf8e',vis:true,sub:[
+  {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:false,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
+  {id:'metro_alta',label:'HL4 / Metro alta',cor:'#f97316',vis:false,sub:[{id:'m4_equip',label:'Equipamentos HL4',cor:'#f97316'}]},
+  {id:'metro_dist',label:'HL5 / Metro dist',cor:'#4da6ff',vis:false,sub:[{id:'m5_equip',label:'Equipamentos HL5',cor:'#4da6ff'}]},
+  {id:'acesso',label:'Acesso / OLT',cor:'#3ecf8e',vis:false,sub:[
     {id:'ac_site',label:'Sites acesso',cor:'#3ecf8e'},
     {id:'ac_caixa',label:'Caixas CEO/CTO',cor:'#22d3ee'},
     {id:'ac_erb',label:'ERBs',cor:'#f43f5e'},
@@ -772,6 +787,35 @@ const mkD=(c,s=9)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],h
 const mkSq=(c,s=8)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:2px;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
 const mkDia=(c,s=13)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s*.7}px;height:${s*.7}px;margin:${s*.15}px;background:${c};border:2px solid rgba(255,255,255,.6);transform:rotate(45deg);border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.9)"></div>`});
 const mkLoc=()=>L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],html:'<div style="width:14px;height:14px;margin:2px;border-radius:50%;background:#4da6ff;border:2.5px solid #fff;box-shadow:0 0 0 5px rgba(77,166,255,.3),0 2px 8px rgba(0,0,0,.8)"></div>'});
+const codeFirstLabel=item=>{
+  const codigo=normText(item?.codigo||item?.sigla);
+  const nome=normText(item?.nome);
+  if(codigo&&nome&&codigo.toUpperCase()!==nome.toUpperCase())return `${codigo} — ${nome}`;
+  return codigo||nome||'—';
+};
+const nearestSiteTo=(lat,lng,maxDist=120)=>{
+  let best=null,bestDist=Infinity;
+  allS.forEach(s=>{
+    const pt=PP(s.localizacao);if(!pt)return;
+    const d=map?map.distance([lat,lng],pt):999999;
+    if(d<bestDist&&d<=maxDist){best=s;bestDist=d;}
+  });
+  return best?{site:best,dist:bestDist}:null;
+};
+function saveMapCache(sites,cabos,science){
+  try{localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({sites,cabos,science,salvo_em:new Date().toISOString()}));}
+  catch(err){console.warn('cache mapa falhou',err);}
+}
+function loadMapCache(){
+  try{return JSON.parse(localStorage.getItem(MAP_CACHE_KEY)||'null');}catch{return null;}
+}
+function setOfflineState(on,msg=''){
+  mapOffline=!!on;
+  const base='Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.';
+  const badge=mapOffline?`<div style="margin-top:8px"><span class="ctx-off">modo offline</span></div>`:'';
+  if($('mapsub'))$('mapsub').innerHTML=base+badge;
+  if(msg)toast(msg,mapOffline?'wn':'ok');
+}
 // Marcador de rompimento — vermelho pulsante
 const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
 // Marcador de nova caixa após lançamento
@@ -912,14 +956,17 @@ function initMapObj(){
   L.control.zoom({position:'bottomright'}).addTo(map);
   tileLayer=L.tileLayer(temaEsc?TILES.dark:TILES.light,{attribution:'©OSM©CARTO',maxZoom:20,minZoom:4}).addTo(map);
   LAYERS.forEach(l=>{
-    if(l.tipo==='cabo'){LYR[l.id]=L.layerGroup();if(l.vis)LYR[l.id].addTo(map);}
-    else{l.sub.forEach(s=>{LYR[s.id]=L.layerGroup();if(l.vis)LYR[s.id].addTo(map);});}
+    if(l.tipo==='cabo'){LYR[l.id]=L.layerGroup();if(VIS[l.id]!==false)LYR[l.id].addTo(map);}
+    else{l.sub.forEach(s=>{LYR[s.id]=L.layerGroup();if(VIS[s.id]!==false)LYR[s.id].addTo(map);});}
   });
   LYR['outros']=L.layerGroup().addTo(map);
   rompLayer=L.layerGroup().addTo(map);
   draftInvLayer=L.layerGroup().addTo(map);
   suggestLayer=L.layerGroup().addTo(map);
   pendingLayer=L.layerGroup().addTo(map);
+  map.on('click',()=>hideContextMenu());
+  map.on('contextmenu',ev=>openContextMenu(ev));
+  map.getContainer().addEventListener('contextmenu',ev=>ev.preventDefault());
 }
 
 async function loadMap(){
@@ -929,11 +976,23 @@ async function loadMap(){
   allS=[];allC=[];scienceSites=[];fmap={};cableFx={};activeCableId=null;
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
-    const[sites,cabos,science]=await Promise.all([
-      fetch(`${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`,{headers:RH}).then(r=>r.json()),
-      fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`,{headers:RH}).then(r=>r.json()),
-      loadScienceSites(),
-    ]);
+    let sites,cabos,science;
+    try{
+      [sites,cabos,science]=await Promise.all([
+        fetch(`${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
+        fetch(`${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
+        loadScienceSites(),
+      ]);
+      saveMapCache(sites,cabos,science);
+      setOfflineState(false);
+    }catch(netErr){
+      const cache=loadMapCache();
+      if(!cache)throw netErr;
+      sites=cache.sites||[];
+      cabos=cache.cabos||[];
+      science=cache.science||[];
+      setOfflineState(true,'Sem rede estável. Carregando último cache local.');
+    }
     scienceSites=Array.isArray(science)?science:[];
     allS=mergeSitesData(Array.isArray(sites)?sites:[],scienceSites);
     allC=Array.isArray(cabos)?cabos:[];
@@ -1113,12 +1172,12 @@ function renderSBv2(q=''){
         const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
         h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
         Object.keys(localMap).sort((a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR')).forEach(loc=>{
-          const arr=localMap[loc].sort((a,b)=>String(a.nome||a.codigo||'').localeCompare(String(b.nome||b.codigo||''),'pt-BR'));
+          const arr=localMap[loc].sort((a,b)=>codeFirstLabel(a).localeCompare(codeFirstLabel(b),'pt-BR'));
           h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
           arr.slice(0,120).forEach(i=>{
             const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
-            const sub=[i.municipio,i.codigo&&`Código ${i.codigo}`,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
-            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+            const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
           });
           if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
         });
@@ -1130,7 +1189,7 @@ function renderSBv2(q=''){
       const fallback=data.slice(0,200).map(i=>{
         const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
         const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.codigo].filter(Boolean).join(' • ');
-        return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
+        return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
       }).join('');
       el.innerHTML=`<div style="padding:8px 10px;font-size:10px;color:var(--am);font-weight:800">Agrupamento CN/localidade falhou. Exibindo lista simples.</div>${fallback}`;
       return;
@@ -1145,7 +1204,7 @@ function renderSBv2(q=''){
       const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
       const sub=i.municipio||km(i.comprimento)||'';
       const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
-      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
     });
     if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} refine a busca</div>`;
   });
@@ -1179,8 +1238,8 @@ function showPanSite(s,pt){
 function showPanSite(s,pt){
   closePan();
   const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
-  showPan(s.nome||s.codigo||'Site',[
-    s.codigo&&['Codigo',s.codigo],
+  showPan(codeFirstLabel(s),[
+    s.codigo&&['Sigla / codigo',s.codigo],
     ['Tipo',s.tipo||'-'],['Camada',s.camada||'-'],
     s.cn&&['CN / DDD',s.cn],
     s.localidade&&['Localidade',s.localidade],
@@ -1204,8 +1263,8 @@ function showPanSite(s,pt){
   ],[
     sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
     sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
-    sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
-    {l:'Rota',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
+    {l:'Rota',fn:`abrirRastreamento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
     sessao.perfil==='admin'&&canEdit&&{l:'Excluir',c:'r',fn:`del('sites','${s.id}')`},
   ].filter(Boolean));
   focI('s-'+s.id);
@@ -1601,7 +1660,14 @@ function abrirFilaAuditoria(){
 const gv=id=>$(id)?.value?.trim()||null;
 const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
 function gpsF(li,lo){navigator.geolocation.getCurrentPosition(p=>{$(li).value=p.coords.latitude.toFixed(6);$(lo).value=p.coords.longitude.toFixed(6);toast('GPS capturado!');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:8000});}
-function limpar(pre){document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});$(pre+'-msg').textContent='';}
+function limpar(pre){
+  document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{
+    if(el.type==='checkbox')el.checked=false;
+    else if(el.tagName==='SELECT')el.selectedIndex=0;
+    else el.value='';
+  });
+  if($(pre+'-msg'))$(pre+'-msg').textContent='';
+}
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
@@ -1674,8 +1740,9 @@ function showPanDgoDraft(dg){
   if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
   closePan();
   const conexoes=getConexoesDgo(dg.codigo);
-  $('pt').textContent=`DGO ${dg.codigo||'Rascunho'}`;
+  $('pt').textContent=`${dg.codigo||'DGO'}${dg.site?` — ${dg.site}`:''}`;
   $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
     <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site||'—')}</span></div>
     <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
     <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
@@ -1697,7 +1764,7 @@ function showPanDgoDraft(dg){
     </div>
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -1844,23 +1911,94 @@ function salvarConexaoDgo(codigo){
   msgField('ad-msg','Conexao do DGO salva como pendente de confirmacao.','ok');
   setTimeout(()=>{closeM();showPanDgoDraft(getInvStore().dgos.find(d=>(d.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
 }
+function openContextMenu(ev){
+  if(!map)return;
+  ctxLatLng=ev.latlng;
+  const ctx=$('ctxm');
+  const near=nearestSiteTo(ev.latlng.lat,ev.latlng.lng,180);
+  const nearTxt=near?`Referência próxima: <b>${esc(codeFirstLabel(near.site))}</b> a ${Math.round(near.dist)}m.`:'Sem site de referência próximo.';
+  const x=Math.min(window.innerWidth-236,ev.originalEvent.clientX||120);
+  const y=Math.min(window.innerHeight-220,ev.originalEvent.clientY||120);
+  ctx.innerHTML=`
+    <div class="ctx-h">Menu de campo</div>
+    <div class="ctx-sb">${nearTxt}<br>Coordenada: ${ev.latlng.lat.toFixed(6)}, ${ev.latlng.lng.toFixed(6)}</div>
+    <button class="ctx-a" onclick="contextNovaCaixa()">🧰 Criar caixa aqui</button>
+    <button class="ctx-a" onclick="contextNovaRuptura()">🚨 Registrar ruptura aqui</button>
+    <button class="ctx-a" onclick="contextNovoDgo()">🗄 Criar DGO com site próximo</button>
+    <button class="ctx-a" onclick="contextCopiarCoord()">📋 Copiar coordenadas</button>
+  `;
+  ctx.style.left=`${x}px`;
+  ctx.style.top=`${y}px`;
+  ctx.style.display='block';
+}
+function hideContextMenu(){if($('ctxm'))$('ctxm').style.display='none';}
+function contextNovaCaixa(){
+  if(!ctxLatLng)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-lat').value=ctxLatLng.lat.toFixed(6);
+  $('cx-lng').value=ctxLatLng.lng.toFixed(6);
+  $('cx-obs').value=(gv('cx-obs')?gv('cx-obs')+'\n':'')+`Lançado via clique direito no mapa em ${new Date().toLocaleString('pt-BR')}.`;
+  hideContextMenu();
+  toast('Coordenada aplicada no cadastro da caixa','ok');
+}
+function contextNovaRuptura(){
+  if(!ctxLatLng)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-lat').value=ctxLatLng.lat.toFixed(6);
+  $('rp-lng').value=ctxLatLng.lng.toFixed(6);
+  hideContextMenu();
+  toast('Coordenada aplicada no cadastro de ruptura','ok');
+}
+function contextNovoDgo(){
+  if(!ctxLatLng)return;
+  const near=nearestSiteTo(ctxLatLng.lat,ctxLatLng.lng,180);
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(near?.site)$('dg-site').value=near.site.codigo||near.site.nome||'';
+  hideContextMenu();
+  toast(near?.site?'Site de referência aplicado ao DGO':'Nenhum site próximo. Informe manualmente o site.','wn');
+}
+async function contextCopiarCoord(){
+  if(!ctxLatLng)return;
+  const txt=`${ctxLatLng.lat.toFixed(6)}, ${ctxLatLng.lng.toFixed(6)}`;
+  try{await navigator.clipboard.writeText(txt);toast('Coordenadas copiadas','ok');}
+  catch{toast(txt,'wn');}
+  hideContextMenu();
+}
+window.addEventListener('offline',()=>setOfflineState(true,'Sem rede. O app vai tentar usar o último cache local.'));
+window.addEventListener('online',()=>setOfflineState(false,'Conexão restabelecida.'));
 
 function salvarCaixa(){
   const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
-  addInvItem('caixas',{
+  const editId=$('cx-edit-id')?.value||'';
+  const payload={
     codigo,nome:gv('cx-nome'),tipo_instalacao:gv('cx-inst'),modelo:gv('cx-modelo'),
     fabricante:gv('cx-fab'),status:gv('cx-status'),vistoriada:$('cx-vist')?.checked||false,
     precisa_troca:$('cx-troca')?.checked||false,lat:gf('cx-lat'),lng:gf('cx-lng'),observacao:gv('cx-obs')
-  });
-  msgField('cx-msg','✓ Caixa salva em rascunho local.','ok'); limpar('cx');
+  };
+  if(editId){
+    updateInvItem('caixas',editId,payload);
+    msgField('cx-msg','✓ Caixa atualizada em rascunho local.','ok');
+  }else{
+    addInvItem('caixas',payload);
+    msgField('cx-msg','✓ Caixa salva em rascunho local.','ok');
+  }
+  limpar('cx');
 }
 function salvarDgo(){
   const codigo=gv('dg-codigo'),site=gv('dg-site'); if(!codigo||!site){msgField('dg-msg','Código e site são obrigatórios');return;}
-  addInvItem('dgos',{
+  const editId=$('dg-edit-id')?.value||'';
+  const payload={
     codigo,site,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
     modelo:gv('dg-modelo'),fabricante:gv('dg-fab'),status:gv('dg-status'),observacao:gv('dg-obs')
-  });
-  msgField('dg-msg','✓ DGO salvo em rascunho local.','ok'); limpar('dg');
+  };
+  if(editId){
+    updateInvItem('dgos',editId,payload);
+    msgField('dg-msg','✓ DGO atualizado em rascunho local.','ok');
+  }else{
+    addInvItem('dgos',payload);
+    msgField('dg-msg','✓ DGO salvo em rascunho local.','ok');
+  }
+  limpar('dg');
 }
 function salvarSegmento(){
   const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
@@ -1913,6 +2051,7 @@ function showPanCaixaDraft(cx){
   const conexoes=getConexoesCaixa(cx.codigo);
   $('pt').textContent=`🧰 ${cx.codigo||'Caixa'}`;
   $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
     <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(cx.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(cx.fabricante||'—')}</span></div>
@@ -1934,7 +2073,7 @@ function showPanCaixaDraft(cx){
     </div>
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
+  $('pa').innerHTML=`<button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){
@@ -1969,6 +2108,42 @@ function editarSegmentoDraft(id){
   $('sg-lote').value=seg.lote||'';
   $('sg-obs').value=seg.observacao||'';
   msgField('sg-msg','Editando segmento existente. Salve para atualizar.','in');
+  closePan();
+}
+function editarCaixaDraft(id){
+  const cx=getInvStore().caixas.find(x=>x.id===id);
+  if(!cx){toast('Caixa não encontrada','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-edit-id').value=cx.id;
+  $('cx-codigo').value=cx.codigo||'';
+  $('cx-nome').value=cx.nome||'';
+  $('cx-inst').value=cx.tipo_instalacao||'aereo';
+  $('cx-modelo').value=cx.modelo||'ETK';
+  $('cx-fab').value=cx.fabricante||'';
+  $('cx-status').value=cx.status||'ativo';
+  $('cx-vist').checked=!!cx.vistoriada;
+  $('cx-troca').checked=!!cx.precisa_troca;
+  $('cx-lat').value=cx.lat||'';
+  $('cx-lng').value=cx.lng||'';
+  $('cx-obs').value=cx.observacao||'';
+  msgField('cx-msg','Editando caixa existente. Salve para atualizar.','ok');
+  closePan();
+}
+function editarDgoDraft(id){
+  const dg=getInvStore().dgos.find(x=>x.id===id);
+  if(!dg){toast('DGO não encontrado','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('dg-edit-id').value=dg.id;
+  $('dg-codigo').value=dg.codigo||'';
+  $('dg-site').value=dg.site||'';
+  $('dg-rack').value=dg.rack||'';
+  $('dg-fila').value=dg.fila||'';
+  $('dg-bast').value=dg.bastidor||'';
+  $('dg-modelo').value=dg.modelo||'';
+  $('dg-fab').value=dg.fabricante||'';
+  $('dg-status').value=dg.status||'ativo';
+  $('dg-obs').value=dg.observacao||'';
+  msgField('dg-msg','Editando DGO existente. Salve para atualizar.','ok');
   closePan();
 }
 function renderInventarioDrafts(){
