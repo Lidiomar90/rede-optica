@@ -21,6 +21,7 @@ color:var(--t);font-family:'Manrope',sans-serif;transition:background .25s,color
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes flowDash{to{stroke-dashoffset:-22}}
 
 /* LOGIN */
 #ls{position:fixed;inset:0;background:var(--bg);z-index:9000;display:flex;align-items:center;justify-content:center}
@@ -195,6 +196,8 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 
 /* ROMPIMENTO no mapa */
 .romp-marker{animation:pulse 1s infinite}
+.trace-line{animation:flowDash 1.1s linear infinite}
+.otdr-line{animation:flowDash 1.8s linear infinite}
 
 /* PÁGINAS INTERNAS */
 .pgc{flex:1;overflow-y:auto;padding:14px}
@@ -922,7 +925,7 @@ async function execRast(){
     const pm=pts[Math.floor(pts.length/2)];
     if(pm[0]<laMin||pm[0]>laMax||pm[1]<loMin||pm[1]>loMax)return;
     const cor=c.camada==='backbone'?'#f0a500':c.camada==='metro_alta'?'#f97316':c.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
-    addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,popup:`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`});
+    addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`});
     pts.forEach(p=>bounds.push(p));dist+=Number(c.comprimento)||0;nc++;
   });
   if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
@@ -979,14 +982,14 @@ async function plotarOTDR(){
     const latN=lat+Math.cos(angulo)*lanc/111320;
     const lngN=lng+Math.sin(angulo)*lanc/(111320*Math.cos(lat*Math.PI/180));
     L.marker([latN,lngN],{icon:mkNovaBox(lanc),zIndexOffset:3900}).bindPopup(`<b>📦 Nova caixa / emenda</b><br>+${lanc}m de cabo lançado após rompimento`).addTo(otdrLayer);
-    addCableVisual(otdrLayer,[[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:4,dashArray:'6 4',opacity:.95,popup:`Cabo novo lançado: ${lanc}m`});
+    addCableVisual(otdrLayer,[[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:4,dashArray:'6 4',opacity:.95,className:'otdr-line',popup:`Cabo novo lançado: ${lanc}m`});
   }
   // Trecho percorrido e após rompimento
   if(cabo.trajeto?.coordinates){
     const pts=cabo.trajeto.coordinates.map(c2=>[c2[1],c2[0]]);
     const idx=Math.round(pct*(pts.length-1));
-    if(idx>0)addCableVisual(otdrLayer,pts.slice(0,idx+1),{color:'#f0a500',weight:6,opacity:.96,popup:'Trecho percorrido: '+dist+'m'});
-    if(idx<pts.length-1)addCableVisual(otdrLayer,pts.slice(idx),{color:'#e84455',weight:6,opacity:.96,dashArray:'8 5',popup:'Trecho após rompimento'});
+    if(idx>0)addCableVisual(otdrLayer,pts.slice(0,idx+1),{color:'#f0a500',weight:6,opacity:.96,className:'otdr-line',popup:'Trecho percorrido: '+dist+'m'});
+    if(idx<pts.length-1)addCableVisual(otdrLayer,pts.slice(idx),{color:'#e84455',weight:6,opacity:.96,dashArray:'8 5',className:'trace-line',popup:'Trecho após rompimento'});
   }
   map.setView([lat,lng],16);
   const nomeEsc=(cabo.nome||'').replace(/'/g,"\\'");const descEsc=desc.replace(/'/g,"\\'");
