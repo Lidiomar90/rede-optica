@@ -1165,6 +1165,17 @@ function getFlagAnchor(kind,id){
     const mid=midPointOfLine(pts);
     return mid?{lat:mid[0],lng:mid[1],label:codeFirstLabel(c),asset:c,pts}:null;
   }
+  if(kind==='caixa'){
+    const cx=getInvStore().caixas.find(x=>String(x.id)===String(id));
+    const lat=Number(cx?.lat),lng=Number(cx?.lng);
+    return Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng,label:cx.codigo||cx.nome||`Caixa ${id}`,asset:cx}:null;
+  }
+  if(kind==='dgo'){
+    const dg=getInvStore().dgos.find(x=>String(x.id)===String(id));
+    const site=findDraftPoint(dg?.site||'');
+    const lat=Number(site?.lat),lng=Number(site?.lng);
+    return Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng,label:dg.codigo||dg.nome||dg.site||`DGO ${id}`,asset:dg}:null;
+  }
   return null;
 }
 function renderFlags(){
@@ -1178,13 +1189,20 @@ function renderFlags(){
       .on('click',()=>{
         if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
         else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
+        else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
+        else if(f.kind==='dgo'&&anchor.asset)showPanDgoDraft(anchor.asset);
       });
     attachMarkerFieldActions(mk,()=>({
       title:`Flag ${f.title||anchor.label||'operacional'}`,
       subtitle:`${esc(f.kind||'ativo')} • ${esc(f.priority||'normal')}<br>${esc(f.note||'Sem observação')}`,
       actions:[
         {label:'✏️ Editar flag',primary:true,action:()=>openFlagEditor(f.kind,f.assetId)},
-        {label:'📍 Ir para ativo',action:()=>{ if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]); else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0); }},
+        {label:'📍 Ir para ativo',action:()=>{
+          if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
+          else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
+          else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
+          else if(f.kind==='dgo'&&anchor.asset)showPanDgoDraft(anchor.asset);
+        }},
         {label:'🗑 Remover flag',warn:true,action:()=>removeFlag(f.kind,f.assetId)}
       ]
     }));
@@ -1195,7 +1213,8 @@ function openFlagEditor(kind,id){
   const existing=getFlagForAsset(kind,id);
   const anchor=getFlagAnchor(kind,id);
   const label=existing?.label||anchor?.label||`${kind} ${id}`;
-  $('mtt').textContent=`🚩 Flag de ${kind==='site'?'site':'cabo'}`;
+  const titleMap={site:'site',cabo:'cabo',caixa:'caixa',dgo:'DGO'};
+  $('mtt').textContent=`🚩 Flag de ${titleMap[kind]||'ativo'}`;
   $('mbd').innerHTML=`
     <input type="hidden" id="fl-kind" value="${esc(kind)}">
     <input type="hidden" id="fl-id" value="${esc(String(id))}">
@@ -2817,12 +2836,62 @@ function showPanRupturaDraft(rp){
   closePan();
   const rel=getCableDraftRelations(rp.cabo_segmento||'');
   $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura'}`;
+  
+  let htmlCadeia = '';
+  // Se for uma TA validada do SIGITM, tenta mostrar a cadeia de emendas
+  if(String(rp.cabo_segmento).startsWith('TA-') && rp.lat && rp.lng){
+     // Tenta extrair o site da observação (ex: "Site: SAG")
+     const siteMatch = rp.observacao?.match(/Site:\s*([A-Z0-9]+)/i);
+     const siteRef = siteMatch ? siteMatch[1].toUpperCase() : null;
+     
+     if(siteRef){
+        const cadeia = auditarTrechoFalha(siteRef, rp.lat, rp.lng);
+        if(Array.isArray(cadeia)){
+           htmlCadeia = `
+             <div style="margin-top:15px;border-top:1px solid var(--bd);padding-top:12px">
+               <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px">Cadeia de emendas no trecho</div>
+               <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-left:15px">
+                 <div style="position:absolute;left:4px;top:5px;bottom:10px;width:2px;background:linear-gradient(180deg, var(--gr), var(--rd))"></div>
+                 
+                 <!-- Estação -->
+                 <div style="position:relative;margin-bottom:12px">
+                   <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--gr);border:2px solid var(--bg)"></div>
+                   <div style="font-size:11px;color:var(--t)"><b>Estação ${siteRef}</b></div>
+                   <div style="font-size:9px;color:var(--t3)">Ponto de origem (0m)</div>
+                 </div>
+
+                 <!-- Caixas intermediárias -->
+                 ${cadeia.map(cx => `
+                   <div style="position:relative;margin-bottom:12px">
+                     <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:2px;background:var(--bl);border:2px solid var(--bg)"></div>
+                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                       <div style="font-size:11px;color:var(--t2)">Caixa <b>${cx.codigo}</b></div>
+                       <a href="javascript:void(0)" onclick="jumpToRef('${cx.codigo}')" style="font-size:9px;color:var(--bl);text-decoration:none">👁 mapa</a>
+                     </div>
+                     <div style="font-size:9px;color:var(--t3)">Distância: ${cx.distancia} | Vistoria: ${cx.status}</div>
+                   </div>
+                 `).join('')}
+
+                 <!-- Ponto da Falha -->
+                 <div style="position:relative">
+                   <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--rd);border:2px solid var(--bg)"></div>
+                   <div style="font-size:11px;color:var(--rd);font-weight:800">PONTO DA FALHA (OTDR)</div>
+                   <div style="font-size:9px;color:var(--t3)">Local aproximado da TA</div>
+                 </div>
+               </div>
+             </div>
+           `;
+        }
+     }
+  }
+
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
     <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
-    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_lancada_m||0)}</span></div>
+    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_m||rp.metragem_lancada_m||0)}</span></div>
     <div class="pr"><span class="pl">Nova caixa</span><span class="pv">${esc(rp.nova_caixa||'—')}</span></div>
     <div class="pr"><span class="pl">Tipo reparo</span><span class="pv">${esc(rp.tipo_reparo||'—')}</span></div>
+    ${htmlCadeia}
     ${buildRupturaLinksHtml(rel.rupts.filter(x=>x.id!==rp.id))}
     ${rp.nova_caixa?buildRefLinksHtml(rp.nova_caixa):''}
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
