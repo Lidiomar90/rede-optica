@@ -764,6 +764,7 @@ let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer
 let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
 let touchHoldTimer=null;
+let drawTarget='segmento';
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:false,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -1338,9 +1339,10 @@ function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circ
 function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
 function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
 function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
-function startDraw(seedPts=[]){
+function startDraw(seedPts=[],target='segmento'){
   if(drawMode){cancelDraw();return;}
   drawMode=true;
+  drawTarget=target||'segmento';
   drawPts=[];
   $('bdc').classList.add('on-g');
   $('h-draw').style.display='block';
@@ -1361,7 +1363,7 @@ function startDraw(seedPts=[]){
     toast('Ajuste a linha e finalize com duplo clique','in');
     return;
   }
-  toast('Trace o segmento físico','in');
+  toast(drawTarget==='cabo'?'Trace o novo trajeto do cabo':'Trace o segmento físico','in');
 }
 function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}}
 function finishDraw(e){
@@ -1370,6 +1372,13 @@ function finishDraw(e){
   const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));
   const pts=drawPts.map(p=>[Number(p.lat.toFixed(6)),Number(p.lng.toFixed(6))]);
   cancelDraw();
+  if(drawTarget==='cabo'){
+    if($('ec-geo'))$('ec-geo').value=JSON.stringify(pts);
+    if($('ec-comp'))$('ec-comp').value=d;
+    if($('ec-msg'))msgField('ec-msg','Geometria do cabo pronta. Revise e salve.','ok');
+    toast('Trajeto do cabo atualizado. Revise e salve.','ok');
+    return;
+  }
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
   if($('sg-metr'))$('sg-metr').value=d;
   if($('sg-geo'))$('sg-geo').value=JSON.stringify(pts);
@@ -1377,7 +1386,7 @@ function finishDraw(e){
   msgField('sg-msg','Geometria do segmento pronta. Revise A/B e salve.','ok');
   toast('Preencha os pontos A/B e salve o segmento físico','ok');
 }
-function cancelDraw(){drawMode=false;map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
+function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
 function redesenharSegmentoAtual(){
   goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
@@ -1386,7 +1395,7 @@ function redesenharSegmentoAtual(){
     const raw=$('sg-geo')?.value||'';
     if(raw)seed=JSON.parse(raw);
   }catch{}
-  startDraw(seed);
+  startDraw(seed,'segmento');
 }
 function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
 function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
@@ -2474,14 +2483,23 @@ async function salvarEditSite(id){
 }
 async function editarCabo(id){
   const c=allC.find(x=>x.id===id);if(!c)return;
+  const pts=PL(c.trajeto)||[];
   $('mtt').textContent='✏ Editar cabo';
   $('mbd').innerHTML=`
+    <input id="ec-geo" type="hidden" value='${esc(JSON.stringify(pts))}'>
     <div class="mfg"><label>Nome *</label><input id="ec-nome" value="${esc(c.nome||'')}"></div>
     <div class="mfgr">
       <div class="mfg"><label>Tipo</label><select id="ec-tipo">${['distribuicao','backbone','drop','interligacao'].map(t=>`<option ${c.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="mfg"><label>Status</label><select id="ec-st">${['ativo','inativo','previsto'].map(v=>`<option ${c.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
     </div>
     <div class="mfg"><label>Comprimento (m)</label><input id="ec-comp" type="number" value="${c.comprimento||''}"></div>
+    <div class="mfg" style="background:rgba(72,168,255,.08);border:1px solid rgba(72,168,255,.2);border-radius:7px;padding:9px">
+      <label style="color:var(--bl)">Geometria atual</label>
+      <div style="font-size:12px;color:var(--t2);margin-top:3px">${pts.length||0} ponto(s)</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" class="btn2 s" onclick="redesenharCaboOficial('${id}')">🧭 Redesenhar no mapa</button>
+      </div>
+    </div>
     <div class="mfg"><label>Observação</label><textarea id="ec-obs">${esc(c.observacao||'')}</textarea></div>
     <div id="ec-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -2494,9 +2512,24 @@ async function salvarEditCabo(id){
   const nome=($('ec-nome')?.value||'').trim();
   if(!nome){const m=$('ec-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
   const reg={nome,tipo:$('ec-tipo')?.value,status:$('ec-st')?.value,comprimento:Math.round(parseFloat($('ec-comp')?.value))||null,observacao:($('ec-obs')?.value||'').trim()||null};
+  try{
+    const pts=JSON.parse($('ec-geo')?.value||'null');
+    if(Array.isArray(pts)&&pts.length>=2){
+      const coords=pts.map(p=>`${p[1]} ${p[0]}`).join(',');
+      reg.trajeto=`SRID=4326;LINESTRING(${coords})`;
+    }
+  }catch{}
   const r=await fetch(`${SU}/rest/v1/cabos?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
   if([200,204].includes(r.status)){toast('✓ Cabo atualizado!');closeM();closePan();loadMap();}
   else{const err=await r.json().catch(()=>({}));const m=$('ec-msg');m.textContent='Erro: '+(err.message||r.status);m.style.color='var(--rd)';}
+}
+function redesenharCaboOficial(id){
+  const c=allC.find(x=>x.id===id);if(!c){toast('Cabo não encontrado','er');return;}
+  const seed=PL(c.trajeto)||[];
+  closeM();
+  closePan();
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  startDraw(seed,'cabo');
 }
 
 // EXCLUIR

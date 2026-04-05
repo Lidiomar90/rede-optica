@@ -306,6 +306,10 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - `caixa_emenda` pode ser editada
   - `DGO` pode ser editado
   - `segmento_cabo` pode ser editado, reatribuir Ponto A/B e redesenhar geometria
+- cabos oficiais existentes:
+  - modal de edicao agora permite redesenhar o `trajeto`
+  - novo desenho atualiza `trajeto` e `comprimento` no PATCH do cabo
+  - usa o mesmo fluxo de desenho do mapa para manter consistencia
 - geometria de segmento em rascunho:
   - `segmento` agora pode guardar `geometria_pts`
   - renderizacao usa a geometria desenhada quando existir
