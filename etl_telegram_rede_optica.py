@@ -200,6 +200,7 @@ RE_SLASH_FO = re.compile(
 RE_SIGLA_MG = re.compile(r'\b([A-Z]{3,6}MG)\b')
 # Sigla genérica: 3-8 letras maiúsculas
 RE_SIGLA_GEN = re.compile(r'\b([A-Z]{3,8})\b')
+RE_TOKEN_ALNUM = re.compile(r'[A-Z0-9_-]{3,}')
 
 # Palavras que NÃO são siglas de sites (stopwords)
 SIGLA_STOPWORDS = {
@@ -547,6 +548,65 @@ def detectar_camada(texto: str) -> tuple[str, str]:
             return tipo, camada
     return "", ""
 
+def resolver_sigla(sigla: str, db: DB) -> Optional[dict]:
+    """Resolve uma sigla/alias para um site conhecido."""
+    if not sigla:
+        return None
+    return db.lookup_site(sigla)
+
+def extrair_siglas_por_padrao(texto: str, db: DB) -> list[str]:
+    """
+    Extrai pares de siglas em padrões comuns de campo:
+    - SAG x VNZ
+    - SAG / VNZ
+    - MGSAG-MGVNZ
+    - SAG...-VNZ...
+    - PONTA A = SAG / PONTA B = VNZ
+    """
+    txt = texto.upper()
+    encontradas = []
+
+    # PONTA A / PONTA B explícitos
+    ponta_a = re.search(r'PONTA\s*A\s*[=:]\s*([A-Z]{3,8})', txt)
+    ponta_b = re.search(r'PONTA\s*B\s*[=:]\s*([A-Z]{3,8})', txt)
+    if ponta_a:
+        encontradas.append(ponta_a.group(1))
+    if ponta_b:
+        encontradas.append(ponta_b.group(1))
+
+    # ROTA = SAG X VNZ / SAG <> VNZ / VNZ / SAG
+    for m in re.finditer(r'([A-Z]{3,8})\s*(?:<>|/|X|-)\s*([A-Z]{3,8})', txt):
+        encontradas.extend([m.group(1), m.group(2)])
+
+    # Tokens compostos como MGSAG-MGVNZ ou SAGMGH12.72-VNZMGH12.06
+    for m in re.finditer(r'([A-Z]{3,12})[^A-Z0-9]{0,3}[-_/][^A-Z0-9]{0,3}([A-Z]{3,12})', txt):
+        encontradas.extend([m.group(1), m.group(2)])
+
+    # Procurar aliases embutidos em tokens maiores
+    aliases = sorted(db._siglas_set, key=len, reverse=True)
+    tokens = RE_TOKEN_ALNUM.findall(txt)
+    for token in tokens:
+        if token in SIGLA_STOPWORDS:
+            continue
+        hits = []
+        for alias in aliases:
+            if alias in token and alias not in SIGLA_STOPWORDS:
+                hits.append(alias)
+            if len(hits) >= 2:
+                break
+        encontradas.extend(hits)
+
+    resultado = []
+    for sig in encontradas:
+        reg = resolver_sigla(sig, db)
+        if reg:
+            cod = reg.get("codigo", sig)
+            if cod not in resultado:
+                resultado.append(cod)
+        elif sig not in SIGLA_STOPWORDS and sig not in resultado:
+            resultado.append(sig)
+    return resultado
+
 def extrair_siglas(texto: str, siglas_validas: set) -> list[str]:
     """
     Extrai siglas de sites do texto.
@@ -643,7 +703,9 @@ def parse_mensagem(msg: dict, db: DB) -> Optional[MsgParseado]:
     p.camada_norm      = camada
 
     # ── Siglas de sites
-    siglas = extrair_siglas(texto, db._siglas_set)
+    siglas = extrair_siglas_por_padrao(texto, db)
+    if len(siglas) < 2:
+        siglas = extrair_siglas(texto, db._siglas_set)
     if len(siglas) >= 2:
         p.ponta_a_raw  = siglas[0]
         p.ponta_b_raw  = siglas[1]
@@ -942,7 +1004,11 @@ def gerar_relatorio(res: ResultadoETL, caminho_saida: str):
     relatorio = "\n".join(linhas)
     with open(caminho_saida, "w", encoding="utf-8") as f:
         f.write(relatorio)
-    print(relatorio)
+    try:
+        print(relatorio)
+    except UnicodeEncodeError:
+        seguro = relatorio.encode("cp1252", errors="replace").decode("cp1252")
+        print(seguro)
     log.info(f"Relatório salvo em: {caminho_saida}")
 
 # ══════════════════════════════════════════════════════════════════════

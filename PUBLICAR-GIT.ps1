@@ -47,6 +47,7 @@ Set-Location $PASTA
 $ignorePatterns = @(
     "telegram/",
     "*.dwg",
+    "*.apk",
     "privado/"
 )
 if (-not (Test-Path $GITIGNORE)) {
