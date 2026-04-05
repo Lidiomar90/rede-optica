@@ -339,21 +339,29 @@ class DB:
                 return self._site_aliases[s3]
                 
         # 4. Fuzzy Match por Sigla (difflib)
-        # Só tenta se a sigla tiver um tamanho razoável para evitar colisões absurdas
         if len(s) >= 4:
-            matches = difflib.get_close_matches(s, self._site_aliases.keys(), n=1, cutoff=0.85)
+            # Tenta encontrar correspondência entre os aliases conhecidos
+            matches = difflib.get_close_matches(s, self._site_aliases.keys(), n=1, cutoff=0.80)
             if matches:
-                # log.debug(f"Fuzzy sigla match: {s} -> {matches[0]}")
                 return self._site_aliases[matches[0]]
 
-        # 5. Busca por nome (nome_norm ou nome original)
-        # Lento, mas útil como último recurso
+        # 5. Busca por nome (Fuzzy no Nome)
         s_norm = self.normalizar_nome(s)
-        if len(s_norm) > 5:
+        if len(s_norm) > 4:
+            # Cria um mapeamento de nome normalizado -> registro
+            nomes_map = {}
             for cod, reg in self._sites_cache.items():
-                nome = reg.get("nome", "").upper()
-                if s in nome or s_norm in self.normalizar_nome(nome):
-                    return reg
+                n_db = self.normalizar_nome(reg.get("nome", ""))
+                if n_db: nomes_map[n_db] = reg
+            
+            # 5.1 Busca exata no nome normalizado
+            if s_norm in nomes_map:
+                return nomes_map[s_norm]
+                
+            # 5.2 Fuzzy match no nome normalizado
+            matches = difflib.get_close_matches(s_norm, nomes_map.keys(), n=1, cutoff=0.80)
+            if matches:
+                return nomes_map[matches[0]]
                     
         return None
 

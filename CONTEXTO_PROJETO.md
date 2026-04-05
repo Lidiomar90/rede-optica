@@ -353,6 +353,14 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - quebrados / sem continuidade
   - segmentos prontos para campo
   - cabos sem inventario local
+- achados da auditoria agora podem abrir correcoes diretamente:
+  - primeiro segmento quebrado
+  - primeiro ativo quebrado
+  - primeiro ativo pendente
+  - primeiro segmento sem geometria
+  - primeira ruptura ligada
+  - primeiro DGO pendente
+  - ativar preset de campo
 
 ### O que ainda falta no front local
 
