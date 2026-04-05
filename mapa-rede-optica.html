@@ -151,6 +151,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .mhk{font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:5px}
 .mht{font-size:15px;font-weight:800;line-height:1.15;margin-bottom:4px}
 .mhs{font-size:11px;color:var(--t2);line-height:1.45}
+.mmeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.mchip{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer}
+.mchip.on{background:rgba(69,208,140,.16);border-color:rgba(69,208,140,.26);color:var(--gr)}
 @media(max-width:680px){#maphead{top:62px;left:10px;right:68px;max-width:none;padding:10px 12px}.mht{font-size:13px}.mhs{font-size:10px}}
 #mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:5px}
 .mb{width:42px;height:42px;border-radius:14px;background:rgba(11,21,35,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 12px 24px rgba(0,0,0,.22)}
@@ -401,6 +404,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <div class="mhk">Mapa operacional</div>
       <div class="mht">Rotas, falhas, OTDR e cadastro em uma única superfície</div>
       <div class="mhs" id="mapsub">Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.</div>
+      <div class="mmeta">
+        <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
+      </div>
     </div>
     <div id="map"></div>
     <button id="mobb" class="mb" onclick="toggleSB()">☰</button>
@@ -415,6 +421,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <button class="dbtn danger" onclick="cancelDraw()">✕ Cancelar</button>
     </div>
     <div id="fieldbar">
+      <button class="fbtn" onclick="toggleFieldMode()">🛠 Campo</button>
       <button class="fbtn" onclick="toggleSB()">☰ Camadas</button>
       <button class="fbtn" onclick="goLoc()">📍 GPS</button>
       <button class="fbtn" onclick="novaCaixaNoCentro()">🧰 Caixa</button>
@@ -773,7 +780,9 @@ function iniciarApp(){
   const a=$('app');a.style.display='flex';a.style.flexDirection='column';
   $('unome').textContent=sessao.nome.split(' ')[0];
   if(sessao.perfil==='admin')document.querySelectorAll('.adm').forEach(e=>e.style.display='');
-  buildLayerPanel();loadMap();loadIncidentes();loadRotas();
+  buildLayerPanel();
+  if(fieldMode)applyFieldMode(true);
+  loadMap();loadIncidentes();loadRotas();
   if(sessao.perfil==='admin')loadUsuarios();
   setTimeout(()=>rodarAuditoriaIA(true),250);
   aplicarTema();
@@ -805,7 +814,10 @@ let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer
 let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
 let touchHoldTimer=null;
+let assetTouchHoldTimer=null;
+let ctxActions=[];
 let drawTarget='segmento';
+let fieldMode=localStorage.getItem('_field_mode')==='1';
 const OVERLAY_CFG=[
   {id:'ov_romp',label:'Incidentes',warn:true,vis:true},
   {id:'ov_draft',label:'Rascunhos',vis:true},
@@ -870,8 +882,13 @@ function loadMapCache(){
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
   const base='Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.';
-  const badge=mapOffline?`<div style="margin-top:8px"><span class="ctx-off">modo offline</span></div>`:'';
+  const badges=[
+    mapOffline?`<span class="ctx-off">modo offline</span>`:'',
+    fieldMode?`<span class="ctx-off" style="border-color:rgba(69,208,140,.26);background:rgba(69,208,140,.12);color:var(--gr)">modo campo</span>`:''
+  ].filter(Boolean).join('');
+  const badge=badges?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badges}</div>`:'';
   if($('mapsub'))$('mapsub').innerHTML=base+badge;
+  if($('field-mode-chip'))$('field-mode-chip').classList.toggle('on',fieldMode);
   if(msg)toast(msg,mapOffline?'wn':'ok');
 }
 function getLayerPresetMap(name){
@@ -893,6 +910,154 @@ function getCurrentPreset(){
   }
   return 'custom';
 }
+function applyFieldMode(on,msg=''){
+  fieldMode=!!on;
+  localStorage.setItem('_field_mode',fieldMode?'1':'0');
+  if(fieldMode){
+    applyPreset('campo');
+    closeSB();
+  }
+  setOfflineState(mapOffline,msg||'');
+}
+function toggleFieldMode(){
+  applyFieldMode(!fieldMode,fieldMode?'Modo campo desativado.':'Modo campo ativado.');
+}
+function openActionMenu({title='Menu de campo',subtitle='',actions=[],latlng=null,clientX=120,clientY=120}={}){
+  const ctx=$('ctxm');
+  if(!ctx)return;
+  ctxLatLng=latlng||ctxLatLng;
+  ctxActions=actions.map(a=>a&&a.action);
+  const x=Math.max(10,Math.min(window.innerWidth-236,clientX||120));
+  const y=Math.max(10,Math.min(window.innerHeight-260,clientY||120));
+  ctx.innerHTML=`
+    <div class="ctx-h">${esc(title)}</div>
+    <div class="ctx-sb">${subtitle||'Sem detalhes adicionais.'}</div>
+    ${actions.map((a,i)=>`<button class="ctx-a${a.warn?' warn':''}${a.primary?' pri':''}" onclick="runCtxAction(${i})">${a.label}</button>`).join('')}
+  `;
+  ctx.style.left=`${x}px`;
+  ctx.style.top=`${y}px`;
+  ctx.style.display='block';
+}
+function runCtxAction(i){
+  const fn=ctxActions[i];
+  hideContextMenu();
+  if(typeof fn==='function')fn();
+}
+function copiarCoordenadasAt(lat,lng){
+  ctxLatLng={lat,lng};
+  return contextCopiarCoord();
+}
+function attachMarkerFieldActions(marker,menuFactory){
+  if(!marker||typeof menuFactory!=='function')return marker;
+  marker.on('contextmenu',ev=>{
+    L.DomEvent.stopPropagation(ev);
+    const latlng=ev.latlng||marker.getLatLng();
+    const oe=ev.originalEvent||{};
+    openActionMenu({...menuFactory(latlng),latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
+  });
+  marker.on('add',()=>{
+    const el=marker.getElement();
+    if(!el||el.dataset.ctxBound==='1')return;
+    el.dataset.ctxBound='1';
+    const clear=()=>clearTimeout(assetTouchHoldTimer);
+    el.addEventListener('touchstart',ev=>{
+      if(!ev.touches||ev.touches.length!==1)return;
+      clear();
+      const touch=ev.touches[0];
+      assetTouchHoldTimer=setTimeout(()=>{
+        const latlng=marker.getLatLng();
+        openActionMenu({...menuFactory(latlng),latlng,clientX:touch.clientX,clientY:touch.clientY});
+        toast('Ações rápidas do ativo abertas','in');
+      },650);
+    },{passive:true});
+    el.addEventListener('touchend',clear,{passive:true});
+    el.addEventListener('touchmove',clear,{passive:true});
+    el.addEventListener('touchcancel',clear,{passive:true});
+  });
+  return marker;
+}
+function mkSiteMenu(s,pt){
+  return {
+    title:`Site ${codeFirstLabel(s)}`,
+    subtitle:`${esc(s.municipio||'—')} / ${esc(s.uf||'MG')}<br>${esc(s.cn||'Sem CN')}${s.localidade?` | ${esc(s.localidade)}`:''}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanSite(s,pt)},
+      {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(s.codigo||s.nome||'','sg-a')},
+      {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(s.codigo||s.nome||'','sg-b')},
+      {label:'🚨 Nova ruptura aqui',warn:true,action:()=>abrirNovaRupturaContextual(s,pt[0],pt[1])},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(pt[0],pt[1])},
+    ]
+  };
+}
+function mkCaixaMenu(cx){
+  return {
+    title:`Caixa ${normText(cx.codigo)||'Rascunho'}`,
+    subtitle:`${esc(cx.nome||'Caixa de emenda')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanCaixaDraft(cx)},
+      {label:'✏️ Editar caixa',action:()=>editarCaixaDraft(cx.id)},
+      {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-a')},
+      {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-b')},
+      {label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexao(cx.codigo||'')},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(cx.lat),Number(cx.lng))},
+    ]
+  };
+}
+function mkDgoMenu(dg,site){
+  return {
+    title:`DGO ${normText(dg.codigo)||'Rascunho'}`,
+    subtitle:`Site: ${esc(dg.site||'—')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanDgoDraft(dg)},
+      {label:'✏️ Editar DGO',action:()=>editarDgoDraft(dg.id)},
+      {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-a')},
+      {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-b')},
+      {label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexaoDgo(dg.codigo||'')},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(site.lat),Number(site.lng))},
+    ]
+  };
+}
+function mkRupturaMenu(rp){
+  return {
+    title:`Ruptura ${normText(rp.cabo_segmento)||'Local'}`,
+    subtitle:`OTDR: ${rp.distancia_otdr_m||0}m<br>Lançado: ${rp.metragem_lancada_m||0}m | Nova caixa: ${esc(rp.nova_caixa||'—')}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanRupturaDraft(rp)},
+      {label:'✏️ Ajustar ruptura',warn:true,action:()=>abrirRupturaPorContexto(rp)},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(rp.lat),Number(rp.lng))},
+    ]
+  };
+}
+function mkCaboMenu(c,p2,lenCalc){
+  const center=p2&&p2.length?p2[Math.floor(p2.length/2)]:map.getCenter();
+  const latlng=Array.isArray(center)?{lat:center[0],lng:center[1]}:center;
+  return {
+    title:`Cabo ${codeFirstLabel(c)}`,
+    subtitle:`${esc(c.tipo||'—')} | ${km(c.comprimento||lenCalc)}<br>${esc(c.status||'—')}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanCabo(c,p2,lenCalc)},
+      {label:'✏️ Editar cabo',action:()=>editarCabo(c.id)},
+      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharCaboOficial(c.id)},
+      {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(c,latlng.lat,latlng.lng)},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
+    ]
+  };
+}
+function mkSegmentoMenu(seg,path){
+  const center=path&&path.length?path[Math.floor(path.length/2)]:map.getCenter();
+  const latlng=Array.isArray(center)?{lat:center[0],lng:center[1]}:center;
+  return {
+    title:`Segmento ${normText(seg.cabo)||'Rascunho'}`,
+    subtitle:`${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`,
+    actions:[
+      {label:'📋 Ver detalhes',action:()=>showPanSegmentoDraft(seg)},
+      {label:'✏️ Editar segmento',action:()=>editarSegmentoDraft(seg.id)},
+      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharSegmentoDraft(seg.id)},
+      {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(seg,latlng.lat,latlng.lng)},
+      {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
+    ]
+  };
+}
 // Marcador de rompimento — vermelho pulsante
 const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
 // Marcador de nova caixa após lançamento
@@ -900,12 +1065,13 @@ const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15
 const mkDraftCaixa=()=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚</div>`});
 const mkSuggestNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ffb648;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,182,72,.16),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#251200">!</div>`});
 const mkPendNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ff5a68;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,90,104,.14),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#24060b">?</div>`});
-function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,className=''}={}){
+function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,contextmenu=null,className=''}={}){
   const halo=L.polyline(pts,{color:'#ffffff',weight:weight+3,opacity:Math.min(opacity*.22,.32),lineCap:'round',lineJoin:'round',interactive:false,className});
   const line=L.polyline(pts,{color,weight,opacity,dashArray,lineCap:'round',lineJoin:'round',className});
   const group=L.layerGroup([halo,line]);
   if(popup)line.bindPopup(popup);
   if(click)line.on('click',click);
+  if(contextmenu)line.on('contextmenu',contextmenu);
   group.addTo(layer);
   return {group,halo,line};
 }
@@ -1118,6 +1284,7 @@ async function loadMap(){
           if(incMode){regFalha(pt[0],pt[1],s.nome);return;}
           showPanSite(s,pt);
         });
+        attachMarkerFieldActions(mk,()=>mkSiteMenu(s,pt));
         fmap['s-'+s.id]=()=>map.setView(pt,17);
         lyr.addLayer(mk);pts.push(pt);
       });
@@ -1133,6 +1300,10 @@ async function loadMap(){
       const vis=addCableVisual((LYR[t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist']||LYR['outros']),p2,{color:cor,weight:peso,opacity:t==='backbone'?.96:.88,popup,click:ev=>{
         L.DomEvent.stopPropagation(ev);if(drawMode||medMode)return;
         showPanCabo(c,p2,lenCalc);
+      },contextmenu:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        const oe=ev.originalEvent||{};
+        openActionMenu({...mkCaboMenu(c,p2,lenCalc),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
       }});
       cableFx[c.id]={...vis,baseColor:cor,baseWeight:peso,baseOpacity:t==='backbone'?.96:.88,baseHaloOpacity:Math.min((t==='backbone'?.96:.88)*.22,.32),baseDashArray:null};
       fmap['c-'+c.id]=()=>map.fitBounds(vis.line.getBounds(),{padding:[50,50]});
@@ -2216,22 +2387,21 @@ function salvarConexaoDgo(codigo){
 function openContextMenu(ev){
   if(!map)return;
   ctxLatLng=ev.latlng;
-  const ctx=$('ctxm');
   const near=nearestSiteTo(ev.latlng.lat,ev.latlng.lng,180);
   const nearTxt=near?`Referência próxima: <b>${esc(codeFirstLabel(near.site))}</b> a ${Math.round(near.dist)}m.`:'Sem site de referência próximo.';
-  const x=Math.min(window.innerWidth-236,ev.originalEvent.clientX||120);
-  const y=Math.min(window.innerHeight-220,ev.originalEvent.clientY||120);
-  ctx.innerHTML=`
-    <div class="ctx-h">Menu de campo</div>
-    <div class="ctx-sb">${nearTxt}<br>Coordenada: ${ev.latlng.lat.toFixed(6)}, ${ev.latlng.lng.toFixed(6)}</div>
-    <button class="ctx-a" onclick="contextNovaCaixa()">🧰 Criar caixa aqui</button>
-    <button class="ctx-a" onclick="contextNovaRuptura()">🚨 Registrar ruptura aqui</button>
-    <button class="ctx-a" onclick="contextNovoDgo()">🗄 Criar DGO com site próximo</button>
-    <button class="ctx-a" onclick="contextCopiarCoord()">📋 Copiar coordenadas</button>
-  `;
-  ctx.style.left=`${x}px`;
-  ctx.style.top=`${y}px`;
-  ctx.style.display='block';
+  openActionMenu({
+    title:'Menu de campo',
+    subtitle:`${nearTxt}<br>Coordenada: ${ev.latlng.lat.toFixed(6)}, ${ev.latlng.lng.toFixed(6)}`,
+    latlng:ev.latlng,
+    clientX:ev.originalEvent.clientX||120,
+    clientY:ev.originalEvent.clientY||120,
+    actions:[
+      {label:'🧰 Criar caixa aqui',primary:true,action:()=>contextNovaCaixa()},
+      {label:'🚨 Registrar ruptura aqui',warn:true,action:()=>contextNovaRuptura()},
+      {label:'🗄 Criar DGO com site próximo',action:()=>contextNovoDgo()},
+      {label:'📋 Copiar coordenadas',action:()=>contextCopiarCoord()},
+    ]
+  });
 }
 function hideContextMenu(){if($('ctxm'))$('ctxm').style.display='none';}
 function contextNovaCaixa(){

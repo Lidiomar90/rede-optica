@@ -334,6 +334,7 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - barra de desenho no mapa com `desfazer`, `finalizar` e `cancelar`
   - desenho de linha agora fica viável no mobile sem depender de duplo clique
   - barra de campo mobile com atalhos para `camadas`, `GPS`, `nova caixa`, `nova ruptura` e `auditoria`
+  - `Modo Campo` persistente, que aplica preset enxuto e reduz friccao no uso em rua
 
 ### Auditoria IA local agora verifica tambem
 
@@ -348,3 +349,18 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - editar cabos oficiais existentes com geometria real, nao so rascunho local
 - mais acoes mobile de campo (ex.: fluxo de toque longo por elemento e nao so no mapa)
 - diagrama completo de continuidade/fusao/tubo loose
+
+### Automacao multiagente local
+
+- novo script local: `RODAR-REVISAO-MULTIAGENTE.ps1`
+- novo atalho: `RODAR-REVISAO-MULTIAGENTE.bat`
+- finalidade:
+  - gerar handoff padronizado para Claude
+  - gerar handoff padronizado para Gemini
+  - consolidar contexto, checklist, pilotos e estado git local
+  - reduzir perda de contexto entre sessoes/agentes
+- saida padrao:
+  - pasta `handoffs\`
+  - arquivo `handoff_claude_YYYYMMDD_HHMMSS.md`
+  - arquivo `handoff_gemini_YYYYMMDD_HHMMSS.md`
+  - arquivo `resumo_multiagente_YYYYMMDD_HHMMSS.md`
