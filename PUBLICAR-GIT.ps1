@@ -92,7 +92,9 @@ if ($LASTEXITCODE -ne 0) {
 # --- Push com token ---
 Write-Host "Publicando no GitHub..." -ForegroundColor Cyan
 $URL_TOKEN = "https://Lidiomar90:$TOKEN@github.com/Lidiomar90/rede-optica.git"
-$pushOutput = git push $URL_TOKEN main --force 2>&1
+$pushOutput = $pushOutput = git push $URL_TOKEN main --force 2>&1
+if ($LASTEXITCODE -ne 0) { throw ($pushOutput | Out-String) }
+$pushOutput | Out-Host
 if ($LASTEXITCODE -ne 0) { throw ($pushOutput | Out-String) }
 $pushOutput | Out-Host
 
