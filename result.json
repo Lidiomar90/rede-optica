@@ -1,0 +1,4206 @@
+{
+ "name": "SAG - VNZ | LADO A OTS 6739",
+ "type": "private_group",
+ "id": 4586350046,
+ "messages": [
+  {
+   "id": 2252557,
+   "type": "service",
+   "date": "2024-11-03T11:05:00",
+   "date_unixtime": "1730642700",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "create_group",
+   "title": "SAG - VNZ LADO A 33 KM",
+   "members": [
+    "Daniel Nogueira Sup Telemont",
+    "Diego Supervisor VIVO MG Tlm",
+    "Lidiomar",
+    "Bruno Alves Parceira RE Icomon",
+    "Alan Xxxxxx",
+    "Bruno Corp Oi Tlm",
+    "Helbert Coordenador Telemont",
+    "Welbert Corporativo Telemont Xxxxx",
+    "Marcos Bruno Lopes",
+    "Jefferson Sousa"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252558,
+   "type": "service",
+   "date": "2024-11-03T11:05:45",
+   "date_unixtime": "1730642745",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "edit_group_title",
+   "title": "SAG - VNZ LADO LADO A OTS 6739",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252559,
+   "type": "service",
+   "date": "2024-11-03T11:06:05",
+   "date_unixtime": "1730642765",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Vagner Web"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252561,
+   "type": "message",
+   "date": "2024-11-03T11:06:56",
+   "date_unixtime": "1730642816",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "Posições rota DWDM MGSAG-MGVNZ OTS 6739\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Posições rota DWDM MGSAG-MGVNZ OTS 6739\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ]
+  },
+  {
+   "id": 2252562,
+   "type": "message",
+   "date": "2024-11-03T11:07:20",
+   "date_unixtime": "1730642840",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cleber Amaral",
+   "forwarded_from_id": "user5385636644",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_name": "DWDM 5 - 17-10 V5 atualizado com Andre.dwg",
+   "file_size": 31249057,
+   "mime_type": "application/octet-stream",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252563,
+   "type": "message",
+   "date": "2024-11-03T11:07:20",
+   "date_unixtime": "1730642840",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cléber Amaral GESTOR VIVO",
+   "forwarded_from_id": "user211704070",
+   "text": "Rota DWDM",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Rota DWDM"
+    }
+   ]
+  },
+  {
+   "id": 2252564,
+   "type": "message",
+   "date": "2024-11-03T11:11:51",
+   "date_unixtime": "1730643111",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Daniel Nogueira Sup Telemont",
+   "forwarded_from_id": "user81526305",
+   "text": [
+    "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_",
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_"
+    },
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ]
+  },
+  {
+   "id": 2252565,
+   "type": "message",
+   "date": "2024-11-03T11:11:51",
+   "date_unixtime": "1730643111",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "RSNAC Services",
+   "forwarded_from_id": "user366044667",
+   "photo": "photos/photo_1@03-11-2024_11-11-51.jpg",
+   "photo_file_size": 71489,
+   "width": 900,
+   "height": 700,
+   "text": [
+    "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_",
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_"
+    },
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ]
+  },
+  {
+   "id": 2252569,
+   "type": "message",
+   "date": "2024-11-03T11:31:49",
+   "date_unixtime": "1730644309",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_2@03-11-2024_11-31-49.jpg",
+   "photo_file_size": 121224,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252570,
+   "type": "message",
+   "date": "2024-11-03T11:31:49",
+   "date_unixtime": "1730644309",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "text": "Do site SAG até esse ponto tem 5.950 metros.\nCabos de 36 f.o mini",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Do site SAG até esse ponto tem 5.950 metros.\nCabos de 36 f.o mini"
+    }
+   ]
+  },
+  {
+   "id": 2252571,
+   "type": "message",
+   "date": "2024-11-03T11:31:49",
+   "date_unixtime": "1730644309",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Davidson",
+   "forwarded_from_id": "user770744713",
+   "location_information": {
+    "latitude": -19.928543,
+    "longitude": -43.986279
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252572,
+   "type": "message",
+   "date": "2024-11-03T12:34:06",
+   "date_unixtime": "1730648046",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_3@03-11-2024_12-34-06.jpg",
+   "photo_file_size": 200236,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252573,
+   "type": "message",
+   "date": "2024-11-03T12:34:06",
+   "date_unixtime": "1730648046",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_4@03-11-2024_12-34-06.jpg",
+   "photo_file_size": 173827,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252574,
+   "type": "message",
+   "date": "2024-11-03T12:34:06",
+   "date_unixtime": "1730648046",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_5@03-11-2024_12-34-06.jpg",
+   "photo_file_size": 133103,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252575,
+   "type": "message",
+   "date": "2024-11-03T12:34:06",
+   "date_unixtime": "1730648046",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "text": "Falha localizada \nDo site SAG até esse ponto tem 11.400 metros.\nCabo de 24 f.o estruturante.",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Falha localizada \nDo site SAG até esse ponto tem 11.400 metros.\nCabo de 24 f.o estruturante."
+    }
+   ]
+  },
+  {
+   "id": 2252645,
+   "type": "message",
+   "date": "2024-11-03T15:23:07",
+   "date_unixtime": "1730658187",
+   "from": "Diego Supervisor VIVO MG Tlm",
+   "from_id": "user440991922",
+   "forwarded_from": "RSNAC Services",
+   "forwarded_from_id": "user366044667",
+   "photo": "photos/photo_6@03-11-2024_15-23-07.jpg",
+   "photo_file_size": 70989,
+   "width": 900,
+   "height": 700,
+   "text": [
+    "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_",
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SAGMGH12.72(1.1)-VNZMGH12.06(1.1)_OTS_"
+    },
+    {
+     "type": "phone",
+     "text": "9900006739"
+    }
+   ]
+  },
+  {
+   "id": 2252646,
+   "type": "message",
+   "date": "2024-11-03T15:25:23",
+   "date_unixtime": "1730658323",
+   "from": "Diego Supervisor VIVO MG Tlm",
+   "from_id": "user440991922",
+   "text": "Subiu",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Subiu"
+    }
+   ]
+  },
+  {
+   "id": 2252647,
+   "type": "message",
+   "date": "2024-11-03T15:25:37",
+   "date_unixtime": "1730658337",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "Boa",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Boa"
+    }
+   ]
+  },
+  {
+   "id": 2252648,
+   "type": "message",
+   "date": "2024-11-03T15:30:19",
+   "date_unixtime": "1730658619",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_7@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 193347,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252649,
+   "type": "message",
+   "date": "2024-11-03T15:30:19",
+   "date_unixtime": "1730658619",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_8@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 171408,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252650,
+   "type": "message",
+   "date": "2024-11-03T15:30:19",
+   "date_unixtime": "1730658619",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_9@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 254312,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2252651,
+   "type": "message",
+   "date": "2024-11-03T15:30:19",
+   "date_unixtime": "1730658619",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.905240,
+    "longitude": -44.001799
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2258576,
+   "type": "message",
+   "date": "2024-12-11T08:32:41",
+   "date_unixtime": "1733916761",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "text": "Nestas posições de SAG até abordagem de CND \n29.094 MTS",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Nestas posições de SAG até abordagem de CND \n29.094 MTS"
+    }
+   ]
+  },
+  {
+   "id": 2258577,
+   "type": "message",
+   "date": "2024-12-11T08:32:41",
+   "date_unixtime": "1733916761",
+   "edited": "2026-02-26T10:21:02",
+   "edited_unixtime": "1772112062",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "forwarded_from": "Daniel NOGUEIRA##",
+   "text": "Posições rota DWDM MGSAG-MGVNZ OTS 6739\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Posições rota DWDM MGSAG-MGVNZ OTS 6739\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "👍",
+      "recent": [
+       {
+        "from": "Daniel Nogueira Sup Telemont",
+        "from_id": "user81526305",
+        "date": "2024-12-25T12:34:09"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2258584,
+   "type": "service",
+   "date": "2024-12-11T10:04:58",
+   "date_unixtime": "1733922298",
+   "actor": "Vagner Web",
+   "actor_id": "user6125232146",
+   "action": "invite_members",
+   "members": [
+    "Matheus Henrique"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2258585,
+   "type": "message",
+   "date": "2024-12-11T10:05:11",
+   "date_unixtime": "1733922311",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "reply_to_message_id": 2258577,
+   "text": [
+    {
+     "type": "mention",
+     "text": "@MatheUsnegao10"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@MatheUsnegao10"
+    }
+   ]
+  },
+  {
+   "id": 2260881,
+   "type": "service",
+   "date": "2024-12-25T12:40:11",
+   "date_unixtime": "1735141211",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Léo"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260882,
+   "type": "service",
+   "date": "2024-12-25T12:40:11",
+   "date_unixtime": "1735141211",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Cristiano Técnico icomon"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260883,
+   "type": "message",
+   "date": "2024-12-25T14:42:50",
+   "date_unixtime": "1735148570",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cristiano Técnico icomon",
+   "forwarded_from_id": "user919453452",
+   "photo": "photos/photo_10@25-12-2024_14-42-50.jpg",
+   "photo_file_size": 292025,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260884,
+   "type": "message",
+   "date": "2024-12-25T14:42:50",
+   "date_unixtime": "1735148570",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cristiano Técnico icomon",
+   "forwarded_from_id": "user919453452",
+   "photo": "photos/photo_11@25-12-2024_14-42-50.jpg",
+   "photo_file_size": 289640,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260885,
+   "type": "message",
+   "date": "2024-12-25T14:42:50",
+   "date_unixtime": "1735148570",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cristiano Técnico icomon",
+   "forwarded_from_id": "user919453452",
+   "photo": "photos/photo_12@25-12-2024_14-42-50.jpg",
+   "photo_file_size": 260450,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260886,
+   "type": "message",
+   "date": "2024-12-25T14:42:50",
+   "date_unixtime": "1735148570",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cristiano Técnico icomon",
+   "forwarded_from_id": "user919453452",
+   "location_information": {
+    "latitude": -19.926755,
+    "longitude": -43.987043
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260887,
+   "type": "message",
+   "date": "2024-12-25T14:43:58",
+   "date_unixtime": "1735148638",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "SAG <> VNZ \n\nFO 21 /  22\n\nPARADO A 6.198MT DE SAG ATE AKI 👆👆",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SAG <> VNZ \n\nFO 21 /  22\n\nPARADO A 6.198MT DE SAG ATE AKI 👆👆"
+    }
+   ]
+  },
+  {
+   "id": 2260888,
+   "type": "message",
+   "date": "2024-12-25T14:45:22",
+   "date_unixtime": "1735148722",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "reply_to_message_id": 2260885,
+   "text": "Minha nossa",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Minha nossa"
+    }
+   ]
+  },
+  {
+   "id": 2260889,
+   "type": "message",
+   "date": "2024-12-25T14:46:08",
+   "date_unixtime": "1735148768",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "Traz Minha Carne De Jacaré do pantanal kkkk",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Traz Minha Carne De Jacaré do pantanal kkkk"
+    }
+   ]
+  },
+  {
+   "id": 2260890,
+   "type": "message",
+   "date": "2024-12-25T14:46:19",
+   "date_unixtime": "1735148779",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "reply_to_message_id": 2260889,
+   "text": "Tá no jeito mestre",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Tá no jeito mestre"
+    }
+   ]
+  },
+  {
+   "id": 2260891,
+   "type": "message",
+   "date": "2024-12-25T14:49:07",
+   "date_unixtime": "1735148947",
+   "from": "Cristiano Técnico icomon",
+   "from_id": "user919453452",
+   "reply_to_message_id": 2260889,
+   "text": "Kkkkkkk",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Kkkkkkk"
+    }
+   ]
+  },
+  {
+   "id": 2260897,
+   "type": "message",
+   "date": "2024-12-25T14:53:21",
+   "date_unixtime": "1735149201",
+   "from": "Vagner Web",
+   "from_id": "user6125232146",
+   "photo": "photos/photo_13@25-12-2024_14-53-21.jpg",
+   "photo_file_size": 77830,
+   "width": 630,
+   "height": 675,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2260898,
+   "type": "message",
+   "date": "2024-12-25T14:59:47",
+   "date_unixtime": "1735149587",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2260897,
+   "text": "Boaaaaa",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Boaaaaa"
+    }
+   ]
+  },
+  {
+   "id": 2260899,
+   "type": "message",
+   "date": "2024-12-25T15:00:57",
+   "date_unixtime": "1735149657",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_size": 237188,
+   "thumbnail": "(File not included. Change data exporting settings to download.)",
+   "thumbnail_file_size": 2265,
+   "media_type": "animation",
+   "mime_type": "video/mp4",
+   "duration_seconds": 5,
+   "width": 480,
+   "height": 480,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2261037,
+   "type": "message",
+   "date": "2024-12-26T15:23:10",
+   "date_unixtime": "1735237390",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Denise Particular Co",
+   "forwarded_from_id": "user1000608381",
+   "text": [
+    "TA 327157551\n\nROTA = SAG X VNZ\nTA = 327154334\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): SIM\nTIPO DE FALHA: ROMPIMENTO \n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.87DBM\nPOTÊNCIA DE RX = LOSS\n\nPONTA B) = VNZ \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX = \n\nTÉCNICO = ATANAEL DE SOUZA \nCONTATO = 31 9 ",
+    {
+     "type": "phone",
+     "text": "95670453"
+    },
+    "\nDATA = 25/12/2024 \nHORA = 12:06\n\nCORDÃO ÓPTICO TESTADO? = OK \nFOTOS EM ANEXO? = SIM;"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA 327157551\n\nROTA = SAG X VNZ\nTA = 327154334\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): SIM\nTIPO DE FALHA: ROMPIMENTO \n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.87DBM\nPOTÊNCIA DE RX = LOSS\n\nPONTA B) = VNZ \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX = \n\nTÉCNICO = ATANAEL DE SOUZA \nCONTATO = 31 9 "
+    },
+    {
+     "type": "phone",
+     "text": "95670453"
+    },
+    {
+     "type": "plain",
+     "text": "\nDATA = 25/12/2024 \nHORA = 12:06\n\nCORDÃO ÓPTICO TESTADO? = OK \nFOTOS EM ANEXO? = SIM;"
+    }
+   ]
+  },
+  {
+   "id": 2263629,
+   "type": "message",
+   "date": "2025-01-14T17:33:12",
+   "date_unixtime": "1736886792",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Crisley Robert",
+   "forwarded_from_id": "user6020500585",
+   "photo": "photos/photo_14@14-01-2025_17-33-12.jpg",
+   "photo_file_size": 156313,
+   "width": 720,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263630,
+   "type": "service",
+   "date": "2025-01-14T17:33:36",
+   "date_unixtime": "1736886816",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Crisley Robert"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263631,
+   "type": "message",
+   "date": "2025-01-14T17:34:09",
+   "date_unixtime": "1736886849",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.914006,
+    "longitude": -43.996939
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263632,
+   "type": "message",
+   "date": "2025-01-14T17:34:09",
+   "date_unixtime": "1736886849",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": null,
+   "forwarded_from_id": "user2038192168",
+   "reply_to_message_id": 2263631,
+   "text": "VNZ X SAG\nFILA PAREDE\nDGO9\nF 15,16\nROTA MENOR ENLACE 33500\nAte essa localizacao da 23800 de vnz",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ X SAG\nFILA PAREDE\nDGO9\nF 15,16\nROTA MENOR ENLACE 33500\nAte essa localizacao da 23800 de vnz"
+    }
+   ]
+  },
+  {
+   "id": 2263639,
+   "type": "message",
+   "date": "2025-01-14T17:44:11",
+   "date_unixtime": "1736887451",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": [
+    {
+     "type": "mention",
+     "text": "@Bruno_Santos_da_Costal"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@Bruno_Santos_da_Costal"
+    }
+   ]
+  },
+  {
+   "id": 2263640,
+   "type": "message",
+   "date": "2025-01-14T17:45:07",
+   "date_unixtime": "1736887507",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "text": "(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.87DBM\nPOTÊNCIA DE RX = LOSS\n_______\n\nPONTA B) = VNZ SEM INFORMAÇÃO\nEQUIPAMENTO:\nPORTA:\nDGO:\nPOSIÇÃO:\nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX =",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.87DBM\nPOTÊNCIA DE RX = LOSS\n_______\n\nPONTA B) = VNZ SEM INFORMAÇÃO\nEQUIPAMENTO:\nPORTA:\nDGO:\nPOSIÇÃO:\nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX ="
+    }
+   ]
+  },
+  {
+   "id": 2263641,
+   "type": "message",
+   "date": "2025-01-14T17:45:07",
+   "date_unixtime": "1736887507",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "text": "LADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "LADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ]
+  },
+  {
+   "id": 2263642,
+   "type": "message",
+   "date": "2025-01-14T17:45:22",
+   "date_unixtime": "1736887522",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "photo": "photos/photo_15@14-01-2025_17-45-22.jpg",
+   "photo_file_size": 259198,
+   "width": 1266,
+   "height": 843,
+   "text": [
+    {
+     "type": "link",
+     "text": "https://www.google.com/maps/@-19.819303,-43.9632893,3a,75y,171.18h,90.23t/data=!3m7!1e1!3m5!1sx8QTwgREQIOUctuozeksrQ!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com%2Fv1%2Fthumbnail%3Fcb_client%3Dmaps_sv.tactile%26w%3D900%26h%3D600%26pitch%3D-0.2314989708428925%26panoid%3Dx8QTwgREQIOUctuozeksrQ%26yaw%3D171.18496799410377!7i16384!8i8192?hl=pt-BR&entry=ttu&g_ep=EgoyMDI1MDExMC4wIKXMDSoASAFQAw%3D%3D"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "link",
+     "text": "https://www.google.com/maps/@-19.819303,-43.9632893,3a,75y,171.18h,90.23t/data=!3m7!1e1!3m5!1sx8QTwgREQIOUctuozeksrQ!2e0!6shttps:%2F%2Fstreetviewpixels-pa.googleapis.com%2Fv1%2Fthumbnail%3Fcb_client%3Dmaps_sv.tactile%26w%3D900%26h%3D600%26pitch%3D-0.2314989708428925%26panoid%3Dx8QTwgREQIOUctuozeksrQ%26yaw%3D171.18496799410377!7i16384!8i8192?hl=pt-BR&entry=ttu&g_ep=EgoyMDI1MDExMC4wIKXMDSoASAFQAw%3D%3D"
+    }
+   ]
+  },
+  {
+   "id": 2263643,
+   "type": "message",
+   "date": "2025-01-14T17:47:01",
+   "date_unixtime": "1736887621",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "text": "31,0 KM DE SAG \n2,3 KM DE SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "31,0 KM DE SAG \n2,3 KM DE SAG"
+    }
+   ]
+  },
+  {
+   "id": 2263644,
+   "type": "service",
+   "date": "2025-01-14T17:47:27",
+   "date_unixtime": "1736887647",
+   "actor": "Bruno Corp Oi Tlm",
+   "actor_id": "user155363114",
+   "action": "edit_group_title",
+   "title": "SAG - VNZ | LADO A OTS 6739",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263646,
+   "type": "message",
+   "date": "2025-01-14T17:50:57",
+   "date_unixtime": "1736887857",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Joarez",
+   "forwarded_from_id": "user7306348985",
+   "photo": "photos/photo_16@14-01-2025_17-50-57.jpg",
+   "photo_file_size": 105885,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263647,
+   "type": "message",
+   "date": "2025-01-14T17:50:57",
+   "date_unixtime": "1736887857",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Joarez",
+   "forwarded_from_id": "user7306348985",
+   "photo": "photos/photo_17@14-01-2025_17-50-57.jpg",
+   "photo_file_size": 106625,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263648,
+   "type": "message",
+   "date": "2025-01-14T17:50:57",
+   "date_unixtime": "1736887857",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Joarez",
+   "forwarded_from_id": "user7306348985",
+   "photo": "photos/photo_18@14-01-2025_17-50-57.jpg",
+   "photo_file_size": 129768,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263649,
+   "type": "message",
+   "date": "2025-01-14T17:50:57",
+   "date_unixtime": "1736887857",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Joarez",
+   "forwarded_from_id": "user7306348985",
+   "photo": "photos/photo_19@14-01-2025_17-50-57.jpg",
+   "photo_file_size": 150216,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263650,
+   "type": "message",
+   "date": "2025-01-14T17:50:57",
+   "date_unixtime": "1736887857",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Joarez",
+   "forwarded_from_id": "user7306348985",
+   "photo": "photos/photo_20@14-01-2025_17-50-57.jpg",
+   "photo_file_size": 148657,
+   "width": 1280,
+   "height": 960,
+   "text": "Foi localizado nesta caixa CND 29.945 da falha",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Foi localizado nesta caixa CND 29.945 da falha"
+    }
+   ]
+  },
+  {
+   "id": 2263651,
+   "type": "message",
+   "date": "2025-01-14T17:52:20",
+   "date_unixtime": "1736887940",
+   "edited": "2025-01-14T17:52:53",
+   "edited_unixtime": "1736887973",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "text": "3,4 KM DE VNZ CAIXA DE CND",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "3,4 KM DE VNZ CAIXA DE CND"
+    }
+   ]
+  },
+  {
+   "id": 2263662,
+   "type": "message",
+   "date": "2025-01-14T18:45:18",
+   "date_unixtime": "1736891118",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Luiz Felipe Machado",
+   "forwarded_from_id": "user6858003664",
+   "location_information": {
+    "latitude": -19.910329,
+    "longitude": -43.916111
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263663,
+   "type": "message",
+   "date": "2025-01-14T18:45:18",
+   "date_unixtime": "1736891118",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Dalara Xxx",
+   "forwarded_from_id": "user6452356648",
+   "text": "VNZ x SAG\nDGO 9 FO 15/16\n3.586 metros de VNZ",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ x SAG\nDGO 9 FO 15/16\n3.586 metros de VNZ"
+    }
+   ]
+  },
+  {
+   "id": 2263664,
+   "type": "message",
+   "date": "2025-01-14T18:45:18",
+   "date_unixtime": "1736891118",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Zé Técnico EcF",
+   "forwarded_from_id": "user6866049956",
+   "photo": "photos/photo_21@14-01-2025_18-45-18.jpg",
+   "photo_file_size": 237188,
+   "width": 1280,
+   "height": 720,
+   "text": [
+    "ROTA VNZ ",
+    {
+     "type": "bot_command",
+     "text": "/SAG"
+    },
+    " 3570 de VNZ sentido SAG"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "ROTA VNZ "
+    },
+    {
+     "type": "bot_command",
+     "text": "/SAG"
+    },
+    {
+     "type": "plain",
+     "text": " 3570 de VNZ sentido SAG"
+    }
+   ]
+  },
+  {
+   "id": 2263677,
+   "type": "message",
+   "date": "2025-01-14T22:06:24",
+   "date_unixtime": "1736903184",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Fernando Lombardi Técnico Telemont",
+   "forwarded_from_id": "user6822703560",
+   "photo": "photos/photo_22@14-01-2025_22-06-24.jpg",
+   "photo_file_size": 136553,
+   "width": 960,
+   "height": 1280,
+   "text": "Falha localizada fibra quebrada na bandeja",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Falha localizada fibra quebrada na bandeja"
+    }
+   ]
+  },
+  {
+   "id": 2263678,
+   "type": "message",
+   "date": "2025-01-14T22:06:24",
+   "date_unixtime": "1736903184",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Fernando Lombardi Técnico Telemont",
+   "forwarded_from_id": "user6822703560",
+   "photo": "photos/photo_23@14-01-2025_22-06-24.jpg",
+   "photo_file_size": 106107,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2263679,
+   "type": "message",
+   "date": "2025-01-14T22:06:24",
+   "date_unixtime": "1736903184",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Fernando Lombardi Técnico Telemont",
+   "forwarded_from_id": "user6822703560",
+   "text": "VNZ x SAG\nDGO 09 \nFO : 15-16\nAté o ponto 3100M",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ x SAG\nDGO 09 \nFO : 15-16\nAté o ponto 3100M"
+    }
+   ]
+  },
+  {
+   "id": 2263680,
+   "type": "message",
+   "date": "2025-01-14T22:06:24",
+   "date_unixtime": "1736903184",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Fernando Lombardi Técnico Telemont",
+   "forwarded_from_id": "user6822703560",
+   "location_information": {
+    "latitude": -19.817306,
+    "longitude": -43.966191
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272842,
+   "type": "message",
+   "date": "2025-03-15T02:36:19",
+   "date_unixtime": "1742016979",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_24@15-03-2025_02-36-19.jpg",
+   "photo_file_size": 179306,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272843,
+   "type": "message",
+   "date": "2025-03-15T02:36:19",
+   "date_unixtime": "1742016979",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_25@15-03-2025_02-36-19.jpg",
+   "photo_file_size": 151762,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272844,
+   "type": "message",
+   "date": "2025-03-15T02:36:19",
+   "date_unixtime": "1742016979",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_26@15-03-2025_02-36-19.jpg",
+   "photo_file_size": 191963,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272845,
+   "type": "message",
+   "date": "2025-03-15T02:36:19",
+   "date_unixtime": "1742016979",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_27@15-03-2025_02-36-19.jpg",
+   "photo_file_size": 194642,
+   "width": 1280,
+   "height": 960,
+   "text": "TA : 335495960.\n\nRota : SAG BT 41/46 DGO 7A 21/22 • VNZ .\n\nEquipe a 30.950 metros de SAG  e 1.886 metro de VNZ , na localização abaixo.\n\nA 886 metros da falha .",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 335495960.\n\nRota : SAG BT 41/46 DGO 7A 21/22 • VNZ .\n\nEquipe a 30.950 metros de SAG  e 1.886 metro de VNZ , na localização abaixo.\n\nA 886 metros da falha ."
+    }
+   ]
+  },
+  {
+   "id": 2272846,
+   "type": "message",
+   "date": "2025-03-15T02:36:19",
+   "date_unixtime": "1742016979",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "location_information": {
+    "latitude": -19.819115,
+    "longitude": -43.963750
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272847,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_28@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 178863,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272848,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_29@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 175687,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272849,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_30@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 144528,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272850,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_31@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 146537,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272851,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_32@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 173450,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272852,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_33@15-03-2025_03-23-27.jpg",
+   "photo_file_size": 142475,
+   "width": 960,
+   "height": 1280,
+   "text": "TA : 335495960.\n\nRota : SAG BT41/46 DGO 7A 21/22 • VNZ .\n\nCEO na localização abaixo a 30.490 metros de SAG .\n\nEquipe voltando para o lado correto de VNZ .",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 335495960.\n\nRota : SAG BT41/46 DGO 7A 21/22 • VNZ .\n\nCEO na localização abaixo a 30.490 metros de SAG .\n\nEquipe voltando para o lado correto de VNZ ."
+    }
+   ]
+  },
+  {
+   "id": 2272853,
+   "type": "message",
+   "date": "2025-03-15T03:23:27",
+   "date_unixtime": "1742019807",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "location_information": {
+    "latitude": -19.817258,
+    "longitude": -43.966412
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272854,
+   "type": "message",
+   "date": "2025-03-15T03:45:38",
+   "date_unixtime": "1742021138",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Kennedy Telemont",
+   "forwarded_from_id": "user788545390",
+   "location_information": {
+    "latitude": -19.814928,
+    "longitude": -43.970128
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272855,
+   "type": "message",
+   "date": "2025-03-15T03:45:38",
+   "date_unixtime": "1742021138",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Kennedy Telemont",
+   "forwarded_from_id": "user788545390",
+   "text": "3.520 mt de vnx \nRota vnz x sag \nDgo 9 posição 15 e 16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "3.520 mt de vnx \nRota vnz x sag \nDgo 9 posição 15 e 16"
+    }
+   ]
+  },
+  {
+   "id": 2272856,
+   "type": "message",
+   "date": "2025-03-15T03:45:38",
+   "date_unixtime": "1742021138",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Kennedy Telemont",
+   "forwarded_from_id": "user788545390",
+   "photo": "photos/photo_34@15-03-2025_03-45-38.jpg",
+   "photo_file_size": 338670,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272857,
+   "type": "message",
+   "date": "2025-03-15T03:45:38",
+   "date_unixtime": "1742021138",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Kennedy Telemont",
+   "forwarded_from_id": "user788545390",
+   "photo": "photos/photo_35@15-03-2025_03-45-38.jpg",
+   "photo_file_size": 280936,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272858,
+   "type": "message",
+   "date": "2025-03-15T03:47:24",
+   "date_unixtime": "1742021244",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "text": "( ROTA SAG / VNZ ) LADO BAM-ESL\n\nSAG POSIÇÃO 21 E 22DGO 7A\nFILA 2A BAST. 41-46\n\nFIM DE FIBRA A 31.033 MTS\n\nTESTE REALIZADO EM SAG 30/09",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "( ROTA SAG / VNZ ) LADO BAM-ESL\n\nSAG POSIÇÃO 21 E 22DGO 7A\nFILA 2A BAST. 41-46\n\nFIM DE FIBRA A 31.033 MTS\n\nTESTE REALIZADO EM SAG 30/09"
+    }
+   ]
+  },
+  {
+   "id": 2272859,
+   "type": "message",
+   "date": "2025-03-15T03:47:24",
+   "date_unixtime": "1742021244",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "location_information": {
+    "latitude": -19.818969,
+    "longitude": -43.962790
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272860,
+   "type": "message",
+   "date": "2025-03-15T03:47:24",
+   "date_unixtime": "1742021244",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "photo": "photos/photo_36@15-03-2025_03-47-24.jpg",
+   "photo_file_size": 260492,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272861,
+   "type": "message",
+   "date": "2025-03-15T03:47:24",
+   "date_unixtime": "1742021244",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "photo": "photos/photo_37@15-03-2025_03-47-24.jpg",
+   "photo_file_size": 379697,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272863,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_38@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 176121,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272864,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_39@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 126137,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272865,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_40@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 158620,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272866,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_41@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 148307,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272867,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_42@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 172373,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272868,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_43@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 188842,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272869,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_44@15-03-2025_04-44-29.jpg",
+   "photo_file_size": 152826,
+   "width": 960,
+   "height": 1280,
+   "text": "TA : 335495960.\n\nRota : SAG BT41/46 DGO 7A 21/22 • VNZ .\n\nRompimento a 1.886 metros de VNZ , na localização abaixo.\n\nLançamento de 100 metros de cabo 36 FO .\n\nConstrução de 2 CEO , 72 Fusões , Vandalismo .\n\nReadequação de 50 metros devido troca de poste .",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 335495960.\n\nRota : SAG BT41/46 DGO 7A 21/22 • VNZ .\n\nRompimento a 1.886 metros de VNZ , na localização abaixo.\n\nLançamento de 100 metros de cabo 36 FO .\n\nConstrução de 2 CEO , 72 Fusões , Vandalismo .\n\nReadequação de 50 metros devido troca de poste ."
+    }
+   ]
+  },
+  {
+   "id": 2272870,
+   "type": "message",
+   "date": "2025-03-15T04:44:29",
+   "date_unixtime": "1742024669",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "location_information": {
+    "latitude": -19.818096,
+    "longitude": -43.960139
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2272871,
+   "type": "message",
+   "date": "2025-03-15T04:50:14",
+   "date_unixtime": "1742025014",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "text": "31,7 km de SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "31,7 km de SAG"
+    }
+   ]
+  },
+  {
+   "id": 2272954,
+   "type": "message",
+   "date": "2025-03-17T09:09:40",
+   "date_unixtime": "1742213380",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_name": "DWDM 5 - atualizado 17-03-2025.dwg",
+   "file_size": 32673317,
+   "mime_type": "image/vnd.dwg",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2275729,
+   "type": "message",
+   "date": "2025-04-04T12:56:17",
+   "date_unixtime": "1743782177",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "location_information": {
+    "latitude": -19.913842,
+    "longitude": -43.993278
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2275730,
+   "type": "message",
+   "date": "2025-04-04T12:57:04",
+   "date_unixtime": "1743782224",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "text": "9,3 km de SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "9,3 km de SAG"
+    }
+   ]
+  },
+  {
+   "id": 2276384,
+   "type": "message",
+   "date": "2025-04-08T22:30:08",
+   "date_unixtime": "1744162208",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Deyvson Vivo TLM",
+   "forwarded_from_id": "user1767881195",
+   "photo": "photos/photo_45@08-04-2025_22-30-08.jpg",
+   "photo_file_size": 198275,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2276385,
+   "type": "message",
+   "date": "2025-04-08T22:30:19",
+   "date_unixtime": "1744162219",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Deyvson Vivo TLM",
+   "forwarded_from_id": "user1767881195",
+   "location_information": {
+    "latitude": -19.938262,
+    "longitude": -43.961841
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2276386,
+   "type": "message",
+   "date": "2025-04-08T22:30:24",
+   "date_unixtime": "1744162224",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "2KM de SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "2KM de SAG"
+    }
+   ]
+  },
+  {
+   "id": 2276387,
+   "type": "message",
+   "date": "2025-04-08T22:30:38",
+   "date_unixtime": "1744162238",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Diogo Henrique",
+   "forwarded_from_id": "user1537554175",
+   "text": [
+    "TA 341463037\n ## SG-CARIMBOS ##\n\nNOME CARIMBO: TRAMITAÇÃO REDE EXTERNA - MEDIÇÃO;\nGRUPO: REDE-EXTERNA;\nUSUÁRIO CRIAÇÃO: ",
+    {
+     "type": "phone",
+     "text": "80854419"
+    },
+    " - JOSENILDO ALVES GUIMARAES;\nDATA CRIAÇÃO CARIMBO: 08/04/2025 18:16:49;\n\n\n1) REDE;\nRESPOSTA: VIVO 1;\n\n2) TIPO REDE;\nRESPOSTA: BBR;\n\n3) NUMERO DO TICKET ;\nRESPOSTA: 341450708;\n\n4) TRECHO OU REDUNDÂNCIAS;\nRESPOSTA: TRECH;\n\n5) SIGLA DO TRECHO;\nRESPOSTA: BHE.SAG;\n\n6) AFETAÇÃO DE SERVIÇO ;\nRESPOSTA: SIM;\n\n7) SERVIÇO INTERROMPIDO ;\nRESPOSTA: NÃO;\n\n8) SERVIÇO DEGRADADO;\nRESPOSTA: SIM;\n\n9) PONTA A ;\nRESPOSTA: SITE;\n\n10) NOME SITE;\nRESPOSTA: BELO HORIZONTE SANTO AGOSTINHO 2;\n\n11) SIGLA;\nRESPOSTA: BHE.SAG;\n\n12) ENDEREÇO SITE;\nRESPOSTA: RUA MARTIM DE CARVALHO , 691;\n\n13) POSIÇÕES SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: (PONTA A) = SAG EQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1 FILA: 2A BT:41/46 DGO:7A POSIÇÃO = 21 E 22 POTÊNCIA DE TX = +HI DBM POTÊNCIA DE RX = -LOSS;\n\n14) PONTA B;\nRESPOSTA: SITE;\n\n15) NOME SITE;\nRESPOSTA: BELO HORIZONTE - VENDA NOVA SÃO PEDRO - GPON - HL4;\n\n16) SIGLA;\nRESPOSTA: BHE.VNZ;\n\n17) ENDEREÇO SITE;\nRESPOSTA: AVENIDA EDGAR TORRES, 760;\n\n18) POSIÇÕES DA SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: PONTA B) = VNZ SEM INFORMAÇÃO  EQUIPAMENTO:  PORTA:  DGO:  POSIÇÃO:  POTÊNCIA DE TX = POTÊNCIA DE RX = ;\n\n19) MEDIÇÃO ATÉ O PONTO DE FALHA;\nRESPOSTA: SIM;\n\n20) NÚMERO DO CABO;\nRESPOSTA: 1;\n\n21) EQUIPAMENTO TESTADO;\nRESPOSTA: SIM;\n\n22) OBSERVAÇÃO;\nRESPOSTA: ROTA = SAG X VNZ_1\nTA = 341450708\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): NÃO\nTIPO DE FALHA: ROMPIMENTO \n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +HI DBM\nPOTÊNCIA DE RX = -LOSS\n_______\n\nPONTA B) = VNZ SEM INFORMAÇÃO \nEQUIPAMENTO: \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX = \n\nOBS: FO 21 RX \nROMPIMENTO A 2035M\n\nFO 22 TX \nATENUAÇAO DE 1.5 A 1950M\nROMPIMENTO A 2035M.\n\n\nTÉCNICO =  MATEUS BARROS\nCONTATO = 31 9 ",
+    {
+     "type": "phone",
+     "text": "93539770"
+    },
+    "\nDATA = 08/04/2025\nHORA = 18:05\n\nCORDÃO ÓPTICO TESTADO? = OK \nFOTOS EM ANEXO? = SIM;\n\n ",
+    {
+     "type": "mention",
+     "text": "@Daniel_Nogueir4"
+    },
+    ""
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA 341463037\n ## SG-CARIMBOS ##\n\nNOME CARIMBO: TRAMITAÇÃO REDE EXTERNA - MEDIÇÃO;\nGRUPO: REDE-EXTERNA;\nUSUÁRIO CRIAÇÃO: "
+    },
+    {
+     "type": "phone",
+     "text": "80854419"
+    },
+    {
+     "type": "plain",
+     "text": " - JOSENILDO ALVES GUIMARAES;\nDATA CRIAÇÃO CARIMBO: 08/04/2025 18:16:49;\n\n\n1) REDE;\nRESPOSTA: VIVO 1;\n\n2) TIPO REDE;\nRESPOSTA: BBR;\n\n3) NUMERO DO TICKET ;\nRESPOSTA: 341450708;\n\n4) TRECHO OU REDUNDÂNCIAS;\nRESPOSTA: TRECH;\n\n5) SIGLA DO TRECHO;\nRESPOSTA: BHE.SAG;\n\n6) AFETAÇÃO DE SERVIÇO ;\nRESPOSTA: SIM;\n\n7) SERVIÇO INTERROMPIDO ;\nRESPOSTA: NÃO;\n\n8) SERVIÇO DEGRADADO;\nRESPOSTA: SIM;\n\n9) PONTA A ;\nRESPOSTA: SITE;\n\n10) NOME SITE;\nRESPOSTA: BELO HORIZONTE SANTO AGOSTINHO 2;\n\n11) SIGLA;\nRESPOSTA: BHE.SAG;\n\n12) ENDEREÇO SITE;\nRESPOSTA: RUA MARTIM DE CARVALHO , 691;\n\n13) POSIÇÕES SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: (PONTA A) = SAG EQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1 FILA: 2A BT:41/46 DGO:7A POSIÇÃO = 21 E 22 POTÊNCIA DE TX = +HI DBM POTÊNCIA DE RX = -LOSS;\n\n14) PONTA B;\nRESPOSTA: SITE;\n\n15) NOME SITE;\nRESPOSTA: BELO HORIZONTE - VENDA NOVA SÃO PEDRO - GPON - HL4;\n\n16) SIGLA;\nRESPOSTA: BHE.VNZ;\n\n17) ENDEREÇO SITE;\nRESPOSTA: AVENIDA EDGAR TORRES, 760;\n\n18) POSIÇÕES DA SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: PONTA B) = VNZ SEM INFORMAÇÃO  EQUIPAMENTO:  PORTA:  DGO:  POSIÇÃO:  POTÊNCIA DE TX = POTÊNCIA DE RX = ;\n\n19) MEDIÇÃO ATÉ O PONTO DE FALHA;\nRESPOSTA: SIM;\n\n20) NÚMERO DO CABO;\nRESPOSTA: 1;\n\n21) EQUIPAMENTO TESTADO;\nRESPOSTA: SIM;\n\n22) OBSERVAÇÃO;\nRESPOSTA: ROTA = SAG X VNZ_1\nTA = 341450708\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): NÃO\nTIPO DE FALHA: ROMPIMENTO \n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +HI DBM\nPOTÊNCIA DE RX = -LOSS\n_______\n\nPONTA B) = VNZ SEM INFORMAÇÃO \nEQUIPAMENTO: \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX = \n\nOBS: FO 21 RX \nROMPIMENTO A 2035M\n\nFO 22 TX \nATENUAÇAO DE 1.5 A 1950M\nROMPIMENTO A 2035M.\n\n\nTÉCNICO =  MATEUS BARROS\nCONTATO = 31 9 "
+    },
+    {
+     "type": "phone",
+     "text": "93539770"
+    },
+    {
+     "type": "plain",
+     "text": "\nDATA = 08/04/2025\nHORA = 18:05\n\nCORDÃO ÓPTICO TESTADO? = OK \nFOTOS EM ANEXO? = SIM;\n\n "
+    },
+    {
+     "type": "mention",
+     "text": "@Daniel_Nogueir4"
+    },
+    {
+     "type": "plain",
+     "text": ""
+    }
+   ]
+  },
+  {
+   "id": 2283150,
+   "type": "message",
+   "date": "2025-05-10T15:41:51",
+   "date_unixtime": "1746902511",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "text": [
+    "SAG x VNZ\nDWDM\n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = -0.05DBM\nPOTÊNCIA DE RX = -6.45DBM",
+    {
+     "type": "italic",
+     "text": "\n___\n"
+    },
+    "\nPONTA B) = VNZ SEM INFORMAÇÃO \nEQUIPAMENTO: \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX ="
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SAG x VNZ\nDWDM\n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = -0.05DBM\nPOTÊNCIA DE RX = -6.45DBM"
+    },
+    {
+     "type": "italic",
+     "text": "\n___\n"
+    },
+    {
+     "type": "plain",
+     "text": "\nPONTA B) = VNZ SEM INFORMAÇÃO \nEQUIPAMENTO: \nPORTA: \nDGO: \nPOSIÇÃO: \nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX ="
+    }
+   ]
+  },
+  {
+   "id": 2283151,
+   "type": "message",
+   "date": "2025-05-10T15:41:51",
+   "date_unixtime": "1746902511",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "photo": "photos/photo_46@10-05-2025_15-41-51.jpg",
+   "photo_file_size": 269239,
+   "width": 960,
+   "height": 1280,
+   "text": "DE SAG ATE ESSE PONTO 9.962m",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "DE SAG ATE ESSE PONTO 9.962m"
+    }
+   ]
+  },
+  {
+   "id": 2283152,
+   "type": "message",
+   "date": "2025-05-10T15:41:51",
+   "date_unixtime": "1746902511",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "location_information": {
+    "latitude": -19.913745,
+    "longitude": -43.997619
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2283153,
+   "type": "message",
+   "date": "2025-05-10T15:41:51",
+   "date_unixtime": "1746902511",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "photo": "photos/photo_47@10-05-2025_15-41-51.jpg",
+   "photo_file_size": 190086,
+   "width": 960,
+   "height": 1280,
+   "text": "DE SAG ATE ESSE PONTO 9.312m",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "DE SAG ATE ESSE PONTO 9.312m"
+    }
+   ]
+  },
+  {
+   "id": 2283154,
+   "type": "message",
+   "date": "2025-05-10T15:41:51",
+   "date_unixtime": "1746902511",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Pedro Henrique",
+   "forwarded_from_id": "user6807161597",
+   "location_information": {
+    "latitude": -19.913828,
+    "longitude": -43.993265
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2283178,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Marcos Paulo Pocrane",
+   "forwarded_from_id": "user1618078147",
+   "text": "VNZ x SAG 2400 saindo de VNZ",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ x SAG 2400 saindo de VNZ"
+    }
+   ]
+  },
+  {
+   "id": 2283179,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Marcos Paulo Pocrane",
+   "forwarded_from_id": "user1618078147",
+   "photo": "photos/photo_48@10-05-2025_16-09-26.jpg",
+   "photo_file_size": 231777,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2283180,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Marcos Paulo Pocrane",
+   "forwarded_from_id": "user1618078147",
+   "photo": "photos/photo_49@10-05-2025_16-09-26.jpg",
+   "photo_file_size": 156395,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2283181,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Marcos Paulo Pocrane",
+   "forwarded_from_id": "user1618078147",
+   "text": "Vamos manter o grupo informados família, bom pra todos nós!",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Vamos manter o grupo informados família, bom pra todos nós!"
+    }
+   ]
+  },
+  {
+   "id": 2283182,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Daniel Nogueira Sup Telemont",
+   "forwarded_from_id": "user81526305",
+   "reply_to_message_id": 2283178,
+   "text": "segue as posições da alça, rota DWDM, topologia SAG-BAM-ESL-VNZ:\n\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "segue as posições da alça, rota DWDM, topologia SAG-BAM-ESL-VNZ:\n\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ]
+  },
+  {
+   "id": 2283183,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "text": "VNZ / SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ / SAG"
+    }
+   ]
+  },
+  {
+   "id": 2283184,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "location_information": {
+    "latitude": -19.818969,
+    "longitude": -43.962790
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2283185,
+   "type": "message",
+   "date": "2025-05-10T16:09:26",
+   "date_unixtime": "1746904166",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Rodrigo Barros Técnico",
+   "forwarded_from_id": "user6596130269",
+   "text": "Até esse ponto 2.440 metros de VNZ",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Até esse ponto 2.440 metros de VNZ"
+    }
+   ]
+  },
+  {
+   "id": 2286146,
+   "type": "message",
+   "date": "2025-05-28T20:02:56",
+   "date_unixtime": "1748473376",
+   "from": "Lidiomar",
+   "from_id": "user34018323",
+   "reply_to_message_id": 2258577,
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "Welbert Corporativo Telemont",
+     "user_id": 1739528718
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "Welbert Corporativo Telemont",
+     "user_id": 1739528718
+    }
+   ]
+  },
+  {
+   "id": 2286147,
+   "type": "service",
+   "date": "2025-05-28T20:15:56",
+   "date_unixtime": "1748474156",
+   "actor": "Welbert Corporativo Telemont Xxxxx",
+   "actor_id": "user1739528718",
+   "action": "invite_members",
+   "members": [
+    "Anderson Hermógenes Emendador 2"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2286148,
+   "type": "service",
+   "date": "2025-05-28T20:15:56",
+   "date_unixtime": "1748474156",
+   "actor": "Welbert Corporativo Telemont Xxxxx",
+   "actor_id": "user1739528718",
+   "action": "invite_members",
+   "members": [
+    "Renato"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2286154,
+   "type": "message",
+   "date": "2025-05-28T22:36:38",
+   "date_unixtime": "1748482598",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Daniel Nogueira Sup Telemont",
+   "forwarded_from_id": "user81526305",
+   "text": "segue as posições da alça, rota DWDM, topologia SAG-BAM-ESL-VNZ:\n\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "segue as posições da alça, rota DWDM, topologia SAG-BAM-ESL-VNZ:\n\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ]
+  },
+  {
+   "id": 2286155,
+   "type": "message",
+   "date": "2025-05-28T22:36:56",
+   "date_unixtime": "1748482616",
+   "edited": "2025-05-28T22:37:16",
+   "edited_unixtime": "1748482636",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "De SAG até aki 7.862 metros \n\nCaixa projetada",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "De SAG até aki 7.862 metros \n\nCaixa projetada"
+    }
+   ]
+  },
+  {
+   "id": 2286156,
+   "type": "message",
+   "date": "2025-05-28T22:36:56",
+   "date_unixtime": "1748482616",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Anderson Hermogenes",
+   "photo": "photos/photo_50@28-05-2025_22-36-56.jpg",
+   "photo_file_size": 98696,
+   "width": 720,
+   "height": 1280,
+   "text": "TX FO 22 rompida 7.862mts de SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TX FO 22 rompida 7.862mts de SAG"
+    }
+   ]
+  },
+  {
+   "id": 2286157,
+   "type": "message",
+   "date": "2025-05-28T22:38:23",
+   "date_unixtime": "1748482703",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "location_information": {
+    "latitude": -19.918239,
+    "longitude": -43.987451
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2286158,
+   "type": "service",
+   "date": "2025-05-28T22:38:39",
+   "date_unixtime": "1748482719",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "remove_members",
+   "members": [
+    "Matheus Henrique"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2286159,
+   "type": "message",
+   "date": "2025-05-28T23:52:33",
+   "date_unixtime": "1748487153",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "photo": "photos/photo_51@28-05-2025_23-52-33.jpg",
+   "photo_file_size": 161488,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288964,
+   "type": "service",
+   "date": "2025-06-08T04:39:22",
+   "date_unixtime": "1749368362",
+   "actor": "Marcos Bruno Lopes",
+   "actor_id": "user6752208964",
+   "action": "invite_members",
+   "members": [
+    "Gustavo ECF"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288965,
+   "type": "message",
+   "date": "2025-06-08T04:42:58",
+   "date_unixtime": "1749368578",
+   "from": "Marcos Bruno Lopes",
+   "from_id": "user6752208964",
+   "reply_to_message_id": 2272863,
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "Gustavo Diniz",
+     "user_id": 6865445170
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "Gustavo Diniz",
+     "user_id": 6865445170
+    }
+   ]
+  },
+  {
+   "id": 2288966,
+   "type": "service",
+   "date": "2025-06-08T04:50:16",
+   "date_unixtime": "1749369016",
+   "actor": "Marcos Bruno Lopes",
+   "actor_id": "user6752208964",
+   "action": "invite_members",
+   "members": [
+    "Felipe Silva"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288967,
+   "type": "message",
+   "date": "2025-06-08T05:41:43",
+   "date_unixtime": "1749372103",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_52@08-06-2025_05-41-43.jpg",
+   "photo_file_size": 210427,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288968,
+   "type": "message",
+   "date": "2025-06-08T05:41:43",
+   "date_unixtime": "1749372103",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_53@08-06-2025_05-41-43.jpg",
+   "photo_file_size": 160432,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288969,
+   "type": "message",
+   "date": "2025-06-08T05:41:43",
+   "date_unixtime": "1749372103",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_54@08-06-2025_05-41-43.jpg",
+   "photo_file_size": 159450,
+   "width": 960,
+   "height": 1280,
+   "text": "TA : 344447807.\n\nRota : SAG ( FL 2A BT 41/46 DGO 7A  21/22 ) • VNZ .\n\nCEO de abordagem CND a 28.972 metros de SAG  , na localização abaixo .",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 344447807.\n\nRota : SAG ( FL 2A BT 41/46 DGO 7A  21/22 ) • VNZ .\n\nCEO de abordagem CND a 28.972 metros de SAG  , na localização abaixo ."
+    }
+   ]
+  },
+  {
+   "id": 2288970,
+   "type": "message",
+   "date": "2025-06-08T05:41:43",
+   "date_unixtime": "1749372103",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "location_information": {
+    "latitude": -19.815263,
+    "longitude": -43.977739
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288971,
+   "type": "message",
+   "date": "2025-06-08T07:00:48",
+   "date_unixtime": "1749376848",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_55@08-06-2025_07-00-48.jpg",
+   "photo_file_size": 293776,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288972,
+   "type": "message",
+   "date": "2025-06-08T07:00:48",
+   "date_unixtime": "1749376848",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_56@08-06-2025_07-00-48.jpg",
+   "photo_file_size": 275962,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288973,
+   "type": "message",
+   "date": "2025-06-08T07:00:48",
+   "date_unixtime": "1749376848",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_57@08-06-2025_07-00-48.jpg",
+   "photo_file_size": 247114,
+   "width": 960,
+   "height": 1280,
+   "text": "TA : 344447807.\n\nRota : SAG ( FL2A BT 41/46 DGO 7 A 21/22 ) . VNZ .\n\nRompimento a 29.421 metros de SAG .\n\nEquipes recuaram 20 metros de cabo e vão inserir 1 caixa com 36 fusões na localização abaixo .",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 344447807.\n\nRota : SAG ( FL2A BT 41/46 DGO 7 A 21/22 ) . VNZ .\n\nRompimento a 29.421 metros de SAG .\n\nEquipes recuaram 20 metros de cabo e vão inserir 1 caixa com 36 fusões na localização abaixo ."
+    }
+   ]
+  },
+  {
+   "id": 2288974,
+   "type": "message",
+   "date": "2025-06-08T07:00:48",
+   "date_unixtime": "1749376848",
+   "from": "Gustavo ECF",
+   "from_id": "user6865445170",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "location_information": {
+    "latitude": -19.814638,
+    "longitude": -43.973639
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288981,
+   "type": "message",
+   "date": "2025-06-08T15:27:03",
+   "date_unixtime": "1749407223",
+   "edited": "2025-06-08T16:43:14",
+   "edited_unixtime": "1749411794",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "photo": "photos/photo_58@08-06-2025_15-27-03.jpg",
+   "photo_file_size": 137375,
+   "width": 1280,
+   "height": 937,
+   "text": "11.250 Metros de SAG na Abordagem de BAM",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "11.250 Metros de SAG na Abordagem de BAM"
+    }
+   ]
+  },
+  {
+   "id": 2288983,
+   "type": "message",
+   "date": "2025-06-08T16:42:42",
+   "date_unixtime": "1749411762",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "William",
+   "forwarded_from_id": "user7178685614",
+   "photo": "photos/photo_59@08-06-2025_16-42-42.jpg",
+   "photo_file_size": 244625,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288984,
+   "type": "message",
+   "date": "2025-06-08T16:42:42",
+   "date_unixtime": "1749411762",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "William",
+   "forwarded_from_id": "user7178685614",
+   "location_information": {
+    "latitude": -19.903929,
+    "longitude": -44.002374
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288985,
+   "type": "message",
+   "date": "2025-06-08T16:42:49",
+   "date_unixtime": "1749411769",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "Abordagem de BAM",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Abordagem de BAM"
+    }
+   ]
+  },
+  {
+   "id": 2288986,
+   "type": "message",
+   "date": "2025-06-08T16:44:33",
+   "date_unixtime": "1749411873",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_7@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 193347,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288987,
+   "type": "message",
+   "date": "2025-06-08T16:44:33",
+   "date_unixtime": "1749411873",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_8@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 171408,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288988,
+   "type": "message",
+   "date": "2025-06-08T16:44:33",
+   "date_unixtime": "1749411873",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "photo": "photos/photo_9@03-11-2024_15-30-19.jpg",
+   "photo_file_size": 254312,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288989,
+   "type": "message",
+   "date": "2025-06-08T16:44:33",
+   "date_unixtime": "1749411873",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.905240,
+    "longitude": -44.001799
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2288990,
+   "type": "message",
+   "date": "2025-06-08T16:45:00",
+   "date_unixtime": "1749411900",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "11.516 Metros de SAG após abordagem de BAM",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "11.516 Metros de SAG após abordagem de BAM"
+    }
+   ]
+  },
+  {
+   "id": 2292041,
+   "type": "message",
+   "date": "2025-06-18T22:38:51",
+   "date_unixtime": "1750297131",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Alan Xxxxxx",
+   "forwarded_from_id": "user64227469",
+   "text": [
+    "Huawei - Falha no enlace DWDM entre BELO HORIZONTE - VENDA NOVA SÃO PEDRO - GPON - HL4 / MG x BELO HORIZONTE SANTO AGOSTINHO 2 / MG\nDesignador OTS/OMS/SWO: SAGMGH12/72(1.1)-VNZMGH12/06(1.1)_OTS_",
+    {
+     "type": "phone",
+     "text": "9900006739"
+    },
+    ".\nAlarme ponta A: MUT_LOS em VNZMG_2/VNZMGH9XU - O + SAGMGH12 - O  - 1-2B - VNZMGH12/06 - SLAMG_1 / SAG_1-11-G3DAPXF-15(LIN/LOUT)-OTS:1\nAlarme ponta B: Sem Alarmes em SAGMGH12/72 - SAGMG_2-SAGMGH9XU e SAGMGH12 - O-shelf13(15B - SAGMGH12/72 - VNZ_1/IIE_2)-1-G3DAPXF-15(LIN)\nInstância Cardinal: ",
+    {
+     "type": "link",
+     "text": "10.113.144.213"
+    },
+    "\nScript: AutomacaoHuaweiNceDwdmMovel.groovy"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Huawei - Falha no enlace DWDM entre BELO HORIZONTE - VENDA NOVA SÃO PEDRO - GPON - HL4 / MG x BELO HORIZONTE SANTO AGOSTINHO 2 / MG\nDesignador OTS/OMS/SWO: SAGMGH12/72(1.1)-VNZMGH12/06(1.1)_OTS_"
+    },
+    {
+     "type": "phone",
+     "text": "9900006739"
+    },
+    {
+     "type": "plain",
+     "text": ".\nAlarme ponta A: MUT_LOS em VNZMG_2/VNZMGH9XU - O + SAGMGH12 - O  - 1-2B - VNZMGH12/06 - SLAMG_1 / SAG_1-11-G3DAPXF-15(LIN/LOUT)-OTS:1\nAlarme ponta B: Sem Alarmes em SAGMGH12/72 - SAGMG_2-SAGMGH9XU e SAGMGH12 - O-shelf13(15B - SAGMGH12/72 - VNZ_1/IIE_2)-1-G3DAPXF-15(LIN)\nInstância Cardinal: "
+    },
+    {
+     "type": "link",
+     "text": "10.113.144.213"
+    },
+    {
+     "type": "plain",
+     "text": "\nScript: AutomacaoHuaweiNceDwdmMovel.groovy"
+    }
+   ]
+  },
+  {
+   "id": 2292042,
+   "type": "message",
+   "date": "2025-06-18T22:38:51",
+   "date_unixtime": "1750297131",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Cardoso",
+   "text": "Posições rota DWDM MGSAG-MGVNZ\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16\n\nLADO B – 37.900km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07B - FIBRAS 29-30\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 1-2",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Posições rota DWDM MGSAG-MGVNZ\n\nSrs,\n\nSegue as posições de fibras lado A e B.\n\n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16\n\nLADO B – 37.900km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07B - FIBRAS 29-30\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 1-2"
+    }
+   ]
+  },
+  {
+   "id": 2292043,
+   "type": "message",
+   "date": "2025-06-18T22:38:51",
+   "date_unixtime": "1750297131",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.926739,
+    "longitude": -43.987595
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2292044,
+   "type": "message",
+   "date": "2025-06-18T22:38:51",
+   "date_unixtime": "1750297131",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A.",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A."
+    }
+   ]
+  },
+  {
+   "id": 2292045,
+   "type": "service",
+   "date": "2025-06-18T22:39:08",
+   "date_unixtime": "1750297148",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Ramon Gestão Vivo Xxx"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2292687,
+   "type": "message",
+   "date": "2025-06-24T14:48:34",
+   "date_unixtime": "1750787314",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2292041,
+   "text": [
+    {
+     "type": "mention",
+     "text": "@CSantos_L"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@CSantos_L"
+    }
+   ]
+  },
+  {
+   "id": 2300689,
+   "type": "service",
+   "date": "2025-08-05T16:18:35",
+   "date_unixtime": "1754421515",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Everton Furtado Supervisor VIVO Corporativo"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301213,
+   "type": "message",
+   "date": "2025-08-07T15:05:35",
+   "date_unixtime": "1754589935",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Davidson",
+   "forwarded_from_id": "user1662735198",
+   "photo": "photos/photo_63@07-08-2025_15-05-35.jpg",
+   "photo_file_size": 216134,
+   "width": 960,
+   "height": 1280,
+   "text": "Fo 15",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Fo 15"
+    }
+   ]
+  },
+  {
+   "id": 2301214,
+   "type": "message",
+   "date": "2025-08-07T15:05:35",
+   "date_unixtime": "1754589935",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Davidson",
+   "forwarded_from_id": "user1662735198",
+   "photo": "photos/photo_64@07-08-2025_15-05-35.jpg",
+   "photo_file_size": 280108,
+   "width": 960,
+   "height": 1280,
+   "text": "Fo 15 19178m",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Fo 15 19178m"
+    }
+   ]
+  },
+  {
+   "id": 2301215,
+   "type": "message",
+   "date": "2025-08-07T15:05:35",
+   "date_unixtime": "1754589935",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Davidson",
+   "forwarded_from_id": "user1662735198",
+   "photo": "photos/photo_65@07-08-2025_15-05-35.jpg",
+   "photo_file_size": 272483,
+   "width": 1280,
+   "height": 960,
+   "text": "Fo 16 19175m",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Fo 16 19175m"
+    }
+   ]
+  },
+  {
+   "id": 2301216,
+   "type": "service",
+   "date": "2025-08-07T15:05:45",
+   "date_unixtime": "1754589945",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Bruno Davidson"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301217,
+   "type": "message",
+   "date": "2025-08-07T15:06:39",
+   "date_unixtime": "1754589999",
+   "edited": "2026-01-17T22:52:59",
+   "edited_unixtime": "1768701179",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2301215,
+   "text": "ROMPIMENTO DE VNZ \n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "ROMPIMENTO DE VNZ \n\nLADO A – 33.346km\n•  MGSAG - FILA 2A - BAST 41/46 - DGO 07A - FIBRAS 21-22\n•  MGVNZ - FILA PAREDE - BAST 01 - DGO 09 - FIBRAS 15-16"
+    }
+   ]
+  },
+  {
+   "id": 2301221,
+   "type": "message",
+   "date": "2025-08-07T15:50:12",
+   "date_unixtime": "1754592612",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Gustavo ECF",
+   "forwarded_from_id": "user6865445170",
+   "photo": "photos/photo_66@07-08-2025_15-50-12.jpg",
+   "photo_file_size": 204376,
+   "width": 1280,
+   "height": 960,
+   "text": "TA : 346011449.\n\nRota : SAG • VNZ .\n\nCEO 1 acomodada e local limpo !",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA : 346011449.\n\nRota : SAG • VNZ .\n\nCEO 1 acomodada e local limpo !"
+    }
+   ]
+  },
+  {
+   "id": 2301222,
+   "type": "message",
+   "date": "2025-08-07T15:50:57",
+   "date_unixtime": "1754592657",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Pereira",
+   "forwarded_from_id": "user6492338597",
+   "photo": "photos/photo_67@07-08-2025_15-50-57.jpg",
+   "photo_file_size": 227660,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301223,
+   "type": "message",
+   "date": "2025-08-07T15:50:57",
+   "date_unixtime": "1754592657",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Pereira",
+   "forwarded_from_id": "user6492338597",
+   "photo": "photos/photo_68@07-08-2025_15-50-57.jpg",
+   "photo_file_size": 75660,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301224,
+   "type": "message",
+   "date": "2025-08-07T15:50:57",
+   "date_unixtime": "1754592657",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Pereira",
+   "forwarded_from_id": "user6492338597",
+   "location_information": {
+    "latitude": -19.854812,
+    "longitude": -44.005568
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301225,
+   "type": "message",
+   "date": "2025-08-07T15:55:38",
+   "date_unixtime": "1754592938",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "photo": "photos/photo_69@07-08-2025_15-55-38.jpg",
+   "photo_file_size": 204197,
+   "width": 1280,
+   "height": 960,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301231,
+   "type": "message",
+   "date": "2025-08-07T16:06:56",
+   "date_unixtime": "1754593616",
+   "edited": "2025-08-07T16:07:05",
+   "edited_unixtime": "1754593625",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2301224,
+   "text": "14.600 de VNZ ATE AKI",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "14.600 de VNZ ATE AKI"
+    }
+   ]
+  },
+  {
+   "id": 2301237,
+   "type": "service",
+   "date": "2025-08-07T16:21:57",
+   "date_unixtime": "1754594517",
+   "actor": "Everton Furtado Supervisor VIVO Corporativo",
+   "actor_id": "user6262145396",
+   "action": "invite_members",
+   "members": [
+    "Victor Hugo Supervisor Vivo"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2301242,
+   "type": "service",
+   "date": "2025-08-07T16:55:28",
+   "date_unixtime": "1754596528",
+   "actor": "Everton Furtado Supervisor VIVO Corporativo",
+   "actor_id": "user6262145396",
+   "action": "invite_members",
+   "members": [
+    "Eduardo Adequação Vivoh"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2313753,
+   "type": "service",
+   "date": "2025-09-19T21:17:42",
+   "date_unixtime": "1758327462",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "FRANCINE MARQUES Mop"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2313754,
+   "type": "service",
+   "date": "2025-09-19T21:17:56",
+   "date_unixtime": "1758327476",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    null
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2313755,
+   "type": "service",
+   "date": "2025-09-19T21:18:07",
+   "date_unixtime": "1758327487",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Maicon Gestão Vivo Resende"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2313756,
+   "type": "message",
+   "date": "2025-09-19T21:18:43",
+   "date_unixtime": "1758327523",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.926739,
+    "longitude": -43.987595
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2313757,
+   "type": "message",
+   "date": "2025-09-19T21:18:43",
+   "date_unixtime": "1758327523",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A.",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A."
+    }
+   ]
+  },
+  {
+   "id": 2313758,
+   "type": "message",
+   "date": "2025-09-19T21:19:13",
+   "date_unixtime": "1758327553",
+   "edited": "2025-09-19T21:24:40",
+   "edited_unixtime": "1758327880",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2313756,
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "ADNALDO TLMT",
+     "user_id": 7214523841
+    },
+    "  e ",
+    {
+     "type": "mention_name",
+     "text": "Felipe",
+     "user_id": 6443654547
+    },
+    " gentileza deslocar nesse ponto assim que iniciar as 22:00"
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "ADNALDO TLMT",
+     "user_id": 7214523841
+    },
+    {
+     "type": "plain",
+     "text": "  e "
+    },
+    {
+     "type": "mention_name",
+     "text": "Felipe",
+     "user_id": 6443654547
+    },
+    {
+     "type": "plain",
+     "text": " gentileza deslocar nesse ponto assim que iniciar as 22:00"
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "👍",
+      "recent": [
+       {
+        "from": null,
+        "from_id": "user7214523841",
+        "date": "2025-09-19T21:24:40"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2313759,
+   "type": "message",
+   "date": "2025-09-19T21:19:27",
+   "date_unixtime": "1758327567",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "Francine",
+     "user_id": 6898907637
+    },
+    " vai nos monitorar de SAG"
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "Francine",
+     "user_id": 6898907637
+    },
+    {
+     "type": "plain",
+     "text": " vai nos monitorar de SAG"
+    }
+   ]
+  },
+  {
+   "id": 2313779,
+   "type": "message",
+   "date": "2025-09-19T23:08:32",
+   "date_unixtime": "1758334112",
+   "from": "FRANCINE MARQUES Mop",
+   "from_id": "user6898907637",
+   "reply_to_message_id": 2313759,
+   "text": "Aguardando contato da equipe",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Aguardando contato da equipe"
+    }
+   ]
+  },
+  {
+   "id": 2344704,
+   "type": "service",
+   "date": "2025-12-31T23:05:45",
+   "date_unixtime": "1767233145",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Luiz Fernando TLM2"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2344708,
+   "type": "message",
+   "date": "2026-01-01T03:08:38",
+   "date_unixtime": "1767247718",
+   "edited": "2026-01-01T03:09:59",
+   "edited_unixtime": "1767247799",
+   "from": "FRANCINE MARQUES Mop",
+   "from_id": "user6898907637",
+   "reply_to_message_id": 2301231,
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "LUIZ Telemont",
+     "user_id": 6264873937
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "LUIZ Telemont",
+     "user_id": 6264873937
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "👍",
+      "recent": [
+       {
+        "from": "Grecio Patrick",
+        "from_id": "user7415225337",
+        "date": "2026-01-01T03:09:59"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2344709,
+   "type": "service",
+   "date": "2026-01-01T03:09:37",
+   "date_unixtime": "1767247777",
+   "actor": "FRANCINE MARQUES Mop",
+   "actor_id": "user6898907637",
+   "action": "invite_members",
+   "members": [
+    "Grecio Patrick"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2344710,
+   "type": "service",
+   "date": "2026-01-01T03:09:37",
+   "date_unixtime": "1767247777",
+   "actor": "FRANCINE MARQUES Mop",
+   "actor_id": "user6898907637",
+   "action": "invite_members",
+   "members": [
+    "Marcos Paulo Pocrane"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2344711,
+   "type": "message",
+   "date": "2026-01-01T03:10:01",
+   "date_unixtime": "1767247801",
+   "from": "FRANCINE MARQUES Mop",
+   "from_id": "user6898907637",
+   "reply_to_message_id": 2301231,
+   "text": [
+    {
+     "type": "mention",
+     "text": "@grecio89"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@grecio89"
+    }
+   ]
+  },
+  {
+   "id": 2344712,
+   "type": "message",
+   "date": "2026-01-01T03:14:56",
+   "date_unixtime": "1767248096",
+   "edited": "2026-01-01T03:16:25",
+   "edited_unixtime": "1767248185",
+   "from": "Luiz Fernando TLM2",
+   "from_id": "user6264873937",
+   "reply_to_message_id": 2344711,
+   "text": [
+    "Esse e o outro lado ",
+    {
+     "type": "mention_name",
+     "text": "Francine",
+     "user_id": 6898907637
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Esse e o outro lado "
+    },
+    {
+     "type": "mention_name",
+     "text": "Francine",
+     "user_id": 6898907637
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "🤯",
+      "recent": [
+       {
+        "from": "FRANCINE MARQUES Mop",
+        "from_id": "user6898907637",
+        "date": "2026-01-01T03:16:25"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2345402,
+   "type": "service",
+   "date": "2026-01-07T09:49:23",
+   "date_unixtime": "1767790163",
+   "actor": "Alan Xxxxxx",
+   "actor_id": "user64227469",
+   "action": "invite_members",
+   "members": [
+    "Pedro Henrique"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2345403,
+   "type": "message",
+   "date": "2026-01-07T09:49:37",
+   "date_unixtime": "1767790177",
+   "from": "Alan Xxxxxx",
+   "from_id": "user64227469",
+   "reply_to_message_id": 2292043,
+   "text": [
+    {
+     "type": "mention",
+     "text": "@Pedro_Henriquevl"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@Pedro_Henriquevl"
+    }
+   ]
+  },
+  {
+   "id": 2345404,
+   "type": "message",
+   "date": "2026-01-07T09:50:48",
+   "date_unixtime": "1767790248",
+   "from": "Alan Xxxxxx",
+   "from_id": "user64227469",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_name": "DWDM 5 - atualizado 17-03-2025.dwg",
+   "file_size": 32673317,
+   "mime_type": "image/vnd.dwg",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2345446,
+   "type": "message",
+   "date": "2026-01-07T15:19:36",
+   "date_unixtime": "1767809976",
+   "from": "Diego Supervisor VIVO MG Tlm",
+   "from_id": "user440991922",
+   "reply_to_message_id": 2252570,
+   "text": [
+    {
+     "type": "mention",
+     "text": "@Alan_Cesar_P"
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention",
+     "text": "@Alan_Cesar_P"
+    }
+   ]
+  },
+  {
+   "id": 2347027,
+   "type": "service",
+   "date": "2026-01-17T22:55:05",
+   "date_unixtime": "1768701305",
+   "actor": "Marcos Bruno Lopes",
+   "actor_id": "user6752208964",
+   "action": "invite_members",
+   "members": [
+    "Rudione"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347028,
+   "type": "message",
+   "date": "2026-01-18T03:23:35",
+   "date_unixtime": "1768717415",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Jair Dias",
+   "forwarded_from_id": "user5531789204",
+   "photo": "photos/photo_70@18-01-2026_03-23-35.jpg",
+   "photo_file_size": 176752,
+   "width": 960,
+   "height": 1280,
+   "text": "Fibras em vnz 15 e 16 \nAmbas paradas no mesmo ponto",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Fibras em vnz 15 e 16 \nAmbas paradas no mesmo ponto"
+    }
+   ]
+  },
+  {
+   "id": 2347029,
+   "type": "message",
+   "date": "2026-01-18T03:23:35",
+   "date_unixtime": "1768717415",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Jair Dias",
+   "forwarded_from_id": "user5531789204",
+   "photo": "photos/photo_71@18-01-2026_03-23-35.jpg",
+   "photo_file_size": 146337,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347030,
+   "type": "message",
+   "date": "2026-01-18T03:23:35",
+   "date_unixtime": "1768717415",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Jair Dias",
+   "forwarded_from_id": "user5531789204",
+   "photo": "photos/photo_72@18-01-2026_03-23-35.jpg",
+   "photo_file_size": 109519,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347031,
+   "type": "message",
+   "date": "2026-01-18T03:23:57",
+   "date_unixtime": "1768717437",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_73@18-01-2026_03-23-57.jpg",
+   "photo_file_size": 191260,
+   "width": 960,
+   "height": 1280,
+   "text": [
+    "FALHA LOCALIZADA \n\nROTA: VNZ x SAG \n\nCAUSA: CARGA ALTA\n\n",
+    {
+     "type": "mention",
+     "text": "@DANIEL_N0GUEIRA"
+    },
+    " Marcos"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "FALHA LOCALIZADA \n\nROTA: VNZ x SAG \n\nCAUSA: CARGA ALTA\n\n"
+    },
+    {
+     "type": "mention",
+     "text": "@DANIEL_N0GUEIRA"
+    },
+    {
+     "type": "plain",
+     "text": " Marcos"
+    }
+   ]
+  },
+  {
+   "id": 2347032,
+   "type": "message",
+   "date": "2026-01-18T03:23:57",
+   "date_unixtime": "1768717437",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "location_information": {
+    "latitude": -19.814497,
+    "longitude": -43.975278
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347033,
+   "type": "message",
+   "date": "2026-01-18T03:23:57",
+   "date_unixtime": "1768717437",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_74@18-01-2026_03-23-57.jpg",
+   "photo_file_size": 221325,
+   "width": 960,
+   "height": 1280,
+   "text": "INICIANDO LANÇAMENTO",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "INICIANDO LANÇAMENTO"
+    }
+   ]
+  },
+  {
+   "id": 2347034,
+   "type": "message",
+   "date": "2026-01-18T03:24:18",
+   "date_unixtime": "1768717458",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "reply_to_message_id": 2347032,
+   "text": "4.323  metros de VNZ ate Aki",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "4.323  metros de VNZ ate Aki"
+    }
+   ]
+  },
+  {
+   "id": 2347035,
+   "type": "message",
+   "date": "2026-01-18T03:24:32",
+   "date_unixtime": "1768717472",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": "‐-------------------------------------",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "‐-------------------------------------"
+    }
+   ]
+  },
+  {
+   "id": 2347036,
+   "type": "service",
+   "date": "2026-01-18T03:24:41",
+   "date_unixtime": "1768717481",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Lucas Gabriel"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347037,
+   "type": "service",
+   "date": "2026-01-18T03:24:55",
+   "date_unixtime": "1768717495",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Luiz Fernando"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347038,
+   "type": "message",
+   "date": "2026-01-18T03:50:15",
+   "date_unixtime": "1768719015",
+   "edited": "2026-01-18T03:52:39",
+   "edited_unixtime": "1768719159",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "photo": "photos/photo_75@18-01-2026_03-50-15.jpg",
+   "photo_file_size": 214966,
+   "width": 960,
+   "height": 1280,
+   "text": "Caixa finalizada e local limpo",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Caixa finalizada e local limpo"
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "🫡",
+      "recent": [
+       {
+        "from": "Marcos Bruno Lopes",
+        "from_id": "user6752208964",
+        "date": "2026-01-18T03:52:39"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2347039,
+   "type": "message",
+   "date": "2026-01-18T03:50:15",
+   "date_unixtime": "1768719015",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "photo": "photos/photo_76@18-01-2026_03-50-15.jpg",
+   "photo_file_size": 216290,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347040,
+   "type": "message",
+   "date": "2026-01-18T03:50:15",
+   "date_unixtime": "1768719015",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "photo": "photos/photo_77@18-01-2026_03-50-15.jpg",
+   "photo_file_size": 298856,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347041,
+   "type": "message",
+   "date": "2026-01-18T03:50:36",
+   "date_unixtime": "1768719036",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "location_information": {
+    "latitude": -19.814575,
+    "longitude": -43.975304
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2347042,
+   "type": "message",
+   "date": "2026-01-18T03:50:42",
+   "date_unixtime": "1768719042",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "text": "Localização da caixa",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Localização da caixa"
+    }
+   ]
+  },
+  {
+   "id": 2351767,
+   "type": "service",
+   "date": "2026-02-22T08:23:20",
+   "date_unixtime": "1771759400",
+   "actor": "Daniel Nogueira Sup Telemont",
+   "actor_id": "user81526305",
+   "action": "invite_members",
+   "members": [
+    "Breno Silva telemont time Hugo"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2351768,
+   "type": "message",
+   "date": "2026-02-22T08:23:40",
+   "date_unixtime": "1771759420",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "location_information": {
+    "latitude": -19.926739,
+    "longitude": -43.987595
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2351769,
+   "type": "message",
+   "date": "2026-02-22T08:23:41",
+   "date_unixtime": "1771759421",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Alves Parceira RE Icomon",
+   "forwarded_from_id": "user1594443982",
+   "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A.",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "SITE VNZ até esse ponto tem 27.492 metros.\n\nSite SAG até esse ponto tem 6.134 metros.\n\nROTA LADO A."
+    }
+   ]
+  },
+  {
+   "id": 2351770,
+   "type": "message",
+   "date": "2026-02-22T08:23:41",
+   "date_unixtime": "1771759421",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_name": "DWDM 5 - atualizado 17-03-2025.dwg",
+   "file_size": 32673317,
+   "mime_type": "image/vnd.dwg",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2351771,
+   "type": "message",
+   "date": "2026-02-22T08:24:03",
+   "date_unixtime": "1771759443",
+   "from": "Daniel Nogueira Sup Telemont",
+   "from_id": "user81526305",
+   "text": [
+    "1 km antes ",
+    {
+     "type": "mention_name",
+     "text": "BRENO",
+     "user_id": 6359960593
+    },
+    "  desse ponto se estiver rompido a 5 km mesmo"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "1 km antes "
+    },
+    {
+     "type": "mention_name",
+     "text": "BRENO",
+     "user_id": 6359960593
+    },
+    {
+     "type": "plain",
+     "text": "  desse ponto se estiver rompido a 5 km mesmo"
+    }
+   ]
+  },
+  {
+   "id": 2351772,
+   "type": "message",
+   "date": "2026-02-22T08:26:55",
+   "date_unixtime": "1771759615",
+   "edited": "2026-02-22T08:29:13",
+   "edited_unixtime": "1771759753",
+   "from": "Breno Silva telemont time Hugo",
+   "from_id": "user6359960593",
+   "text": "Vou olhar o projeto aq",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Vou olhar o projeto aq"
+    }
+   ]
+  },
+  {
+   "id": 2352286,
+   "type": "message",
+   "date": "2026-02-26T08:55:19",
+   "date_unixtime": "1772106919",
+   "from": "Alan Xxxxxx",
+   "from_id": "user64227469",
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "Renato Eme",
+     "user_id": 6821558016
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "Renato Eme",
+     "user_id": 6821558016
+    }
+   ]
+  },
+  {
+   "id": 2357353,
+   "type": "message",
+   "date": "2026-04-02T03:32:43",
+   "date_unixtime": "1775111563",
+   "edited": "2026-04-02T03:37:58",
+   "edited_unixtime": "1775111878",
+   "from": "Luiz Fernando TLM2",
+   "from_id": "user6264873937",
+   "reply_to_message_id": 2301217,
+   "text": [
+    {
+     "type": "mention_name",
+     "text": "Marcos",
+     "user_id": 1618078147
+    }
+   ],
+   "text_entities": [
+    {
+     "type": "mention_name",
+     "text": "Marcos",
+     "user_id": 1618078147
+    }
+   ],
+   "reactions": [
+     {
+      "type": "emoji",
+      "count": 1,
+      "emoji": "🫡",
+      "recent": [
+       {
+        "from": "Marcos Paulo Pocrane",
+        "from_id": "user1618078147",
+        "date": "2026-04-02T03:37:58"
+       }
+      ]
+     }
+    ]
+  },
+  {
+   "id": 2357354,
+   "type": "service",
+   "date": "2026-04-02T03:42:35",
+   "date_unixtime": "1775112155",
+   "actor": "Marcos Paulo Pocrane",
+   "actor_id": "user1618078147",
+   "action": "invite_members",
+   "members": [
+    "Marcos"
+   ],
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357355,
+   "type": "message",
+   "date": "2026-04-02T03:44:01",
+   "date_unixtime": "1775112241",
+   "from": "Marcos",
+   "from_id": "user7893215912",
+   "photo": "photos/photo_78@02-04-2026_03-44-01.jpg",
+   "photo_file_size": 171548,
+   "width": 960,
+   "height": 1280,
+   "text": "VNZ x SAG dgo 9 posicao 15 e 16 ambas paradas a 16210 metros",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "VNZ x SAG dgo 9 posicao 15 e 16 ambas paradas a 16210 metros"
+    }
+   ]
+  },
+  {
+   "id": 2357356,
+   "type": "message",
+   "date": "2026-04-02T03:44:38",
+   "date_unixtime": "1775112278",
+   "from": "Marcos Paulo Pocrane",
+   "from_id": "user1618078147",
+   "forwarded_from": "Bruno Corp Oi Tlm",
+   "forwarded_from_id": "user155363114",
+   "file": "(File not included. Change data exporting settings to download.)",
+   "file_name": "DWDM 5 - atualizado 17-03-2025.dwg",
+   "file_size": 32673317,
+   "mime_type": "image/vnd.dwg",
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357357,
+   "type": "message",
+   "date": "2026-04-02T03:47:10",
+   "date_unixtime": "1775112430",
+   "from": "Marcos Paulo Pocrane",
+   "from_id": "user1618078147",
+   "forwarded_from": "Lucas Pereira",
+   "forwarded_from_id": "user6492338597",
+   "location_information": {
+    "latitude": -19.854812,
+    "longitude": -44.005568
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357358,
+   "type": "message",
+   "date": "2026-04-02T03:47:10",
+   "date_unixtime": "1775112430",
+   "from": "Marcos Paulo Pocrane",
+   "from_id": "user1618078147",
+   "forwarded_from": "DANIEL NOGUEIRA",
+   "text": "14.600 de VNZ ATE AKI",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "14.600 de VNZ ATE AKI"
+    }
+   ]
+  },
+  {
+   "id": 2357359,
+   "type": "message",
+   "date": "2026-04-02T03:47:46",
+   "date_unixtime": "1775112466",
+   "from": "Marcos Paulo Pocrane",
+   "from_id": "user1618078147",
+   "reply_to_message_id": 2357357,
+   "text": "Precisamos percorrer 1600 metros desse ponto",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Precisamos percorrer 1600 metros desse ponto"
+    }
+   ]
+  },
+  {
+   "id": 2357361,
+   "type": "message",
+   "date": "2026-04-02T06:06:42",
+   "date_unixtime": "1775120802",
+   "from": "Marcos",
+   "from_id": "user7893215912",
+   "forwarded_from": "Luis Fernando Part",
+   "forwarded_from_id": "user7617626608",
+   "photo": "photos/photo_79@02-04-2026_06-06-42.jpg",
+   "photo_file_size": 38817,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357362,
+   "type": "message",
+   "date": "2026-04-02T06:06:42",
+   "date_unixtime": "1775120802",
+   "from": "Marcos",
+   "from_id": "user7893215912",
+   "forwarded_from": "Marcos",
+   "forwarded_from_id": "user7893215912",
+   "reply_to_message_id": 2357361,
+   "text": "Fibra 3e4 dw VNZ x SAG",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Fibra 3e4 dw VNZ x SAG"
+    }
+   ]
+  },
+  {
+   "id": 2357363,
+   "type": "message",
+   "date": "2026-04-02T06:06:52",
+   "date_unixtime": "1775120812",
+   "from": "Marcos",
+   "from_id": "user7893215912",
+   "photo": "photos/photo_78@02-04-2026_03-44-01.jpg",
+   "photo_file_size": 171548,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357364,
+   "type": "message",
+   "date": "2026-04-02T07:12:13",
+   "date_unixtime": "1775124733",
+   "from": "Luiz Fernando",
+   "from_id": "user7361349334",
+   "reply_to_message_id": 2357363,
+   "location_information": {
+    "latitude": -19.861860,
+    "longitude": -43.998116
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357365,
+   "type": "message",
+   "date": "2026-04-02T07:19:38",
+   "date_unixtime": "1775125178",
+   "from": "Luiz Fernando TLM2",
+   "from_id": "user6264873937",
+   "text": "Ate esse ponto\n17.200mts de SAG\n16.210mts de VNZ\n\nESL-LUE\n7.000mts de ESL",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "Ate esse ponto\n17.200mts de SAG\n16.210mts de VNZ\n\nESL-LUE\n7.000mts de ESL"
+    }
+   ]
+  },
+  {
+   "id": 2357385,
+   "type": "message",
+   "date": "2026-04-02T08:06:40",
+   "date_unixtime": "1775128000",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Luis Fernando Part",
+   "forwarded_from_id": "user7617626608",
+   "photo": "photos/photo_81@02-04-2026_08-06-40.jpg",
+   "photo_file_size": 226887,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357386,
+   "type": "message",
+   "date": "2026-04-02T08:06:40",
+   "date_unixtime": "1775128000",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Luis Fernando Part",
+   "forwarded_from_id": "user7617626608",
+   "photo": "photos/photo_82@02-04-2026_08-06-40.jpg",
+   "photo_file_size": 218164,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357387,
+   "type": "message",
+   "date": "2026-04-02T08:36:14",
+   "date_unixtime": "1775129774",
+   "from": "Luiz Fernando",
+   "from_id": "user7361349334",
+   "reply_to_message_id": 2357365,
+   "photo": "photos/photo_83@02-04-2026_08-36-14.jpg",
+   "photo_file_size": 70050,
+   "width": 720,
+   "height": 720,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357596,
+   "type": "message",
+   "date": "2026-04-03T07:14:42",
+   "date_unixtime": "1775211282",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_84@03-04-2026_07-14-42.jpg",
+   "photo_file_size": 154330,
+   "width": 960,
+   "height": 1280,
+   "text": "ROTA: SAG x VNZ \n\nROMPIMENTO PARCIAL LOCALIZADO \nA 17.340 DE VNZ \n\nCAUSA: VANDALISMO",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "ROTA: SAG x VNZ \n\nROMPIMENTO PARCIAL LOCALIZADO \nA 17.340 DE VNZ \n\nCAUSA: VANDALISMO"
+    }
+   ]
+  },
+  {
+   "id": 2357597,
+   "type": "message",
+   "date": "2026-04-03T07:14:42",
+   "date_unixtime": "1775211282",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "location_information": {
+    "latitude": -19.871058,
+    "longitude": -43.999335
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357598,
+   "type": "message",
+   "date": "2026-04-03T07:14:42",
+   "date_unixtime": "1775211282",
+   "from": "Bruno Corp Oi Tlm",
+   "from_id": "user155363114",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_85@03-04-2026_07-14-42.jpg",
+   "photo_file_size": 271231,
+   "width": 960,
+   "height": 1280,
+   "text": "ROTA: SAG x VNZ \n\nLOCAL DA FALHA \nLuis",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "ROTA: SAG x VNZ \n\nLOCAL DA FALHA \nLuis"
+    }
+   ]
+  },
+  {
+   "id": 2357599,
+   "type": "message",
+   "date": "2026-04-03T07:41:58",
+   "date_unixtime": "1775212918",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "text": "DWDM cabo de 36FO Grupo 1 fibras 3 e 4",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "DWDM cabo de 36FO Grupo 1 fibras 3 e 4"
+    }
+   ]
+  },
+  {
+   "id": 2357600,
+   "type": "message",
+   "date": "2026-04-03T07:49:40",
+   "date_unixtime": "1775213380",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "text": [
+    "TA 360255542\n\n## SG-CARIMBOS ##\n\nNOME CARIMBO: TRAMITAÇÃO REDE EXTERNA - MEDIÇÃO;\nGRUPO: REDE-EXTERNA;\nUSUÁRIO CRIAÇÃO: ",
+    {
+     "type": "phone",
+     "text": "80920551"
+    },
+    " - WASHINGTON SOARES DE OLIVEIRA;\nDATA CRIAÇÃO CARIMBO: 03/04/2026 05:02:58;\n\n\n1) REDE;\nRESPOSTA: VIVO 1;\n\n2) TIPO REDE;\nRESPOSTA: BBR;\n\n3) NUMERO DO TICKET ;\nRESPOSTA: 360242165;\n\n4) TRECHO OU REDUNDÂNCIAS;\nRESPOSTA: TRECHO;\n\n5) SIGLA DO TRECHO;\nRESPOSTA: BHE.SAG<>BHE,VNZ;\n\n6) AFETAÇÃO DE SERVIÇO ;\nRESPOSTA: SIM;\n\n7) SERVIÇO INTERROMPIDO ;\nRESPOSTA: SIM;\n\n8) SERVIÇO DEGRADADO;\nRESPOSTA: NÃO;\n\n9) PONTA A ;\nRESPOSTA: SITE;\n\n10) NOME SITE;\nRESPOSTA: BELO HORIZONTE SANTO AGOSTINHO 2;\n\n11) SIGLA;\nRESPOSTA: BHE.SAG;\n\n12) ENDEREÇO SITE;\nRESPOSTA: RUA MARTIM DE CARVALHO , 691;\n\n13) POSIÇÕES SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: (PONTA A) = SAG EQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1/IIE FILA: 2A BT:41/46 DGO:7A POSIÇÃO = 21 E 22 POTÊNCIA DE TX = +5.32 DBM POTÊNCIA DE RX = LOSS;\n\n14) PONTA B;\nRESPOSTA: SITE;\n\n15) NOME SITE;\nRESPOSTA: BELO HORIZONTE - VENDA NOVA SÃO PEDRO;\n\n16) SIGLA;\nRESPOSTA: BHE.VNZ;\n\n17) ENDEREÇO SITE;\nRESPOSTA: AVENIDA EDGAR TORRES, 760;\n\n18) POSIÇÕES DA SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: PONTA B) = VNZ INFORMAÇÃO EQUIPAMENTO: VNZMGH12/06-SLA_1/SAG_1 FILA: FILA PAREDE BASTIDOR: 01 DGO: 09 POSIÇÃO: 15/16 POTÊNCIA DE TX = POTÊNCIA DE RX = ;\n\n19) MEDIÇÃO ATÉ O PONTO DE FALHA;\nRESPOSTA: SIM;\n\n20) NÚMERO DO CABO;\nRESPOSTA: 1;\n\n21) EQUIPAMENTO TESTADO;\nRESPOSTA: SIM;\n\n22) OBSERVAÇÃO;\nRESPOSTA: *CARIMBO REDE EXTERNA*\n\nROTA = SAG X VNZ_1\nOTS: ",
+    {
+     "type": "phone",
+     "text": "9900006739"
+    },
+    "\nTA = 360242165\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): NÃO\nTIPO DE FALHA: ROMPIMENTO\n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1/IIE\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.32 DBM\nPOTÊNCIA DE RX = LOSS\n",
+    {
+     "type": "italic",
+     "text": "_"
+    },
+    "__\n\nPONTA B) = VNZ INFORMAÇÃO\nEQUIPAMENTO: VNZMGH12/06-SLA_1/SAG_1\nFILA: FILA PAREDE\nBASTIDOR: 01\nDGO: 09\nPOSIÇÃO: 15/16\nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX =\n\nOBS:\n\nTÉCNICO = WESLLEY AFONSO\nCONTATO = 31 9 ",
+    {
+     "type": "phone",
+     "text": "95368648"
+    },
+    "\nDATA = 03/04/2026\nHORA = 04:50\n\nCORDÃO ÓPTICO TESTADO? = OK\nFOTOS EM ANEXO? = SIM"
+   ],
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA 360255542\n\n## SG-CARIMBOS ##\n\nNOME CARIMBO: TRAMITAÇÃO REDE EXTERNA - MEDIÇÃO;\nGRUPO: REDE-EXTERNA;\nUSUÁRIO CRIAÇÃO: "
+    },
+    {
+     "type": "phone",
+     "text": "80920551"
+    },
+    {
+     "type": "plain",
+     "text": " - WASHINGTON SOARES DE OLIVEIRA;\nDATA CRIAÇÃO CARIMBO: 03/04/2026 05:02:58;\n\n\n1) REDE;\nRESPOSTA: VIVO 1;\n\n2) TIPO REDE;\nRESPOSTA: BBR;\n\n3) NUMERO DO TICKET ;\nRESPOSTA: 360242165;\n\n4) TRECHO OU REDUNDÂNCIAS;\nRESPOSTA: TRECHO;\n\n5) SIGLA DO TRECHO;\nRESPOSTA: BHE.SAG<>BHE,VNZ;\n\n6) AFETAÇÃO DE SERVIÇO ;\nRESPOSTA: SIM;\n\n7) SERVIÇO INTERROMPIDO ;\nRESPOSTA: SIM;\n\n8) SERVIÇO DEGRADADO;\nRESPOSTA: NÃO;\n\n9) PONTA A ;\nRESPOSTA: SITE;\n\n10) NOME SITE;\nRESPOSTA: BELO HORIZONTE SANTO AGOSTINHO 2;\n\n11) SIGLA;\nRESPOSTA: BHE.SAG;\n\n12) ENDEREÇO SITE;\nRESPOSTA: RUA MARTIM DE CARVALHO , 691;\n\n13) POSIÇÕES SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: (PONTA A) = SAG EQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1/IIE FILA: 2A BT:41/46 DGO:7A POSIÇÃO = 21 E 22 POTÊNCIA DE TX = +5.32 DBM POTÊNCIA DE RX = LOSS;\n\n14) PONTA B;\nRESPOSTA: SITE;\n\n15) NOME SITE;\nRESPOSTA: BELO HORIZONTE - VENDA NOVA SÃO PEDRO;\n\n16) SIGLA;\nRESPOSTA: BHE.VNZ;\n\n17) ENDEREÇO SITE;\nRESPOSTA: AVENIDA EDGAR TORRES, 760;\n\n18) POSIÇÕES DA SALA DE TRANSMISSÃO/DGO;\nRESPOSTA: PONTA B) = VNZ INFORMAÇÃO EQUIPAMENTO: VNZMGH12/06-SLA_1/SAG_1 FILA: FILA PAREDE BASTIDOR: 01 DGO: 09 POSIÇÃO: 15/16 POTÊNCIA DE TX = POTÊNCIA DE RX = ;\n\n19) MEDIÇÃO ATÉ O PONTO DE FALHA;\nRESPOSTA: SIM;\n\n20) NÚMERO DO CABO;\nRESPOSTA: 1;\n\n21) EQUIPAMENTO TESTADO;\nRESPOSTA: SIM;\n\n22) OBSERVAÇÃO;\nRESPOSTA: *CARIMBO REDE EXTERNA*\n\nROTA = SAG X VNZ_1\nOTS: "
+    },
+    {
+     "type": "phone",
+     "text": "9900006739"
+    },
+    {
+     "type": "plain",
+     "text": "\nTA = 360242165\n\nTIPO DE REDE: DWDM\nAFETAÇÃO (ISOLADO): NÃO\nTIPO DE FALHA: ROMPIMENTO\n\n(PONTA A) = SAG\nEQUIPAMENTO: HUAWEI MGH12/72 -VNZ-1/IIE\nFILA: 2A\nBT:41/46\nDGO:7A\nPOSIÇÃO = 21 E 22\nPOTÊNCIA DE TX = +5.32 DBM\nPOTÊNCIA DE RX = LOSS\n"
+    },
+    {
+     "type": "italic",
+     "text": "_"
+    },
+    {
+     "type": "plain",
+     "text": "__\n\nPONTA B) = VNZ INFORMAÇÃO\nEQUIPAMENTO: VNZMGH12/06-SLA_1/SAG_1\nFILA: FILA PAREDE\nBASTIDOR: 01\nDGO: 09\nPOSIÇÃO: 15/16\nPOTÊNCIA DE TX =\nPOTÊNCIA DE RX =\n\nOBS:\n\nTÉCNICO = WESLLEY AFONSO\nCONTATO = 31 9 "
+    },
+    {
+     "type": "phone",
+     "text": "95368648"
+    },
+    {
+     "type": "plain",
+     "text": "\nDATA = 03/04/2026\nHORA = 04:50\n\nCORDÃO ÓPTICO TESTADO? = OK\nFOTOS EM ANEXO? = SIM"
+    }
+   ]
+  },
+  {
+   "id": 2357604,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_86@03-04-2026_08-19-59.jpg",
+   "photo_file_size": 214242,
+   "width": 960,
+   "height": 1280,
+   "text": "TA: 360255542\nROTA: SAG x VNZ\n\nCAIXA FINALIZADA E LOCAL LIMPO",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "TA: 360255542\nROTA: SAG x VNZ\n\nCAIXA FINALIZADA E LOCAL LIMPO"
+    }
+   ]
+  },
+  {
+   "id": 2357605,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_87@03-04-2026_08-19-59.jpg",
+   "photo_file_size": 194261,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357606,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_88@03-04-2026_08-19-59.jpg",
+   "photo_file_size": 335294,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357607,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_89@03-04-2026_08-19-59.jpg",
+   "photo_file_size": 179234,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357608,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "photo": "photos/photo_90@03-04-2026_08-19-59.jpg",
+   "photo_file_size": 389763,
+   "width": 960,
+   "height": 1280,
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357609,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "location_information": {
+    "latitude": -19.871383,
+    "longitude": -43.999453
+   },
+   "text": "",
+   "text_entities": []
+  },
+  {
+   "id": 2357610,
+   "type": "message",
+   "date": "2026-04-03T08:19:59",
+   "date_unixtime": "1775215199",
+   "from": "Lucas Gabriel",
+   "from_id": "user7934836912",
+   "forwarded_from": "Lucas Gabriel",
+   "forwarded_from_id": "user7934836912",
+   "text": "LOCALIZAÇÃO DA CAIXA",
+   "text_entities": [
+    {
+     "type": "plain",
+     "text": "LOCALIZAÇÃO DA CAIXA"
+    }
+   ]
+  }
+ ]
+}

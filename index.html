@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rede Óptica MG — Portal</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0f18;color:#dde2f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.logo{text-align:center;margin-bottom:32px;animation:up .3s ease}
+.ico{width:68px;height:68px;border-radius:18px;background:linear-gradient(135deg,#4da6ff,#a855f7);display:inline-flex;align-items:center;justify-content:center;font-size:34px;margin-bottom:12px;box-shadow:0 8px 32px rgba(77,166,255,.3)}
+.logo h1{font-size:20px;font-weight:800}.logo h1 em{color:#3ecf8e;font-style:normal}
+.logo p{font-size:11px;color:#4a506e;margin-top:3px}
+.dot{width:7px;height:7px;border-radius:50%;background:#3ecf8e;display:inline-block;animation:pulse 2s infinite;margin-right:5px;vertical-align:middle}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;width:100%;max-width:960px}
+a{text-decoration:none}
+.card{background:#151824;border:1.5px solid #252840;border-radius:14px;padding:20px;cursor:pointer;transition:.15s;animation:up .3s ease;display:block}
+.card:hover{background:#1c2030;border-color:#3ecf8e;transform:translateY(-2px);box-shadow:0 8px 28px rgba(62,207,142,.12)}
+.card:hover .arr{color:#3ecf8e}
+.card-ico{font-size:28px;margin-bottom:10px}
+.card-t{font-size:14px;font-weight:700;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
+.arr{color:#4a506e;font-size:16px;transition:.15s}
+.card-d{font-size:10px;color:#505578;line-height:1.7}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.tag{padding:2px 8px;border-radius:14px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.tg{background:rgba(62,207,142,.12);color:#3ecf8e;border:1px solid rgba(62,207,142,.2)}
+.tb{background:rgba(77,166,255,.12);color:#4da6ff;border:1px solid rgba(77,166,255,.2)}
+.tp{background:rgba(168,85,247,.12);color:#a855f7;border:1px solid rgba(168,85,247,.2)}
+.ta{background:rgba(240,165,0,.12);color:#f0a500;border:1px solid rgba(240,165,0,.2)}
+.tr{background:rgba(232,68,85,.12);color:#e84455;border:1px solid rgba(232,68,85,.2)}
+.footer{margin-top:28px;font-size:9px;color:#2a2d42;text-align:center}
+</style>
+</head>
+<body>
+<div class="logo">
+  <div class="ico">📡</div>
+  <h1>Rede <em>Óptica</em> MG</h1>
+  <p><span class="dot"></span>Sistema integrado de cadastro, inventário e IA · MG</p>
+</div>
+<div class="grid">
+  <a class="card" href="mapa-rede-optica.html">
+    <div class="card-ico">🗺</div>
+    <div class="card-t">Mapa da Rede <span class="arr">→</span></div>
+    <div class="card-d">56k+ sites e 7.9k cabos no mapa. Rastreamento A→B, OTDR, edição de campo, incidentes SLA 5h, camadas por tipo de rede.</div>
+    <div class="tags"><span class="tag tg">56k sites</span><span class="tag tb">7.9k cabos</span><span class="tag ta">OTDR</span><span class="tag tp">Leaflet</span></div>
+  </a>
+  <a class="card" href="dashboard.html">
+    <div class="card-ico">📊</div>
+    <div class="card-t">Dashboard Técnico <span class="arr">→</span></div>
+    <div class="card-d">9 módulos: fusão de fibras, ocupação por cabo, orçamento óptico, viabilidade CTO, inventário, auditoria, relatórios.</div>
+    <div class="tags"><span class="tag tg">Fusão</span><span class="tag tb">Fibras</span><span class="tag ta">Orçamento</span><span class="tag tp">Relatórios</span></div>
+  </a>
+  <a class="card" href="ia-assistente.html">
+    <div class="card-ico">🤖</div>
+    <div class="card-t">IA Assistente <span class="arr">→</span></div>
+    <div class="card-d">Claude, GPT-4o e outras IAs plugáveis. Orientação de campo, cadastro de fibras por tubo loose, diagnóstico de falhas, análise OTDR.</div>
+    <div class="tags"><span class="tag tp">Claude</span><span class="tag tg">GPT-4o</span><span class="tag tb">Campo</span><span class="tag ta">OTDR</span></div>
+  </a>
+  <a class="card" href="auditoria-revisao.html">
+    <div class="card-ico">🔍</div>
+    <div class="card-t">Auditoria & Revisão <span class="arr">→</span></div>
+    <div class="card-d">Score de saúde do sistema, aprovações por hierarquia, histórico de alterações, snapshots, segurança e relatório para IA corrigir.</div>
+    <div class="tags"><span class="tag tr">Segurança</span><span class="tag ta">Aprovações</span><span class="tag tg">Snapshots</span><span class="tag tb">Auditoria</span></div>
+  </a>
+</div>
+<div class="footer">Rede Óptica MG · Sistema interno · <span id="ano"></span> · <a href="https://github.com/Lidiomar90/rede-optica" style="color:#2a2d42">GitHub</a></div>
+<script>document.getElementById('ano').textContent=new Date().getFullYear();</script>
+</body>
+</html>
