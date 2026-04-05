@@ -366,8 +366,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     <div id="mt">
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
       <div style="position:relative"><button class="mb" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
+      <div style="position:relative"><button class="mb" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
       <div style="position:relative"><button class="mb" id="bmed" onclick="toggleMed()">📏<div class="tip">Medir distância</div></button></div>
-      <div style="position:relative"><button class="mb" id="bdc" onclick="startDraw()">🔌<div class="tip">Desenhar cabo</div></button></div>
+      <div style="position:relative"><button class="mb" id="bdc" onclick="startDraw()">🔌<div class="tip">Desenhar segmento/cabo</div></button></div>
       <div style="position:relative"><button class="mb on-b" onclick="abrirRastreamento()">🔍<div class="tip">Rastrear rota A→B</div></button></div>
       <div style="position:relative"><button class="mb" onclick="abrirOTDR()">📡<div class="tip">Localizar rompimento OTDR</div></button></div>
       <div style="position:relative"><button class="mb tb r" id="binc" onclick="toggleInc()">🚨<div class="tip">Registrar falha</div></button></div>
@@ -496,6 +497,97 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
         <div class="bbs"><button class="btn2 s" onclick="limpar('cr')">Limpar</button><button class="btn2 p" onclick="salvarRota()">💾 Salvar</button></div>
         <div id="cr-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
       </div>
+      <div class="fc">
+        <div class="fct">🧰 Caixa de emenda / CTO / CEO</div>
+        <div class="fg"><label>Código <span class="req">*</span></label><input id="cx-codigo" placeholder="CX-BH-001 / CEO-SAG-01"></div>
+        <div class="fg"><label>Nome operacional</label><input id="cx-nome" placeholder="Caixa abordagem BAM"></div>
+        <div class="fgr">
+          <div class="fg"><label>Tipo instalação</label><select id="cx-inst"><option>aereo</option><option>subterraneo</option><option>misto</option></select></div>
+          <div class="fg"><label>Modelo</label><select id="cx-modelo"><option>ETK</option><option>PLP</option><option>FIST</option><option>outro</option></select></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Fabricante</label><input id="cx-fab" placeholder="Furukawa / Prysmian / PLP"></div>
+          <div class="fg"><label>Status</label><select id="cx-status"><option>ativo</option><option>vistoriar</option><option>danificada</option><option>substituir</option></select></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Latitude</label><input id="cx-lat" type="number" step="0.000001" placeholder="-19.9"></div>
+          <div class="fg"><label>Longitude</label><input id="cx-lng" type="number" step="0.000001" placeholder="-43.9"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label><input id="cx-vist" type="checkbox"> Vistoriada</label></div>
+          <div class="fg"><label><input id="cx-troca" type="checkbox"> Precisa troca</label></div>
+        </div>
+        <div class="fg"><button type="button" class="tb" style="width:100%;padding:8px" onclick="gpsF('cx-lat','cx-lng')">📍 GPS atual</button></div>
+        <div class="fg"><label>Observação rica</label><textarea id="cx-obs" placeholder="Acesso, estado físico, tampa, ferragens, reserva técnica, necessidade de troca, referência visual..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('cx')">Limpar</button><button class="btn2 p" onclick="salvarCaixa()">💾 Salvar rascunho</button></div>
+        <div id="cx-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">🗄 DGO / terminação interna</div>
+        <div class="fg"><label>Código <span class="req">*</span></label><input id="dg-codigo" placeholder="DGO-SAG-01"></div>
+        <div class="fg"><label>Site <span class="req">*</span></label><input id="dg-site" placeholder="SAG / JCT / ESL"></div>
+        <div class="fgr">
+          <div class="fg"><label>Rack</label><input id="dg-rack" placeholder="Rack 02"></div>
+          <div class="fg"><label>Fila</label><input id="dg-fila" placeholder="Fila 2A"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Bastidor</label><input id="dg-bast" placeholder="BT 41/46"></div>
+          <div class="fg"><label>Modelo</label><input id="dg-modelo" placeholder="Huawei / Datacom / Furukawa"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Fabricante</label><input id="dg-fab" placeholder="Huawei"></div>
+          <div class="fg"><label>Status</label><select id="dg-status"><option>ativo</option><option>vistoriar</option><option>pendente</option></select></div>
+        </div>
+        <div class="fg"><label>Observação</label><textarea id="dg-obs" placeholder="Posições, bandeja, porta, observações do levantamento, pendências..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('dg')">Limpar</button><button class="btn2 p" onclick="salvarDgo()">💾 Salvar rascunho</button></div>
+        <div id="dg-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">📏 Segmento físico de cabo</div>
+        <div class="fg"><label>Cabo <span class="req">*</span></label><input id="sg-cabo" placeholder="JCT-ESL-144FO"></div>
+        <div class="fgr">
+          <div class="fg"><label>Ponto A</label><input id="sg-a" placeholder="site/caixa/dgo origem"></div>
+          <div class="fg"><label>Ponto B</label><input id="sg-b" placeholder="site/caixa/dgo destino"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Tipo lançamento</label><select id="sg-tipo"><option>aereo</option><option>subterraneo</option><option>misto</option></select></div>
+          <div class="fg"><label>Metragem (m)</label><input id="sg-metr" type="number" placeholder="200"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Fabricante</label><input id="sg-fab" placeholder="Furukawa"></div>
+          <div class="fg"><label>Modelo / data</label><input id="sg-modelo" placeholder="ASU 144FO / 2023"></div>
+        </div>
+        <div class="fg"><label>Lote</label><input id="sg-lote" placeholder="LOT-2023-001"></div>
+        <div class="fg"><label>Observação</label><textarea id="sg-obs" placeholder="Carona, caixas intermediárias, tipo de sustentação, subterrâneo em duto, aéreo em poste, misto..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('sg')">Limpar</button><button class="btn2 p" onclick="salvarSegmento()">💾 Salvar rascunho</button></div>
+        <div id="sg-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">🚨 Ruptura / reparo</div>
+        <div class="fg"><label>Cabo ou segmento <span class="req">*</span></label><input id="rp-cabo" placeholder="JCT-ESL-144FO / segmento 003"></div>
+        <div class="fgr">
+          <div class="fg"><label>Distância OTDR (m)</label><input id="rp-otdr" type="number" placeholder="3500"></div>
+          <div class="fg"><label>Cabo lançado (m)</label><input id="rp-lanc" type="number" placeholder="200"></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Nova caixa</label><input id="rp-caixa" placeholder="CX-BH-009"></div>
+          <div class="fg"><label>Tipo reparo</label><select id="rp-reparo"><option>fusao</option><option>substituicao_trecho</option><option>nova_caixa</option><option>em_levantamento</option></select></div>
+        </div>
+        <div class="fgr">
+          <div class="fg"><label>Latitude</label><input id="rp-lat" type="number" step="0.000001" placeholder="-19.9"></div>
+          <div class="fg"><label>Longitude</label><input id="rp-lng" type="number" step="0.000001" placeholder="-43.9"></div>
+        </div>
+        <div class="fg"><button type="button" class="tb" style="width:100%;padding:8px" onclick="gpsF('rp-lat','rp-lng')">📍 GPS atual</button></div>
+        <div class="fg"><label>Observação operacional completa</label><textarea id="rp-obs" placeholder="Origem e destino, caixas usadas, trecho aéreo/subterrâneo, fabricante, lote, fusões, pendências, próxima ação de campo..."></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="limpar('rp')">Limpar</button><button class="btn2 r" onclick="salvarRuptura()">💾 Salvar rascunho</button></div>
+        <div id="rp-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
+      </div>
+      <div class="fc">
+        <div class="fct">📋 Pendências e rascunhos locais</div>
+        <div class="fg"><label>Resumo</label><textarea id="inv-resumo" readonly style="min-height:160px"></textarea></div>
+        <div class="bbs"><button class="btn2 s" onclick="renderInventarioResumo()">Atualizar resumo</button><button class="btn2 p" onclick="limparInventarioRascunho()">Limpar rascunhos</button></div>
+        <div id="inv-msg" style="min-height:20px;font-size:11px;text-align:center;margin-top:6px"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -607,9 +699,9 @@ const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
 let cableFx={},activeCableId=null;
-let editMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false;
+let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
-let rastLayer=null,otdrLayer=null,rompLayer=null;
+let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null;
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:true,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -641,6 +733,7 @@ const mkLoc=()=>L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],html:'
 const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
 // Marcador de nova caixa após lançamento
 const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
+const mkDraftCaixa=()=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚</div>`});
 function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,className=''}={}){
   const halo=L.polyline(pts,{color:'#ffffff',weight:weight+3,opacity:Math.min(opacity*.22,.32),lineCap:'round',lineJoin:'round',interactive:false,className});
   const line=L.polyline(pts,{color,weight,opacity,dashArray,lineCap:'round',lineJoin:'round',className});
@@ -678,6 +771,7 @@ function initMapObj(){
   });
   LYR['outros']=L.layerGroup().addTo(map);
   rompLayer=L.layerGroup().addTo(map);
+  draftInvLayer=L.layerGroup().addTo(map);
 }
 
 async function loadMap(){
@@ -738,6 +832,7 @@ async function loadMap(){
     });
     // Carregar incidentes abertos com rompimento no mapa
     loadRompimentosNoMapa();
+    renderInventarioDrafts();
     applyVis();renderSB();
     if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:11});
     $('load').style.display='none';setProg(0);
@@ -868,14 +963,25 @@ function closePan(){$('pan').style.display='none';}
 function goLoc(){navigator.geolocation.getCurrentPosition(p=>{if(locMk)map.removeLayer(locMk);locMk=L.marker([p.coords.latitude,p.coords.longitude],{icon:mkLoc(),zIndexOffset:3000}).addTo(map);map.setView([p.coords.latitude,p.coords.longitude],17);toast('Localização atual','in');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:12000});}
 function toggleEdit(){editMode=!editMode;$('bed').classList.toggle('on',editMode);if(editMode){map.on('click',editClick);toast('Clique no mapa para criar site','wn');}else map.off('click',editClick);}
 function editClick(e){if(!drawMode&&!medMode&&!incMode&&!moveMode)openM('site',null,e.latlng.lat,e.latlng.lng);}
+function toggleCaixaMap(){caixaMapMode=!caixaMapMode;$('bcx').classList.toggle('on-b',caixaMapMode);if(caixaMapMode){map.on('click',caixaMapClick);toast('Clique no mapa para lançar caixa de emenda','in');}else map.off('click',caixaMapClick);}
+function caixaMapClick(e){
+  if(drawMode||medMode||incMode||moveMode)return;
+  $('cx-lat').value=e.latlng.lat.toFixed(6);
+  $('cx-lng').value=e.latlng.lng.toFixed(6);
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  caixaMapMode=false;
+  $('bcx').classList.remove('on-b');
+  map.off('click',caixaMapClick);
+  toast('Preencha os dados da nova caixa no cadastro','ok');
+}
 function toggleMed(){if(medMode){cancelMed();return;}medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);toast('Medição ativa','in');}
 function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#4da6ff',fillOpacity:1,weight:2}).addTo(map));if(medPts.length>=2){if(medLn)map.removeLayer(medLn);medLn=L.polyline(medPts,{color:'#4da6ff',weight:2.5,dashArray:'5 4',opacity:.9}).addTo(map);}const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);$('med-info').textContent=medPts.length>1?`${medPts.length} pts • ${km(d)}`:'1 ponto';if(medPts.length>1)$('h-med').textContent=`📏 ${medPts.length} pts • ${km(d)} — duplo clique p/ finalizar`;}
 function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
 function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
 function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
-function startDraw(){if(drawMode){cancelDraw();return;}drawMode=true;drawPts=[];$('bdc').classList.add('on-g');$('h-draw').style.display='block';clearDrawLines();map.on('click',addDrawPt);map.on('dblclick',finishDraw);toast('Trace o cabo','in');}
+function startDraw(){if(drawMode){cancelDraw();return;}drawMode=true;drawPts=[];$('bdc').classList.add('on-g');$('h-draw').style.display='block';clearDrawLines();map.on('click',addDrawPt);map.on('dblclick',finishDraw);toast('Trace o segmento físico','in');}
 function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}}
-function finishDraw(e){L.DomEvent.stopPropagation(e);if(drawPts.length<2)return;const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));const pts=[...drawPts];cancelDraw();openM('cabo',null,null,null,pts,d);}
+function finishDraw(e){L.DomEvent.stopPropagation(e);if(drawPts.length<2)return;const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));const pts=[...drawPts];cancelDraw();goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));if($('sg-metr'))$('sg-metr').value=d;if($('sg-obs'))$('sg-obs').value=(($('sg-obs').value||'').trim()?$('sg-obs').value.trim()+' | ':'')+`Trajeto desenhado com ${pts.length} ponto(s)`;toast('Preencha os pontos A/B e salve o segmento físico','ok');}
 function cancelDraw(){drawMode=false;map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
 function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
@@ -1136,6 +1242,98 @@ const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
 function gpsF(li,lo){navigator.geolocation.getCurrentPosition(p=>{$(li).value=p.coords.latitude.toFixed(6);$(lo).value=p.coords.longitude.toFixed(6);toast('GPS capturado!');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:8000});}
 function limpar(pre){document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{if(el.tagName==='SELECT')el.selectedIndex=0;else el.value='';});$(pre+'-msg').textContent='';}
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
+const INV_KEY='redeoptica_inventario_rascunho_v1';
+function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]};}}
+function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();}
+function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({...item,criado_em:new Date().toISOString()});saveInvStore(store);}
+function renderInventarioResumo(){
+  const store=getInvStore();
+  const linhas=[
+    `Caixas: ${store.caixas.length}`,
+    `DGOs: ${store.dgos.length}`,
+    `Segmentos: ${store.segmentos.length}`,
+    `Rupturas: ${store.rupturas.length}`,
+    '',
+    ...store.caixas.slice(-3).map(x=>`CX ${x.codigo} | ${x.tipo_instalacao} | ${x.status}`),
+    ...store.dgos.slice(-3).map(x=>`DGO ${x.codigo} | site ${x.site}`),
+    ...store.segmentos.slice(-3).map(x=>`SEG ${x.cabo} | ${x.ponto_a} -> ${x.ponto_b}`),
+    ...store.rupturas.slice(-3).map(x=>`RUP ${x.cabo_segmento} | OTDR ${x.distancia_otdr_m||0}m | lanc ${x.metragem_lancada_m||0}m`)
+  ];
+  if($('inv-resumo'))$('inv-resumo').value=linhas.join('\n').trim();
+  renderInventarioDrafts();
+}
+function limparInventarioRascunho(){
+  if(!confirm('Limpar todos os rascunhos locais do inventário?'))return;
+  localStorage.removeItem(INV_KEY);
+  renderInventarioResumo();
+  msgField('inv-msg','Rascunhos locais removidos.','ok');
+}
+
+function salvarCaixa(){
+  const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
+  addInvItem('caixas',{
+    codigo,nome:gv('cx-nome'),tipo_instalacao:gv('cx-inst'),modelo:gv('cx-modelo'),
+    fabricante:gv('cx-fab'),status:gv('cx-status'),vistoriada:$('cx-vist')?.checked||false,
+    precisa_troca:$('cx-troca')?.checked||false,lat:gf('cx-lat'),lng:gf('cx-lng'),observacao:gv('cx-obs')
+  });
+  msgField('cx-msg','✓ Caixa salva em rascunho local.','ok'); limpar('cx');
+}
+function salvarDgo(){
+  const codigo=gv('dg-codigo'),site=gv('dg-site'); if(!codigo||!site){msgField('dg-msg','Código e site são obrigatórios');return;}
+  addInvItem('dgos',{
+    codigo,site,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
+    modelo:gv('dg-modelo'),fabricante:gv('dg-fab'),status:gv('dg-status'),observacao:gv('dg-obs')
+  });
+  msgField('dg-msg','✓ DGO salvo em rascunho local.','ok'); limpar('dg');
+}
+function salvarSegmento(){
+  const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
+  addInvItem('segmentos',{
+    cabo,ponto_a:pontoA,ponto_b:pontoB,tipo_lancamento:gv('sg-tipo'),
+    metragem_m:gf('sg-metr'),fabricante:gv('sg-fab'),modelo:gv('sg-modelo'),
+    lote:gv('sg-lote'),observacao:gv('sg-obs')
+  });
+  msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok'); limpar('sg');
+}
+function salvarRuptura(){
+  const caboSegmento=gv('rp-cabo'); if(!caboSegmento){msgField('rp-msg','Cabo ou segmento é obrigatório');return;}
+  addInvItem('rupturas',{
+    cabo_segmento:caboSegmento,distancia_otdr_m:gf('rp-otdr'),metragem_lancada_m:gf('rp-lanc'),
+    nova_caixa:gv('rp-caixa'),tipo_reparo:gv('rp-reparo'),lat:gf('rp-lat'),lng:gf('rp-lng'),
+    observacao:gv('rp-obs')
+  });
+  msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok'); limpar('rp');
+}
+function renderInventarioDrafts(){
+  if(!draftInvLayer)return;
+  draftInvLayer.clearLayers();
+  const store=getInvStore();
+  store.caixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
+        .bindPopup(`<b>🧰 ${esc(cx.codigo||'Caixa')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}<br>${cx.precisa_troca?'⚠ Precisa troca<br>':''}${cx.vistoriada?'✓ Vistoriada<br>':''}${esc(cx.observacao||'')}`)
+        .addTo(draftInvLayer);
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    const a=allS.find(s=>((s.nome||'').toUpperCase()===(seg.ponto_a||'').toUpperCase())||((s.codigo||'').toUpperCase()===(seg.ponto_a||'').toUpperCase()));
+    const b=allS.find(s=>((s.nome||'').toUpperCase()===(seg.ponto_b||'').toUpperCase())||((s.codigo||'').toUpperCase()===(seg.ponto_b||'').toUpperCase()));
+    const pa=PP(a?.localizacao),pb=PP(b?.localizacao);
+    if(pa&&pb){
+      addCableVisual(draftInvLayer,[pa,pb],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>📏 ${esc(seg.cabo||'Segmento')}</b><br>${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`});
+    }
+  });
+  store.rupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
+        .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'—')}<br>${esc(rp.observacao||'')}`)
+        .addTo(draftInvLayer);
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
+      }
+    }
+  });
+}
 
 async function salvarSite(){
   const nome=gv('cs-nome');
@@ -1379,6 +1577,7 @@ async function salvarCaboM(){
 $('le').addEventListener('keydown',e=>{if(e.key==='Enter')$('lp').focus();});
 $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 loadPref();aplicarTema();
+renderInventarioResumo();
 if(checkSessao()){iniciarApp();}else{$('le').focus();}
 </script>
 </body>

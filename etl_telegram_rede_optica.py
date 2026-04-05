@@ -212,6 +212,8 @@ SIGLA_STOPWORDS = {
     "BANDEJA","PORTA","CONECTOR","JUMPER","CORDAO","PATCH","PIGTAIL","FUSAO",
     "ODB","MDF","DDF","ODF","ARMARIO","ABRIGO","SHELTER","SITE","ERB","POP",
     "ROMPIMENTO","FALHA","ATENUACAO","MEDICAO","EMENDA","CAIXA","CABO","FIBRA",
+    "COM","MAPS","EXTERNA","MEDI","MUT","SEM","BRUNO","SANTOS","PEDRO","ALAN",
+    "CESAR","HENRIQUEVL","CORPORATIVO","TELEMONT","GOOGLE","HTTPS","HTTP",
 }
 
 # ══════════════════════════════════════════════════════════════════════
@@ -539,6 +541,13 @@ def extrair_texto_msg(msg: dict) -> str:
         texto = " ".join(partes)
     return str(texto).strip()
 
+def limpar_texto_siglas(texto: str) -> str:
+    """Remove ruído óbvio antes da extração de siglas."""
+    texto = re.sub(r'https?://\S+', ' ', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'www\.\S+', ' ', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'@\w+', ' ', texto)
+    return texto
+
 def detectar_camada(texto: str) -> tuple[str, str]:
     """Detecta tipo_enlace e camada a partir do texto."""
     t = normalizar(texto)
@@ -563,7 +572,7 @@ def extrair_siglas_por_padrao(texto: str, db: DB) -> list[str]:
     - SAG...-VNZ...
     - PONTA A = SAG / PONTA B = VNZ
     """
-    txt = texto.upper()
+    txt = limpar_texto_siglas(texto).upper()
     encontradas = []
 
     # PONTA A / PONTA B explícitos
@@ -576,11 +585,15 @@ def extrair_siglas_por_padrao(texto: str, db: DB) -> list[str]:
 
     # ROTA = SAG X VNZ / SAG <> VNZ / VNZ / SAG
     for m in re.finditer(r'([A-Z]{3,8})\s*(?:<>|/|X|-)\s*([A-Z]{3,8})', txt):
-        encontradas.extend([m.group(1), m.group(2)])
+        a,b=m.group(1),m.group(2)
+        if a not in SIGLA_STOPWORDS and b not in SIGLA_STOPWORDS:
+            encontradas.extend([a,b])
 
     # Tokens compostos como MGSAG-MGVNZ ou SAGMGH12.72-VNZMGH12.06
     for m in re.finditer(r'([A-Z]{3,12})[^A-Z0-9]{0,3}[-_/][^A-Z0-9]{0,3}([A-Z]{3,12})', txt):
-        encontradas.extend([m.group(1), m.group(2)])
+        a,b=m.group(1),m.group(2)
+        if a not in SIGLA_STOPWORDS and b not in SIGLA_STOPWORDS:
+            encontradas.extend([a,b])
 
     # Procurar aliases embutidos em tokens maiores
     aliases = sorted(db._siglas_set, key=len, reverse=True)
@@ -590,7 +603,7 @@ def extrair_siglas_por_padrao(texto: str, db: DB) -> list[str]:
             continue
         hits = []
         for alias in aliases:
-            if alias in token and alias not in SIGLA_STOPWORDS:
+            if len(alias) >= 3 and alias in token and alias not in SIGLA_STOPWORDS:
                 hits.append(alias)
             if len(hits) >= 2:
                 break
@@ -614,13 +627,14 @@ def extrair_siglas(texto: str, siglas_validas: set) -> list[str]:
     """
     encontradas = []
     # 1. Padrão XXXXXMG (mais confiável)
-    for m in RE_SIGLA_MG.finditer(texto.upper()):
+    txt = limpar_texto_siglas(texto).upper()
+    for m in RE_SIGLA_MG.finditer(txt):
         sig = m.group(1)
         if sig not in SIGLA_STOPWORDS:
             encontradas.append(sig)
     # 2. Qualquer sigla no dicionário de sites
     if not encontradas:
-        for m in RE_SIGLA_GEN.finditer(texto.upper()):
+        for m in RE_SIGLA_GEN.finditer(txt):
             sig = m.group(1)
             if sig in siglas_validas and sig not in SIGLA_STOPWORDS:
                 encontradas.append(sig)
