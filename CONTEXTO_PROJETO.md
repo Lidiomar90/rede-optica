@@ -21,6 +21,7 @@
 7. Front do mapa ganhou `flags operacionais` em `site`, `cabo`, `caixa` e `DGO`, com marcador estilo placemark, edição por modal, ação no painel, menu rápido e indicador na lista lateral
 8. Sidebar do mapa ganhou aba operacional `Ativos`, com navegação direta para `Caixas / emendas` e `DGOs`, status operacional e flag visível
 9. Sidebar do mapa ganhou aba `Continu.`, com navegação direta para `Segmentos físicos` e `Rupturas / reparos`, incluindo salto para o mapa e abertura do painel técnico
+10. Abas `Ativos` e `Continu.` ganharam filtros rápidos por status (`Todos`, `Quebrados`, `Pendentes`, `Confirmados`) para inspeção operacional mais rápida
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace

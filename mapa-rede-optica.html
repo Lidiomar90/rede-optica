@@ -137,6 +137,8 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 #sbl{flex:1;overflow-y:auto;display:none;padding:8px 10px 12px}
 #sbl::-webkit-scrollbar{width:2px}
 #sbl::-webkit-scrollbar-thumb{background:var(--bd2)}
+.sbflt{display:none;padding:8px 10px 4px;border-bottom:1px solid rgba(255,255,255,.05);gap:6px;flex-wrap:wrap}
+.sbflt.on{display:flex}
 .gh{padding:8px 6px 5px;font-size:9px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.18em;display:flex;justify-content:space-between}
 .gh span:last-child{background:rgba(255,255,255,.05);border-radius:999px;padding:2px 7px}
 .si{padding:9px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:12px;transition:.08s;margin-bottom:4px}
@@ -382,6 +384,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <div class="stt" onclick="sbTab('ativos',this)">Ativos</div>
       <div class="stt" onclick="sbTab('continu',this)">Continu.</div>
     </div>
+    <div id="sbflt" class="sbflt"></div>
     <div id="lc">
       <div class="lc-stack">
         <div class="lc-hdr">
@@ -823,7 +826,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-let map,allS=[],allC=[],allR=[],scienceSites=[],sbMode='camadas',fmap={};
+let map,allS=[],allC=[],allR=[],scienceSites=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -1695,7 +1698,37 @@ async function syncLocalDrafts(){
 }
 
 // SIDEBAR
-function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';if(m!=='camadas')renderSB($('si').value);}
+function renderSidebarFilters(){
+  const el=$('sbflt');
+  if(!el)return;
+  if(sbMode!=='ativos'&&sbMode!=='continu'){
+    el.classList.remove('on');
+    el.innerHTML='';
+    return;
+  }
+  const opts=[
+    ['todos','Todos'],
+    ['quebrado','Quebrados'],
+    ['pendente','Pendentes'],
+    ['confirmado','Confirmados'],
+  ];
+  el.innerHTML=opts.map(([id,label])=>`<button class="overlay-chip ${sbStatusFilter===id?'on':''}" onclick="setSidebarStatusFilter('${id}')">${label}</button>`).join('');
+  el.classList.add('on');
+}
+function setSidebarStatusFilter(next){
+  sbStatusFilter=next||'todos';
+  renderSidebarFilters();
+  renderSB($('si')?.value||'');
+}
+function matchesSidebarStatus(status){
+  const s=String(status||'').toLowerCase();
+  if(sbStatusFilter==='todos')return true;
+  if(sbStatusFilter==='quebrado')return s.includes('quebrado')||s.includes('sem continuidade');
+  if(sbStatusFilter==='pendente')return s.includes('pend')||s.includes('montagem')||s.includes('rascunho');
+  if(sbStatusFilter==='confirmado')return s.includes('confirmado')||s.includes('registrada')||s.includes('ativo')||s.includes('pronto');
+  return true;
+}
+function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';renderSidebarFilters();if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){if(sbMode!=='camadas')renderSB(q);}
 function renderSB(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
@@ -1768,7 +1801,7 @@ function renderSBv2(q=''){
       status:rp._synced?'registrada':'rascunho',
       cls:rp._synced?'tok':'twn'
     }));
-    const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q));
+    const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
     if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
     let h='';
     const groups=[
@@ -1792,7 +1825,7 @@ function renderSBv2(q=''){
     const ativos=[
       ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
       ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)}))
-    ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q));
+    ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
     if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
     const groups={
       caixas:ativos.filter(a=>a.kind==='caixa').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
