@@ -1820,6 +1820,46 @@ function renderInventarioDrafts(){
     }
   });
 }
+function renderInventarioDraftsV2(){
+  if(!draftInvLayer)return;
+  draftInvLayer.clearLayers();
+  const store=getInvStore();
+  store.caixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(),zIndexOffset:3600})
+        .bindPopup(`<b>Caixa ${esc(cx.codigo||'Rascunho')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'-')} | ${esc(cx.modelo||'-')}<br>${cx.precisa_troca?'Precisa troca<br>':''}${cx.vistoriada?'Vistoriada<br>':''}${esc(cx.observacao||'')}`)
+        .on('click',()=>showPanCaixaDraft(cx))
+        .addTo(draftInvLayer);
+    }
+  });
+  store.dgos.forEach(dg=>{
+    const site=findDraftPoint(dg.site||'');
+    if(site?.lat&&site?.lng){
+      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D</div>`});
+      L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3650})
+        .bindPopup(`<b>DGO ${esc(dg.codigo||'Rascunho')}</b><br>Site: ${esc(dg.site||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')}`)
+        .on('click',()=>showPanDgoDraft(dg))
+        .addTo(draftInvLayer);
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b);
+    if(a?.lat&&a?.lng&&b?.lat&&b?.lng){
+      addCableVisual(draftInvLayer,[[a.lat,a.lng],[b.lat,b.lng]],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:.92,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
+    }
+  });
+  store.rupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      L.marker([rp.lat,rp.lng],{icon:mkRomp(),zIndexOffset:4000})
+        .bindPopup(`<b>Ruptura ${esc(rp.cabo_segmento||'-')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'-')}<br>${esc(rp.observacao||'')}`)
+        .addTo(draftInvLayer);
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
+      }
+    }
+  });
+}
+renderInventarioDrafts=renderInventarioDraftsV2;
 function roundCoord(n){return Number(n).toFixed(5);}
 function sugerirConexoesCabos(){
   if(!suggestLayer)return;
