@@ -544,6 +544,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       </div>
       <div class="fc">
         <div class="fct">📏 Segmento físico de cabo</div>
+        <input id="sg-edit-id" type="hidden">
         <div class="fg"><label>Cabo <span class="req">*</span></label><input id="sg-cabo" placeholder="JCT-ESL-144FO"></div>
         <div class="fgr">
           <div class="fg"><label>Ponto A</label><div class="bbs"><input id="sg-a" placeholder="site/caixa/dgo origem"><button type="button" class="tb" style="padding:9px 10px" onclick="armarSelecaoPonto('sg-a')">🎯</button></div></div>
@@ -701,7 +702,7 @@ let map,allS=[],allC=[],allR=[],sbMode='camadas',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
-let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null;
+let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null;
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:true,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -734,6 +735,7 @@ const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],htm
 // Marcador de nova caixa após lançamento
 const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
 const mkDraftCaixa=()=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚</div>`});
+const mkSuggestNode=()=>L.divIcon({className:'',iconSize:[24,24],iconAnchor:[12,12],html:`<div style="width:24px;height:24px;border-radius:50%;background:#ffb648;border:2px solid #fff;box-shadow:0 0 0 6px rgba(255,182,72,.16),0 6px 18px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#251200">!</div>`});
 function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,className=''}={}){
   const halo=L.polyline(pts,{color:'#ffffff',weight:weight+3,opacity:Math.min(opacity*.22,.32),lineCap:'round',lineJoin:'round',interactive:false,className});
   const line=L.polyline(pts,{color,weight,opacity,dashArray,lineCap:'round',lineJoin:'round',className});
@@ -785,6 +787,7 @@ function initMapObj(){
   LYR['outros']=L.layerGroup().addTo(map);
   rompLayer=L.layerGroup().addTo(map);
   draftInvLayer=L.layerGroup().addTo(map);
+  suggestLayer=L.layerGroup().addTo(map);
 }
 
 async function loadMap(){
@@ -847,6 +850,7 @@ async function loadMap(){
     // Carregar incidentes abertos com rompimento no mapa
     loadRompimentosNoMapa();
     renderInventarioDrafts();
+    sugerirConexoesCabos();
     applyVis();renderSB();
     if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:11});
     $('load').style.display='none';setProg(0);
@@ -1259,7 +1263,15 @@ function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.
 const INV_KEY='redeoptica_inventario_rascunho_v1';
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[]};}}
 function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();}
-function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({...item,criado_em:new Date().toISOString()});saveInvStore(store);}
+function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
+function updateInvItem(tipo,id,patch){
+  const store=getInvStore();
+  const idx=store[tipo].findIndex(x=>x.id===id);
+  if(idx<0)return false;
+  store[tipo][idx]={...store[tipo][idx],...patch,atualizado_em:new Date().toISOString()};
+  saveInvStore(store);
+  return true;
+}
 function renderInventarioResumo(){
   const store=getInvStore();
   const linhas=[
@@ -1302,12 +1314,21 @@ function salvarDgo(){
 }
 function salvarSegmento(){
   const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
-  addInvItem('segmentos',{
+  const editId=$('sg-edit-id')?.value||'';
+  const payload={
     cabo,ponto_a:pontoA,ponto_b:pontoB,tipo_lancamento:gv('sg-tipo'),
     metragem_m:gf('sg-metr'),fabricante:gv('sg-fab'),modelo:gv('sg-modelo'),
     lote:gv('sg-lote'),observacao:gv('sg-obs')
-  });
-  msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok'); limpar('sg');
+  };
+  if(editId){
+    updateInvItem('segmentos',editId,payload);
+    msgField('sg-msg','✓ Segmento atualizado em rascunho local.','ok');
+  }else{
+    addInvItem('segmentos',payload);
+    msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok');
+  }
+  limpar('sg');
+  if($('sg-edit-id'))$('sg-edit-id').value='';
 }
 function salvarRuptura(){
   const caboSegmento=gv('rp-cabo'); if(!caboSegmento){msgField('rp-msg','Cabo ou segmento é obrigatório');return;}
@@ -1371,8 +1392,25 @@ function showPanSegmentoDraft(seg){
     <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
     ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML='';
+  $('pa').innerHTML=`<button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button>`;
   $('pan').style.display='block';
+}
+function editarSegmentoDraft(id){
+  const seg=getInvStore().segmentos.find(x=>x.id===id);
+  if(!seg){toast('Segmento não encontrado','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if($('sg-edit-id'))$('sg-edit-id').value=seg.id;
+  $('sg-cabo').value=seg.cabo||'';
+  $('sg-a').value=seg.ponto_a||'';
+  $('sg-b').value=seg.ponto_b||'';
+  $('sg-tipo').value=seg.tipo_lancamento||'aereo';
+  $('sg-metr').value=seg.metragem_m||'';
+  $('sg-fab').value=seg.fabricante||'';
+  $('sg-modelo').value=seg.modelo||'';
+  $('sg-lote').value=seg.lote||'';
+  $('sg-obs').value=seg.observacao||'';
+  msgField('sg-msg','Editando segmento existente. Salve para atualizar.','in');
+  closePan();
 }
 function renderInventarioDrafts(){
   if(!draftInvLayer)return;
@@ -1404,6 +1442,64 @@ function renderInventarioDrafts(){
       }
     }
   });
+}
+function roundCoord(n){return Number(n).toFixed(5);}
+function sugerirConexoesCabos(){
+  if(!suggestLayer)return;
+  suggestLayer.clearLayers();
+  const pontos={};
+  allC.forEach(c=>{
+    const pts=PL(c.trajeto);
+    if(!pts||pts.length<2)return;
+    pts.forEach((p,idx)=>{
+      const key=`${roundCoord(p[0])}|${roundCoord(p[1])}`;
+      if(!pontos[key])pontos[key]={lat:p[0],lng:p[1],cabos:new Map(),hits:0,tipos:new Set(),vertice:idx===0||idx===pts.length-1};
+      pontos[key].cabos.set(c.id,c.nome||c.id);
+      pontos[key].tipos.add(c.tipo||'distribuicao');
+      pontos[key].hits++;
+      if(idx===0||idx===pts.length-1)pontos[key].vertice=true;
+    });
+  });
+  Object.values(pontos)
+    .filter(p=>p.cabos.size>=2 && p.vertice)
+    .slice(0,250)
+    .forEach(p=>{
+      const nomes=[...p.cabos.values()].slice(0,6);
+      L.marker([p.lat,p.lng],{icon:mkSuggestNode(),zIndexOffset:3700})
+        .bindPopup(`<b>⚠ Possível caixa/emenda</b><br>${p.cabos.size} cabo(s) convergem neste ponto.<br><br><b>Cabos:</b><br>${nomes.map(n=>`• ${esc(n)}`).join('<br>')}<br><br><span style="color:#ffb648;font-weight:700">Confirmar em campo antes de consolidar.</span>`)
+        .on('click',()=>showPanSugestaoConexao(p))
+        .addTo(suggestLayer);
+    });
+}
+function showPanSugestaoConexao(p){
+  closePan();
+  $('pt').textContent='⚠ Sugestão automática de conexão';
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Status</span><span class="pv">pendente de confirmação</span></div>
+    <div class="pr"><span class="pl">Cabos</span><span class="pv">${p.cabos.size}</span></div>
+    <div class="pr"><span class="pl">Coordenada</span><span class="pv">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">
+      O sistema detectou encontro de cabos neste ponto com base na geometria.
+      Isso <b>não confirma</b> que exista caixa de emenda real no local.
+      O usuário deve validar em campo, confirmar, ajustar ou descartar.
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Cabos envolvidos</div>
+    ${[...p.cabos.values()].map(n=>`<div style="font-size:11px;color:var(--t2);margin-bottom:4px">• ${esc(n)}</div>`).join('')}
+  `;
+  const cabosTxt=[...p.cabos.values()].join(' | ').replace(/'/g,"\\'");
+  $('pa').innerHTML=`
+    <button class="pac g" onclick="confirmarCaixaSugestao(${p.lat},${p.lng},'${cabosTxt}')">🧰 Criar caixa rascunho</button>
+    <button class="pac a" onclick="toast('Sugestão mantida para vistoria de campo','wn')">📍 Validar em campo</button>
+  `;
+  $('pan').style.display='block';
+}
+function confirmarCaixaSugestao(lat,lng,cabosTxt){
+  $('cx-lat').value=Number(lat).toFixed(6);
+  $('cx-lng').value=Number(lng).toFixed(6);
+  $('cx-obs').value=`Sugestão automática de conexão entre cabos: ${cabosTxt}. Necessário confirmar em campo, ajustar ou descartar.`;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  closePan();
+  toast('Preencha e confirme a caixa sugerida antes de salvar','in');
 }
 
 async function salvarSite(){
