@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Rede Óptica — MG</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#07111f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -1512,6 +1514,23 @@ async function syncLocalDrafts(){
     if(res.ok){ seg._synced = true; ok++; }
   }
 
+  // Sincronizar Rupturas
+  for(const rp of store.rupturas){
+    if(rp._synced) continue; total++;
+    const payload = {
+      cabo_segmento: rp.cabo_segmento,
+      distancia_otdr_m: rp.distancia_otdr_m,
+      metragem_lancada_m: rp.metragem_lancada_m,
+      nova_caixa: rp.nova_caixa,
+      tipo_reparo: rp.tipo_reparo,
+      localizacao: rp.lat && rp.lng ? `SRID=4326;POINT(${rp.lng} ${rp.lat})` : null,
+      observacao: rp.observacao,
+      data_hora: rp.data_hora || new Date().toISOString()
+    };
+    const res = await fetch(`${SU}/rest/v1/evento_ruptura`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ rp._synced = true; ok++; }
+  }
+
   saveInvStore(store);
   if(total===0) toast('Nada novo para sincronizar.','in');
   else toast(`✓ Sincronizados ${ok} de ${total} itens.` , ok===total?'ok':'wn');
@@ -2339,6 +2358,42 @@ function auditMetrics(){
 function collectAuditIssues(){
   const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,segReady,segPendingGeo,cabNoInventory,cabWithRupture}=auditMetrics();
   const issues=[];
+  
+  // Sincronização e Rascunhos
+  const unsyncedCaixas = store.caixas.filter(x => !x._synced);
+  const unsyncedDgos = store.dgos.filter(x => !x._synced);
+  const unsyncedSegs = store.segmentos.filter(x => !x._synced);
+  const unsyncedRups = store.rupturas.filter(x => !x._synced);
+  const totalUnsynced = unsyncedCaixas.length + unsyncedDgos.length + unsyncedSegs.length + unsyncedRups.length;
+  
+  if(totalUnsynced > 0){
+    const oldest = [...unsyncedCaixas, ...unsyncedDgos, ...unsyncedSegs, ...unsyncedRups]
+      .map(x => new Date(x.criado_em || 0)).sort((a,b) => a-b)[0];
+    const hours = oldest ? (new Date() - oldest) / 36e5 : 0;
+    
+    issues.push({
+      severity: hours > 24 ? 'alto' : 'medio',
+      domain: 'sincronizacao',
+      kind: 'dados',
+      title: `${totalUnsynced} rascunho(s) pendente(s) de nuvem`,
+      detail: hours > 24 ? `Há rascunhos locais criados há mais de ${Math.round(hours)}h sem sincronização.` : `Existem ${totalUnsynced} itens salvos apenas localmente.`,
+      action: 'Clique em "Sincronizar Tudo" na aba Auditoria para persistir no banco.',
+      fn: 'syncLocalDrafts()',
+      fnLabel: '☁ Sincronizar agora'
+    });
+  }
+
+  if(store.rupturas.length > 0) {
+    issues.push({
+      severity: 'baixo',
+      domain: 'incidente',
+      kind: 'campo',
+      title: `${store.rupturas.length} ruptura(s) registrada(s)`,
+      detail: `Há incidentes de campo documentados no rascunho local.`,
+      action: 'Validar se a correção já foi feita antes de arquivar.'
+    });
+  }
+
   if(!allS.length)issues.push({severity:'critico',domain:'mapa',kind:'campo',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
   if(!allC.length)issues.push({severity:'alto',domain:'mapa',kind:'continuidade',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
   if(!scienceSites.length)issues.push({severity:'alto',domain:'science',kind:'dados',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
@@ -2963,14 +3018,31 @@ async function salvarSegmento(){
   limpar('sg');
   if($('sg-edit-id'))$('sg-edit-id').value='';
 }
-function salvarRuptura(){
+async function salvarRuptura(){
   const caboSegmento=gv('rp-cabo'); if(!caboSegmento){msgField('rp-msg','Cabo ou segmento é obrigatório');return;}
-  addInvItem('rupturas',{
+  const lat=gf('rp-lat'), lng=gf('rp-lng');
+  const payload={
     cabo_segmento:caboSegmento,distancia_otdr_m:gf('rp-otdr'),metragem_lancada_m:gf('rp-lanc'),
-    nova_caixa:gv('rp-caixa'),tipo_reparo:gv('rp-reparo'),lat:gf('rp-lat'),lng:gf('rp-lng'),
-    observacao:gv('rp-obs')
-  });
-  msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok'); limpar('rp');
+    nova_caixa:gv('rp-caixa'),tipo_reparo:gv('rp-reparo'),lat,lng,
+    observacao:gv('rp-obs'), data_hora: new Date().toISOString()
+  };
+  addInvItem('rupturas',payload);
+  msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok');
+  
+  // Tenta persistir no banco (tabela evento_ruptura)
+  const dbPayload = {
+    cabo_segmento: payload.cabo_segmento,
+    distancia_otdr_m: payload.distancia_otdr_m,
+    metragem_lancada_m: payload.metragem_lancada_m,
+    nova_caixa: payload.nova_caixa,
+    tipo_reparo: payload.tipo_reparo,
+    localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
+    observacao: payload.observacao,
+    data_hora: payload.data_hora
+  };
+  await pushToSupabase('evento_ruptura', dbPayload, 'rp-msg');
+  
+  limpar('rp');
 }
 function buildDraftConnectionDiagram(ref){
   const store=getInvStore();
@@ -3527,6 +3599,11 @@ $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 loadPref();aplicarTema();
 renderInventarioResumo();
 if(checkSessao()){iniciarApp();}else{$('le').focus();}
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
+  });
+}
 </script>
 </body>
 </html>

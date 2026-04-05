@@ -417,3 +417,16 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - arquivo `handoff_claude_YYYYMMDD_HHMMSS.md`
   - arquivo `handoff_gemini_YYYYMMDD_HHMMSS.md`
   - arquivo `resumo_multiagente_YYYYMMDD_HHMMSS.md`
+
+### Validacao focada vs GeoSite
+
+- checklist criado: `CHECKLIST_GEOSITE_GAP.md`
+- handoff especifico para Gemini:
+  - `handoffs\handoff_gemini_geosite_gap_20260405.md`
+- foco dessa rodada:
+  - mapa
+  - linhas
+  - DGO
+  - caixa de emenda
+  - usabilidade
+  - uso em campo
