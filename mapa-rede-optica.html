@@ -108,6 +108,12 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .lc-btns{display:flex;gap:4px}
 .lc-btn{padding:4px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t3);font-size:9px;cursor:pointer;font-family:inherit;font-weight:800;transition:.12s}
 .lc-btn:hover{background:rgba(255,255,255,.07);color:var(--t2)}
+.lc-stack{display:flex;flex-direction:column;gap:8px}
+.preset-row,.overlay-row{display:flex;gap:6px;flex-wrap:wrap}
+.preset-chip,.overlay-chip{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t3);font-size:9px;cursor:pointer;font-family:inherit;font-weight:800;transition:.12s;text-transform:uppercase;letter-spacing:.08em}
+.preset-chip:hover,.overlay-chip:hover{background:rgba(255,255,255,.07);color:var(--t2)}
+.preset-chip.on,.overlay-chip.on{background:rgba(72,168,255,.12);border-color:rgba(72,168,255,.26);color:var(--t)}
+.overlay-chip.warn.on{background:rgba(255,90,104,.14);border-color:rgba(255,90,104,.26);color:var(--rd)}
 .lg{margin-bottom:8px;border:1px solid rgba(255,255,255,.06);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.03);box-shadow:0 12px 24px rgba(0,0,0,.08)}
 .lg-h{display:flex;align-items:center;gap:9px;padding:10px 11px;cursor:pointer;transition:.08s;user-select:none}
 .lg-h:hover{background:rgba(255,255,255,.05)}
@@ -362,11 +368,21 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <div class="stt" onclick="sbTab('cabos',this)">Cabos</div>
     </div>
     <div id="lc">
-      <div class="lc-hdr">
-        <span class="lc-t">Visibilidade</span>
-        <div class="lc-btns">
-          <button class="lc-btn" onclick="setAll(true)">Todos</button>
-          <button class="lc-btn" onclick="setAll(false)">Nenhum</button>
+      <div class="lc-stack">
+        <div class="lc-hdr">
+          <span class="lc-t">Visibilidade</span>
+          <div class="lc-btns">
+            <button class="lc-btn" onclick="setAll(true)">Todos</button>
+            <button class="lc-btn" onclick="setAll(false)">Nenhum</button>
+          </div>
+        </div>
+        <div>
+          <div class="lc-t" style="margin-bottom:6px">Perfis rápidos</div>
+          <div class="preset-row" id="preset-row"></div>
+        </div>
+        <div>
+          <div class="lc-t" style="margin-bottom:6px">Operação no mapa</div>
+          <div class="overlay-row" id="overlay-row"></div>
         </div>
       </div>
       <div id="lg-wrap"></div>
@@ -777,6 +793,14 @@ let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
 let touchHoldTimer=null;
 let drawTarget='segmento';
+const OVERLAY_CFG=[
+  {id:'ov_romp',label:'Incidentes',warn:true,vis:true},
+  {id:'ov_draft',label:'Rascunhos',vis:true},
+  {id:'ov_suggest',label:'Sugestões',vis:false},
+  {id:'ov_pending',label:'Pendências',warn:true,vis:true},
+];
+const OVIS={};
+OVERLAY_CFG.forEach(o=>OVIS[o.id]=o.vis);
 
 const LAYERS=[
   {id:'backbone',label:'Backbone DWDM',cor:'#f0a500',vis:false,sub:[{id:'bb_site',label:'Sites backbone',cor:'#f0a500'}]},
@@ -836,6 +860,25 @@ function setOfflineState(on,msg=''){
   const badge=mapOffline?`<div style="margin-top:8px"><span class="ctx-off">modo offline</span></div>`:'';
   if($('mapsub'))$('mapsub').innerHTML=base+badge;
   if(msg)toast(msg,mapOffline?'wn':'ok');
+}
+function getLayerPresetMap(name){
+  const base={};
+  Object.keys(VIS).forEach(k=>base[k]=false);
+  const setKeys=keys=>keys.forEach(k=>{if(k in base)base[k]=true;});
+  if(name==='limpo')return base;
+  if(name==='campo'){setKeys(['acesso','ac_site','ac_caixa','ac_erb','cab_dist','cab_drop']);return base;}
+  if(name==='transporte'){setKeys(['backbone','bb_site','metro_alta','m4_equip','metro_dist','m5_equip','cab_bb','cab_dist']);return base;}
+  if(name==='incidentes'){setKeys(['acesso','ac_site','ac_caixa','cab_bb','cab_dist']);return base;}
+  return base;
+}
+function getCurrentPreset(){
+  const names=['limpo','campo','transporte','incidentes'];
+  for(const n of names){
+    const p=getLayerPresetMap(n);
+    const same=Object.keys(VIS).every(k=>!!VIS[k]===!!p[k]);
+    if(same)return n;
+  }
+  return 'custom';
 }
 // Marcador de rompimento — vermelho pulsante
 const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
@@ -981,10 +1024,14 @@ function initMapObj(){
     else{l.sub.forEach(s=>{LYR[s.id]=L.layerGroup();if(VIS[s.id]!==false)LYR[s.id].addTo(map);});}
   });
   LYR['outros']=L.layerGroup().addTo(map);
-  rompLayer=L.layerGroup().addTo(map);
-  draftInvLayer=L.layerGroup().addTo(map);
-  suggestLayer=L.layerGroup().addTo(map);
-  pendingLayer=L.layerGroup().addTo(map);
+  rompLayer=L.layerGroup();
+  draftInvLayer=L.layerGroup();
+  suggestLayer=L.layerGroup();
+  pendingLayer=L.layerGroup();
+  if(OVIS.ov_romp)rompLayer.addTo(map);
+  if(OVIS.ov_draft)draftInvLayer.addTo(map);
+  if(OVIS.ov_suggest)suggestLayer.addTo(map);
+  if(OVIS.ov_pending)pendingLayer.addTo(map);
   map.on('click',()=>hideContextMenu());
   map.on('contextmenu',ev=>openContextMenu(ev));
   const mapEl=map.getContainer();
@@ -1127,14 +1174,50 @@ function buildLayerPanel(){
         </div>`).join('')}</div>`:''}
     </div>`;
   }).join('');
+  renderPresetRow();
+  renderOverlayRow();
+}
+function renderPresetRow(){
+  const el=$('preset-row'); if(!el)return;
+  const current=getCurrentPreset();
+  const presets=[
+    ['limpo','Limpo'],
+    ['campo','Campo'],
+    ['transporte','Transporte'],
+    ['incidentes','Incidentes'],
+  ];
+  el.innerHTML=presets.map(([id,label])=>`<button class="preset-chip ${current===id?'on':''}" onclick="applyPreset('${id}')">${label}</button>`).join('');
+}
+function renderOverlayRow(){
+  const el=$('overlay-row'); if(!el)return;
+  el.innerHTML=OVERLAY_CFG.map(o=>`<button class="overlay-chip ${OVIS[o.id]?'on':''} ${o.warn?'warn':''}" onclick="toggleOverlay('${o.id}')">${o.label}</button>`).join('');
 }
 function toggleLg(id){const sub=$('sub-'+id),arr=$('arr-'+id);if(!sub)return;sub.classList.toggle('op');if(arr)arr.classList.toggle('op');}
-function toggleLayer(id){VIS[id]=!VIS[id];const ck=$('ck-'+id),l=LAYERS.find(x=>x.id===id);if(ck&&l){ck.classList.toggle('on',VIS[id]);ck.textContent=VIS[id]?'✓':'';ck.style.background=VIS[id]?l.cor:'';}l?.sub?.forEach(s=>{VIS[s.id]=VIS[id];const sk=$('sck-'+s.id);if(sk){sk.classList.toggle('on',VIS[id]);sk.textContent=VIS[id]?'✓':'';sk.style.background=VIS[id]?s.cor:'';}});applyVis();savePref();}
-function toggleSubLayer(sid,pid){VIS[sid]=!VIS[sid];const sk=$('sck-'+sid),l=LAYERS.find(x=>x.id===pid),s=l?.sub.find(x=>x.id===sid);if(sk&&s){sk.classList.toggle('on',VIS[sid]);sk.textContent=VIS[sid]?'✓':'';sk.style.background=VIS[sid]?s.cor:'';}const allOn=l?.sub.every(x=>VIS[x.id]);VIS[pid]=allOn;const pk=$('ck-'+pid);if(pk&&l){pk.classList.toggle('on',allOn);pk.textContent=allOn?'✓':'';pk.style.background=allOn?l.cor:'';}applyVis();savePref();}
-function applyVis(){if(!map)return;Object.entries(LYR).forEach(([id,lyr])=>{const vis=VIS[id]!==false;if(vis&&!map.hasLayer(lyr))lyr.addTo(map);else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);});}
+function toggleLayer(id){VIS[id]=!VIS[id];const ck=$('ck-'+id),l=LAYERS.find(x=>x.id===id);if(ck&&l){ck.classList.toggle('on',VIS[id]);ck.textContent=VIS[id]?'✓':'';ck.style.background=VIS[id]?l.cor:'';}l?.sub?.forEach(s=>{VIS[s.id]=VIS[id];const sk=$('sck-'+s.id);if(sk){sk.classList.toggle('on',VIS[id]);sk.textContent=VIS[id]?'✓':'';sk.style.background=VIS[id]?s.cor:'';}});applyVis();savePref();renderPresetRow();}
+function toggleSubLayer(sid,pid){VIS[sid]=!VIS[sid];const sk=$('sck-'+sid),l=LAYERS.find(x=>x.id===pid),s=l?.sub.find(x=>x.id===sid);if(sk&&s){sk.classList.toggle('on',VIS[sid]);sk.textContent=VIS[sid]?'✓':'';sk.style.background=VIS[sid]?s.cor:'';}const allOn=l?.sub.every(x=>VIS[x.id]);VIS[pid]=allOn;const pk=$('ck-'+pid);if(pk&&l){pk.classList.toggle('on',allOn);pk.textContent=allOn?'✓':'';pk.style.background=allOn?l.cor:'';}applyVis();savePref();renderPresetRow();}
+function toggleOverlay(id){OVIS[id]=!OVIS[id];applyVis();savePref();renderOverlayRow();}
+function applyVis(){
+  if(!map)return;
+  Object.entries(LYR).forEach(([id,lyr])=>{const vis=VIS[id]!==false;if(vis&&!map.hasLayer(lyr))lyr.addTo(map);else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);});
+  const overlayMap={ov_romp:rompLayer,ov_draft:draftInvLayer,ov_suggest:suggestLayer,ov_pending:pendingLayer};
+  Object.entries(overlayMap).forEach(([id,lyr])=>{
+    if(!lyr)return;
+    const vis=OVIS[id]!==false;
+    if(vis&&!map.hasLayer(lyr))lyr.addTo(map);else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);
+  });
+}
 function setAll(on){Object.keys(VIS).forEach(k=>VIS[k]=on);buildLayerPanel();applyVis();savePref();}
-function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));}
-function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}}
+function applyPreset(name){
+  const next=getLayerPresetMap(name);
+  Object.keys(VIS).forEach(k=>VIS[k]=!!next[k]);
+  if(name==='limpo'){Object.keys(OVIS).forEach(k=>OVIS[k]=false);}
+  if(name==='campo'){OVIS.ov_draft=true;OVIS.ov_pending=true;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
+  if(name==='transporte'){OVIS.ov_draft=false;OVIS.ov_pending=false;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
+  if(name==='incidentes'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;}
+  buildLayerPanel();applyVis();savePref();
+}
+function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));}
+function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}}
 
 // SIDEBAR
 function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';if(m!=='camadas')renderSB($('si').value);}
@@ -1250,31 +1333,86 @@ renderSB=renderSBv2;
 function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
 function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
 function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
+function getPointSummary(ref){
+  const p=findDraftPoint(ref||'');
+  if(!p)return null;
+  const store=getInvStore();
+  const code=(p.codigo||p.nome||ref||'').toUpperCase();
+  const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===code||String(s.ponto_b||'').toUpperCase()===code).length;
+  const conns=store.conexoes.filter(c=>String(c.caixa_codigo||c.dgo_codigo||'').toUpperCase()===code).length;
+  const pend=store.pendencias.filter(x=>String(x.referencia||'').toUpperCase()===code).length;
+  return {p,segs,conns,pend};
+}
+function buildOperationalBadges(items){
+  return items.filter(Boolean).map(([label,tone='var(--bl)'])=>`<span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:9px;font-weight:800;color:${tone};text-transform:uppercase;letter-spacing:.08em">${esc(label)}</span>`).join('');
+}
+function operationalSummaryHtml(ref){
+  const sum=getPointSummary(ref);
+  if(!sum)return '';
+  const badges=buildOperationalBadges([
+    [`${sum.segs} segmento(s)`,'var(--bl)'],
+    [sum.conns?`${sum.conns} conexão(ões)`:'sem conexão',sum.conns?'var(--gr)':'var(--am)'],
+    [sum.pend?`${sum.pend} pendência(s)`:'sem pendência',sum.pend?'var(--rd)':'var(--gr)'],
+  ]);
+  return `<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Resumo operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${badges}</div></div>`;
+}
+function getCableDraftRelations(name){
+  const store=getInvStore();
+  const key=String(name||'').toUpperCase();
+  const segs=store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===key);
+  const rupts=store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key));
+  return {segs,rupts};
+}
+function findRupturaDraft(id){
+  return getInvStore().rupturas.find(r=>r.id===id)||null;
+}
+function jumpToRef(ref){
+  const p=findDraftPoint(ref||'');
+  if(!p||!map){toast('Referência não localizada no mapa','wn');return;}
+  map.setView([p.lat,p.lng],17);
+  if(p.tipo==='caixa')showPanCaixaDraft(p.item);
+  else if(p.tipo==='dgo')showPanDgoDraft(p.item);
+  else if(p.tipo==='site')showPanSite(p.item,[p.lat,p.lng]);
+}
+function jumpToSegmentDraft(id){
+  const seg=getInvStore().segmentos.find(x=>x.id===id);
+  if(!seg){toast('Segmento não encontrado','wn');return;}
+  const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
+    ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(Boolean)
+    : (()=>{const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b); return a&&b?[[a.lat,a.lng],[b.lat,b.lng]]:[];})();
+  if(path.length>=2)map.fitBounds(L.latLngBounds(path),{padding:[40,40],maxZoom:18});
+  showPanSegmentoDraft(seg);
+}
+function jumpToRupturaDraft(id){
+  const rp=findRupturaDraft(id);
+  if(!rp){toast('Ruptura não encontrada','wn');return;}
+  if(rp.lat&&rp.lng)map.setView([rp.lat,rp.lng],18);
+  showPanRupturaDraft(rp);
+}
+function relatedSegmentsByRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  return getInvStore().segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key);
+}
+function buildRefLinksHtml(ref){
+  const segs=relatedSegmentsByRef(ref).slice(0,8);
+  if(!segs.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Ativos relacionados</div><div style="display:flex;flex-direction:column;gap:6px">${segs.map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+}
+function buildSegmentLinksHtml(seg){
+  const refs=[seg.ponto_a,seg.ponto_b].filter(Boolean);
+  if(!refs.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Navegação rápida</div><div style="display:flex;gap:6px;flex-wrap:wrap">${refs.map(r=>`<button class="pac" onclick="jumpToRef('${String(r).replace(/'/g,"\\'")}')">${esc(r)}</button>`).join('')}</div></div>`;
+}
+function buildRupturaLinksHtml(rupts){
+  if(!rupts?.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Rupturas ligadas</div><div style="display:flex;flex-direction:column;gap:6px">${rupts.slice(0,6).map(r=>`<button class="pac" style="width:100%" onclick="jumpToRupturaDraft('${r.id}')">${esc(r.cabo_segmento||'Ruptura')} • OTDR ${km(r.distancia_otdr_m||0)}</button>`).join('')}</div></div>`;
+}
 
 // PAINEL
 function showPanSite(s,pt){
   closePan();
   const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
-  showPan(s.nome||s.codigo||'Site',[
-    s.codigo&&['Código',s.codigo],
-    ['Tipo',s.tipo||'—'],['Camada',s.camada||'—'],
-    s.municipio&&['Município',(s.municipio||'')+(s.uf?'/'+s.uf:'')],
-    s.responsavel&&['Responsável',s.responsavel],
-    s.status&&['Status',s.status,TC(s.status)],
-    s.observacao&&['Obs',s.observacao.substring(0,200)],
-  ],[
-    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarSite('${s.id}')`},
-    sessao.perfil!=='leitura'&&{l:'↕ Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
-    sessao.perfil!=='leitura'&&{l:'🚨 Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
-    {l:'🔍 Rota',fn:`abrirRastreamento('${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
-    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('sites','${s.id}')`},
-  ].filter(Boolean));
-  focI('s-'+s.id);
-}
-function showPanSite(s,pt){
-  closePan();
-  const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
-  showPan(codeFirstLabel(s),[
+  const rows=[
     s.codigo&&['Sigla / codigo',s.codigo],
     ['Tipo',s.tipo||'-'],['Camada',s.camada||'-'],
     s.cn&&['CN / DDD',s.cn],
@@ -1296,20 +1434,24 @@ function showPanSite(s,pt){
     s.responsavel&&['Responsavel',s.responsavel],
     s.status&&['Status',s.status,TC(s.status)],
     s.observacao&&['Obs',s.observacao.substring(0,200)],
-  ],[
+  ].filter(Boolean);
+  showPan(codeFirstLabel(s),rows,[
     sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
     sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
     sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
     {l:'Rota',fn:`abrirRastreamento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
     sessao.perfil==='admin'&&canEdit&&{l:'Excluir',c:'r',fn:`del('sites','${s.id}')`},
   ].filter(Boolean));
+  $('pb').innerHTML+=operationalSummaryHtml(s.codigo||s.nome||'');
+  $('pb').innerHTML+=buildRefLinksHtml(s.codigo||s.nome||'');
   focI('s-'+s.id);
 }
 function showPanCabo(c,pts,lenCalc){
   closePan();
   highlightCable(c.id);
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
-  showPan(c.nome||'Cabo',[
+  const rel=getCableDraftRelations(c.nome||'');
+  showPan(codeFirstLabel(c),[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
     ['Comprimento cad.',km(c.comprimento)],
     ['Comprimento calc.',km(lenCalc)],
@@ -1321,6 +1463,14 @@ function showPanCabo(c,pts,lenCalc){
     {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
     sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
   ].filter(Boolean));
+  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+    [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
+    [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
+  ])}</div></div>`;
+  if(rel.segs.length){
+    $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+  }
+  $('pb').innerHTML+=buildRupturaLinksHtml(rel.rupts);
   focI('c-'+c.id);
 }
 function showPan(t,rows,acts){
@@ -1853,6 +2003,7 @@ function showPanDgoDraft(dg){
   if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
   closePan();
   const conexoes=getConexoesDgo(dg.codigo);
+  const resumo=operationalSummaryHtml(dg.codigo||'');
   $('pt').textContent=`${dg.codigo||'DGO'}${dg.site?` — ${dg.site}`:''}`;
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
@@ -1875,6 +2026,8 @@ function showPanDgoDraft(dg){
         ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
       </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma conexão registrada.</div>'}
     </div>
+    ${resumo}
+    ${buildRefLinksHtml(dg.codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
@@ -1952,13 +2105,31 @@ function renderPendencias(){
 }
 function showPanPendencia(p){
   closePan();
+  const relatedRef=String(p.referencia||'');
   $('pt').textContent='⚠ Pendência operacional';
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Tipo</span><span class="pv">${esc(p.tipo||'—')}</span></div>
     <div class="pr"><span class="pl">Referência</span><span class="pv">${esc(p.referencia||'—')}</span></div>
     <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(p.observacao||'Pendência sem descrição')}</div>
   `;
-  $('pa').innerHTML=`<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
+  $('pa').innerHTML=`${relatedRef?`<button class="pac b" onclick="jumpToRef('${relatedRef.replace(/'/g,"\\'")}')">🔎 Ir para referência</button>`:''}<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
+  $('pan').style.display='block';
+}
+function showPanRupturaDraft(rp){
+  closePan();
+  const rel=getCableDraftRelations(rp.cabo_segmento||'');
+  $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
+    <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
+    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_lancada_m||0)}</span></div>
+    <div class="pr"><span class="pl">Nova caixa</span><span class="pv">${esc(rp.nova_caixa||'—')}</span></div>
+    <div class="pr"><span class="pl">Tipo reparo</span><span class="pv">${esc(rp.tipo_reparo||'—')}</span></div>
+    ${buildRupturaLinksHtml(rel.rupts.filter(x=>x.id!==rp.id))}
+    ${rp.nova_caixa?buildRefLinksHtml(rp.nova_caixa):''}
+    ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`${rp.nova_caixa?`<button class="pac b" onclick="jumpToRef('${String(rp.nova_caixa).replace(/'/g,"\\'")}')">🧰 Ir para nova caixa</button>`:''}<button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar ruptura</button>`;
   $('pan').style.display='block';
 }
 function abrirAssistenteConexaoCaixa(codigo,lat,lng){
@@ -2164,6 +2335,7 @@ function showPanCaixaDraft(cx){
   if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
   closePan();
   const conexoes=getConexoesCaixa(cx.codigo);
+  const resumo=operationalSummaryHtml(cx.codigo||'');
   $('pt').textContent=`🧰 ${cx.codigo||'Caixa'}`;
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
@@ -2186,6 +2358,8 @@ function showPanCaixaDraft(cx){
         ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
       </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma pré-conexão registrada.</div>'}
     </div>
+    ${resumo}
+    ${buildRefLinksHtml(cx.codigo||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
@@ -2204,6 +2378,7 @@ function showPanSegmentoDraft(seg){
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(seg.fabricante||'—')}</span></div>
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(seg.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
+    ${buildSegmentLinksHtml(seg)}
     ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button>`;

@@ -299,9 +299,13 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - camadas principais desligadas por padrao
   - operador decide o que ativar
   - preferencia continua salva em `localStorage`
+  - perfis rapidos: `limpo`, `campo`, `transporte`, `incidentes`
+  - overlays operacionais agora tem flag propria: `incidentes`, `rascunhos`, `sugestoes`, `pendencias`
 - leitura operacional priorizada:
   - sigla/codigo do site vem antes do nome
   - listas e painéis usam `codigo — nome`
+- paineis agora mostram resumo operacional rapido de segmentos/conexoes/pendencias
+  - paineis agora permitem navegar rapidamente para ativos relacionados (site/caixa/DGO/segmento)
 - rascunhos locais agora editam melhor:
   - `caixa_emenda` pode ser editada
   - `DGO` pode ser editado
