@@ -144,6 +144,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .mhk{font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:5px}
 .mht{font-size:15px;font-weight:800;line-height:1.15;margin-bottom:4px}
 .mhs{font-size:11px;color:var(--t2);line-height:1.45}
+@media(max-width:680px){#maphead{top:62px;left:10px;right:68px;max-width:none;padding:10px 12px}.mht{font-size:13px}.mhs{font-size:10px}}
 #mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:5px}
 .mb{width:42px;height:42px;border-radius:14px;background:rgba(11,21,35,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 12px 24px rgba(0,0,0,.22)}
 .mb:hover{background:rgba(18,34,57,.92);color:var(--t);transform:translateY(-1px)}
@@ -636,6 +637,15 @@ const mkLoc=()=>L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],html:'
 const mkRomp=()=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div></div>`});
 // Marcador de nova caixa após lançamento
 const mkNovaBox=(metro)=>L.divIcon({className:'',iconSize:[30,20],iconAnchor:[15,10],html:`<div style="background:#3ecf8e;color:#000;border-radius:4px;padding:2px 5px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.5);box-shadow:0 2px 8px rgba(0,0,0,.7)">📦 +${metro}m</div>`});
+function addCableVisual(layer,pts,{color,weight=3,opacity=.9,dashArray=null,popup=null,click=null,className=''}={}){
+  const halo=L.polyline(pts,{color:'#ffffff',weight:weight+3,opacity:Math.min(opacity*.22,.32),lineCap:'round',lineJoin:'round',interactive:false,className});
+  const line=L.polyline(pts,{color,weight,opacity,dashArray,lineCap:'round',lineJoin:'round',className});
+  const group=L.layerGroup([halo,line]);
+  if(popup)line.bindPopup(popup);
+  if(click)line.on('click',click);
+  group.addTo(layer);
+  return {group,halo,line};
+}
 
 function initMapObj(){
   if(map)return;
@@ -696,15 +706,14 @@ async function loadMap(){
     allC.forEach(c=>{
       const p2=PL(c.trajeto);if(!p2||p2.length<2)return;
       const t=c.tipo||'distribuicao';const cor=CABO[t]||CABO.distribuicao;
-      const peso=t==='backbone'?3.5:t==='drop'?1.5:2;
+      const peso=t==='backbone'?4.2:t==='drop'?2.2:2.8;
       const lenCalc=Math.round(p2.reduce((a,p,i)=>i===0?0:a+map.distance(p2[i-1],p),0));
-      const pl=L.polyline(p2,{color:cor,weight:peso,opacity:.8}).on('click',ev=>{
+      const popup=`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`;
+      const vis=addCableVisual((LYR[t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist']||LYR['outros']),p2,{color:cor,weight:peso,opacity:t==='backbone'?.96:.88,popup,click:ev=>{
         L.DomEvent.stopPropagation(ev);if(drawMode||medMode)return;
         showPanCabo(c,p2,lenCalc);
-      });
-      fmap['c-'+c.id]=()=>map.fitBounds(pl.getBounds(),{padding:[50,50]});
-      const caboLyr=t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist';
-      (LYR[caboLyr]||LYR['outros']).addLayer(pl);
+      }});
+      fmap['c-'+c.id]=()=>map.fitBounds(vis.line.getBounds(),{padding:[50,50]});
     });
     // Carregar incidentes abertos com rompimento no mapa
     loadRompimentosNoMapa();
@@ -894,7 +903,7 @@ async function execRast(){
     const pm=pts[Math.floor(pts.length/2)];
     if(pm[0]<laMin||pm[0]>laMax||pm[1]<loMin||pm[1]>loMax)return;
     const cor=c.camada==='backbone'?'#f0a500':c.camada==='metro_alta'?'#f97316':c.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
-    L.polyline(pts,{color:cor,weight:5,opacity:.95}).bindPopup(`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`).addTo(rastLayer);
+    addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,popup:`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`});
     pts.forEach(p=>bounds.push(p));dist+=Number(c.comprimento)||0;nc++;
   });
   if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
@@ -951,14 +960,14 @@ async function plotarOTDR(){
     const latN=lat+Math.cos(angulo)*lanc/111320;
     const lngN=lng+Math.sin(angulo)*lanc/(111320*Math.cos(lat*Math.PI/180));
     L.marker([latN,lngN],{icon:mkNovaBox(lanc),zIndexOffset:3900}).bindPopup(`<b>📦 Nova caixa / emenda</b><br>+${lanc}m de cabo lançado após rompimento`).addTo(otdrLayer);
-    L.polyline([[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:3,dashArray:'6 4',opacity:.9}).bindPopup(`Cabo novo lançado: ${lanc}m`).addTo(otdrLayer);
+    addCableVisual(otdrLayer,[[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:4,dashArray:'6 4',opacity:.95,popup:`Cabo novo lançado: ${lanc}m`});
   }
   // Trecho percorrido e após rompimento
   if(cabo.trajeto?.coordinates){
     const pts=cabo.trajeto.coordinates.map(c2=>[c2[1],c2[0]]);
     const idx=Math.round(pct*(pts.length-1));
-    if(idx>0)L.polyline(pts.slice(0,idx+1),{color:'#f0a500',weight:5,opacity:.9}).bindPopup('Trecho percorrido: '+dist+'m').addTo(otdrLayer);
-    if(idx<pts.length-1)L.polyline(pts.slice(idx),{color:'#e84455',weight:5,opacity:.9,dashArray:'8 5'}).bindPopup('Trecho após rompimento').addTo(otdrLayer);
+    if(idx>0)addCableVisual(otdrLayer,pts.slice(0,idx+1),{color:'#f0a500',weight:6,opacity:.96,popup:'Trecho percorrido: '+dist+'m'});
+    if(idx<pts.length-1)addCableVisual(otdrLayer,pts.slice(idx),{color:'#e84455',weight:6,opacity:.96,dashArray:'8 5',popup:'Trecho após rompimento'});
   }
   map.setView([lat,lng],16);
   const nomeEsc=(cabo.nome||'').replace(/'/g,"\\'");const descEsc=desc.replace(/'/g,"\\'");
