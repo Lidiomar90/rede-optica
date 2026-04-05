@@ -18,12 +18,14 @@
 4. Criadas views: `vw_continuidade_completa`, `vw_rupturas_abertas`, `vw_caixas_emenda_mapa`
 5. Expandida `vw_pendencias_qualidade`: agora cobre dgo, caixa_emenda, segmento_cabo, evento_ruptura
 6. Todos triggers de atualizado_em e sync de network_nodes aplicados
+7. Front do mapa ganhou `flags operacionais` em `site` e `cabo`, com marcador estilo placemark, edição por modal, ação no painel, menu rápido e indicador na lista lateral
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
 - Codex: plotar caixa_emenda no mapa via `vw_caixas_emenda_mapa`
 - Codex: painel de rupturas via `vw_rupturas_abertas`
 - Codex: conectar `execRast()` ao RPC `fn_tracer_bfs` (BUG 2 — ainda pendente)
+- Codex: evoluir `flag` para suportar também caixas, DGO e eventualmente cabos por vértice/trecho
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
@@ -416,13 +418,14 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - pasta `handoffs\`
   - arquivo `handoff_claude_YYYYMMDD_HHMMSS.md`
   - arquivo `handoff_gemini_YYYYMMDD_HHMMSS.md`
+  - arquivo `handoff_gemini_geosite_gap_YYYYMMDD_HHMMSS.md`
   - arquivo `resumo_multiagente_YYYYMMDD_HHMMSS.md`
 
 ### Validacao focada vs GeoSite
 
 - checklist criado: `CHECKLIST_GEOSITE_GAP.md`
 - handoff especifico para Gemini:
-  - `handoffs\handoff_gemini_geosite_gap_20260405.md`
+  - `handoffs\handoff_gemini_geosite_gap_YYYYMMDD_HHMMSS.md`
 - foco dessa rodada:
   - mapa
   - linhas
