@@ -162,6 +162,13 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 #h-inc{background:rgba(232,68,85,.2);border:1px solid var(--rd);color:var(--rd)}
 #h-move{background:rgba(240,165,0,.2);border:1px solid var(--am);color:var(--am)}
 #med-info{position:absolute;top:50px;left:50%;transform:translateX(-50%);z-index:400;background:var(--bg2);border:1px solid var(--bl);border-radius:14px;padding:4px 13px;font-size:11px;color:var(--bl);display:none;font-weight:600;pointer-events:none}
+#drawbar{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:420;display:none;gap:8px;padding:8px;background:rgba(9,18,31,.88);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 16px 36px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
+.dbtn{min-width:96px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:11px;font-family:inherit;font-weight:800;cursor:pointer}
+.dbtn:hover{background:rgba(255,255,255,.08);color:var(--t)}
+.dbtn.ok{background:rgba(69,208,140,.18);border-color:rgba(69,208,140,.28);color:var(--gr)}
+.dbtn.warn{background:rgba(255,182,72,.14);border-color:rgba(255,182,72,.26);color:var(--am)}
+.dbtn.danger{background:rgba(255,90,104,.14);border-color:rgba(255,90,104,.26);color:var(--rd)}
+@media(max-width:680px){#drawbar{left:10px;right:10px;bottom:12px;transform:none;justify-content:space-between}.dbtn{min-width:0;flex:1}}
 
 /* LEGENDA */
 #leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:none;transition:background .25s;backdrop-filter:blur(16px)}
@@ -380,6 +387,11 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     <div id="h-inc" class="hint">🚨 Clique no local da falha</div>
     <div id="h-move" class="hint">↕ Clique no novo local</div>
     <div id="med-info"></div>
+    <div id="drawbar">
+      <button class="dbtn warn" onclick="undoDrawPt()">↶ Desfazer</button>
+      <button class="dbtn ok" onclick="finishDrawManual()">✓ Finalizar</button>
+      <button class="dbtn danger" onclick="cancelDraw()">✕ Cancelar</button>
+    </div>
     <div id="mt">
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
       <div style="position:relative"><button class="mb" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
@@ -1346,6 +1358,7 @@ function startDraw(seedPts=[],target='segmento'){
   drawPts=[];
   $('bdc').classList.add('on-g');
   $('h-draw').style.display='block';
+  $('drawbar').style.display='flex';
   clearDrawLines();
   map.on('click',addDrawPt);
   map.on('dblclick',finishDraw);
@@ -1358,14 +1371,14 @@ function startDraw(seedPts=[],target='segmento'){
     if(drawPts.length>=2){
       drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);
       const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);
-      $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;
+      $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;
     }
     toast('Ajuste a linha e finalize com duplo clique','in');
     return;
   }
   toast(drawTarget==='cabo'?'Trace o novo trajeto do cabo':'Trace o segmento físico','in');
 }
-function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — duplo clique p/ salvar`;}}
+function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;}else{$('h-draw').textContent='🔌 1 ponto marcado • continue ou cancele';}}
 function finishDraw(e){
   L.DomEvent.stopPropagation(e);
   if(drawPts.length<2)return;
@@ -1386,7 +1399,25 @@ function finishDraw(e){
   msgField('sg-msg','Geometria do segmento pronta. Revise A/B e salve.','ok');
   toast('Preencha os pontos A/B e salve o segmento físico','ok');
 }
-function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
+function undoDrawPt(){
+  if(!drawMode||!drawPts.length)return;
+  drawPts.pop();
+  const last=drawMks.pop();
+  if(last)map.removeLayer(last);
+  if(drawLn){map.removeLayer(drawLn);drawLn=null;}
+  if(drawPts.length>=2){
+    drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);
+    const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);
+    $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;
+  }else{
+    $('h-draw').textContent='🔌 Trace o cabo • finalize pela barra';
+  }
+}
+function finishDrawManual(){
+  if(!drawMode||drawPts.length<2){toast('Adicione pelo menos 2 pontos','wn');return;}
+  finishDraw({stopPropagation(){}});
+}
+function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('drawbar').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
 function redesenharSegmentoAtual(){
   goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));

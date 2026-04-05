@@ -324,6 +324,8 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - fallback offline quando a rede falhar
   - indicador de `modo offline`
   - controles mobile ficaram maiores
+  - barra de desenho no mapa com `desfazer`, `finalizar` e `cancelar`
+  - desenho de linha agora fica viável no mobile sem depender de duplo clique
 
 ### Auditoria IA local agora verifica tambem
 
