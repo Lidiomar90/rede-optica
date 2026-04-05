@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#07111f;--bg2:#0e1a2b;--bg3:#132239;--bg4:#1b2c46;--bd:#1f3552;--bd2:#2d4970;--t:#e7f0ff;--t2:#9eb2d2;--t3:#647a9c;--gr:#45d08c;--bl:#48a8ff;--am:#ffb648;--rd:#ff5a68;--pu:#8d6bff;--cy:#2fd4cf;--ink:#06101c;--glass:rgba(14,26,43,.84)}
@@ -372,11 +374,13 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
         <div class="sbst"><b id="cs2">—</b><span>Spans</span></div>
       </div>
     </div>
-    <div id="srch"><input id="si" placeholder="Buscar site, cidade, código..." oninput="filterSB(this.value)"></div>
+    <div id="srch"><input id="si" placeholder="Buscar site, cabo, caixa, DGO..." oninput="filterSB(this.value)"></div>
     <div id="stabs">
       <div class="stt on" onclick="sbTab('camadas',this)">Camadas</div>
       <div class="stt" onclick="sbTab('sites',this)">Sites</div>
       <div class="stt" onclick="sbTab('cabos',this)">Cabos</div>
+      <div class="stt" onclick="sbTab('ativos',this)">Ativos</div>
+      <div class="stt" onclick="sbTab('continu',this)">Continu.</div>
     </div>
     <div id="lc">
       <div class="lc-stack">
@@ -732,6 +736,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 <div id="ctxm"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script>
 // ═══════════════════════════════════════════
 // CONFIG
@@ -1005,11 +1010,13 @@ function mkSiteMenu(s,pt){
   };
 }
 function mkCaixaMenu(cx){
+  const flagged=!!getFlagForAsset('caixa',cx.id);
   return {
     title:`Caixa ${normText(cx.codigo)||'Rascunho'}`,
     subtitle:`${esc(cx.nome||'Caixa de emenda')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}`,
     actions:[
       {label:'📋 Ver detalhes',action:()=>showPanCaixaDraft(cx)},
+      {label:flagged?'🚩 Editar flag':'🚩 Marcar caixa',action:()=>openFlagEditor('caixa',cx.id)},
       {label:'✏️ Editar caixa',action:()=>editarCaixaDraft(cx.id)},
       {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-a')},
       {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-b')},
@@ -1019,11 +1026,13 @@ function mkCaixaMenu(cx){
   };
 }
 function mkDgoMenu(dg,site){
+  const flagged=!!getFlagForAsset('dgo',dg.id);
   return {
     title:`DGO ${normText(dg.codigo)||'Rascunho'}`,
     subtitle:`Site: ${esc(dg.site||'—')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}`,
     actions:[
       {label:'📋 Ver detalhes',action:()=>showPanDgoDraft(dg)},
+      {label:flagged?'🚩 Editar flag':'🚩 Marcar DGO',action:()=>openFlagEditor('dgo',dg.id)},
       {label:'✏️ Editar DGO',action:()=>editarDgoDraft(dg.id)},
       {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-a')},
       {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-b')},
@@ -1738,6 +1747,73 @@ function renderSB(q=''){
 }
 function renderSBv2(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
+  if(sbMode==='continu'){
+    const store=getInvStore();
+    const segs=store.segmentos.map(seg=>{
+      const st=getSegmentOperationalState(seg);
+      return {
+        kind:'segmento',
+        id:seg.id,
+        label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+        sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
+        status:st.status,
+        cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+      };
+    });
+    const rupts=store.rupturas.map(rp=>({
+      kind:'ruptura',
+      id:rp.id,
+      label:rp.cabo_segmento||'Ruptura local',
+      sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
+      status:rp._synced?'registrada':'rascunho',
+      cls:rp._synced?'tok':'twn'
+    }));
+    const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q));
+    if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
+    let h='';
+    const groups=[
+      ['segmento','Segmentos físicos','#22d3ee'],
+      ['ruptura','Rupturas / reparos','#e84455']
+    ];
+    groups.forEach(([kind,label,color])=>{
+      const arr=items.filter(i=>i.kind===kind).sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'));
+      if(!arr.length)return;
+      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      arr.forEach(i=>{
+        const id=`${kind==='segmento'?'seg':'rp'}-${i.id}`;
+        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${kind==='segmento'?'ln':''}" style="background:${color}${kind==='segmento'?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
+  if(sbMode==='ativos'){
+    const store=getInvStore();
+    const ativos=[
+      ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+      ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)}))
+    ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q));
+    if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
+    const groups={
+      caixas:ativos.filter(a=>a.kind==='caixa').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
+      dgos:ativos.filter(a=>a.kind==='dgo').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
+    };
+    let h='';
+    const groupDefs=[['caixas','Caixas / emendas'],['dgos','DGOs']];
+    groupDefs.forEach(([key,label])=>{
+      const arr=groups[key];
+      if(!arr.length)return;
+      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      arr.forEach(i=>{
+        const tone=i.kind==='caixa'?'#3ecf8e':'#7c93ff';
+        const id=`${i.kind==='caixa'?'cx':'dg'}-${i.id}`;
+        const cls=i.status&&String(i.status).toLowerCase().includes('quebrado')?'ter':i.status&&String(i.status).toLowerCase().includes('pend')?'twn':'tok';
+        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii" style="background:${tone}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${i.flag}<span>${esc(i.label)}</span></div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${cls}">${esc(i.status||'ativo')}</span></div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
   let data=sbMode==='cabos'?allC:allS;
   if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
   if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
@@ -2717,6 +2793,7 @@ function buildDgoConnectionDiagram(codigo){
 function showPanDgoDraft(dg){
   if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
   closePan();
+  const dgoFlag=getFlagForAsset('dgo',dg.id);
   const conexoes=getConexoesDgo(dg.codigo);
   const resumo=operationalSummaryHtml(dg.codigo||'');
   $('pt').textContent=`${dg.codigo||'DGO'}${dg.site?` — ${dg.site}`:''}`;
@@ -2729,6 +2806,10 @@ function showPanDgoDraft(dg){
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(dg.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(dg.fabricante||'—')}</span></div>
     <div class="pr"><span class="pl">Status</span><span class="pv">${esc(dg.status||'—')}</span></div>
+    ${dgoFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [dgoFlag.priority||'normal',dgoFlag.color||'var(--am)'],
+      [dgoFlag.category||'operacao',dgoFlag.color||'var(--am)']
+    ])}</div>${dgoFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dgoFlag.note)}</div>`:''}</div>`:''}
     <div style="margin-top:10px">
       <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Continuidade</div>
       ${buildDgoConnectionDiagram(dg.codigo)}
@@ -2745,7 +2826,7 @@ function showPanDgoDraft(dg){
     ${buildRefLinksHtml(dg.codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -3281,6 +3362,7 @@ function buildDraftConnectionDiagram(ref){
 function showPanCaixaDraft(cx){
   if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
   closePan();
+  const caixaFlag=getFlagForAsset('caixa',cx.id);
   const conexoes=getConexoesCaixa(cx.codigo);
   const resumo=operationalSummaryHtml(cx.codigo||'');
   $('pt').textContent=`🧰 ${cx.codigo||'Caixa'}`;
@@ -3293,6 +3375,10 @@ function showPanCaixaDraft(cx){
     <div class="pr"><span class="pl">Status</span><span class="pv">${esc(cx.status||'—')}</span></div>
     <div class="pr"><span class="pl">Vistoria</span><span class="pv">${cx.vistoriada?'vistoriada':'pendente'}</span></div>
     <div class="pr"><span class="pl">Troca</span><span class="pv">${cx.precisa_troca?'necessária':'não'}</span></div>
+    ${caixaFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [caixaFlag.priority||'normal',caixaFlag.color||'var(--am)'],
+      [caixaFlag.category||'operacao',caixaFlag.color||'var(--am)']
+    ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
     <div style="margin-top:10px">
       <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Diagrama de conexão</div>
       ${buildDraftConnectionDiagram(cx.codigo)}
@@ -3309,7 +3395,7 @@ function showPanCaixaDraft(cx){
     ${buildRefLinksHtml(cx.codigo||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){
@@ -3448,6 +3534,7 @@ function renderInventarioDraftsV2(){
         .on('click',()=>showPanCaixaDraft(cx))
         .addTo(draftInvLayer);
       attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
+      fmap['cx-'+cx.id]=()=>{map.setView([Number(cx.lat),Number(cx.lng)],18);showPanCaixaDraft(cx);};
     }
   });
   store.dgos.forEach(dg=>{
@@ -3459,6 +3546,7 @@ function renderInventarioDraftsV2(){
         .on('click',()=>showPanDgoDraft(dg))
         .addTo(draftInvLayer);
       attachMarkerFieldActions(mk,()=>mkDgoMenu(dg,site));
+      fmap['dg-'+dg.id]=()=>{map.setView([Number(site.lat),Number(site.lng)],18);showPanDgoDraft(dg);};
     }
   });
   store.segmentos.forEach(seg=>{
@@ -3472,6 +3560,8 @@ function renderInventarioDraftsV2(){
         const oe=ev.originalEvent||{};
         openActionMenu({...mkSegmentoMenu(seg,path),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
       }});
+      const bounds=L.latLngBounds(path.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]));
+      fmap['seg-'+seg.id]=()=>{map.fitBounds(bounds,{padding:[50,50],maxZoom:18});showPanSegmentoDraft(seg);};
     }
   });
   store.rupturas.forEach(rp=>{
@@ -3481,6 +3571,7 @@ function renderInventarioDraftsV2(){
         .on('click',()=>showPanRupturaDraft(rp))
         .addTo(draftInvLayer);
       attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
+      fmap['rp-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaDraft(rp);};
       if(rp.metragem_lancada_m){
         L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
       }

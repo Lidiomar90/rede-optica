@@ -18,14 +18,16 @@
 4. Criadas views: `vw_continuidade_completa`, `vw_rupturas_abertas`, `vw_caixas_emenda_mapa`
 5. Expandida `vw_pendencias_qualidade`: agora cobre dgo, caixa_emenda, segmento_cabo, evento_ruptura
 6. Todos triggers de atualizado_em e sync de network_nodes aplicados
-7. Front do mapa ganhou `flags operacionais` em `site` e `cabo`, com marcador estilo placemark, edição por modal, ação no painel, menu rápido e indicador na lista lateral
+7. Front do mapa ganhou `flags operacionais` em `site`, `cabo`, `caixa` e `DGO`, com marcador estilo placemark, edição por modal, ação no painel, menu rápido e indicador na lista lateral
+8. Sidebar do mapa ganhou aba operacional `Ativos`, com navegação direta para `Caixas / emendas` e `DGOs`, status operacional e flag visível
+9. Sidebar do mapa ganhou aba `Continu.`, com navegação direta para `Segmentos físicos` e `Rupturas / reparos`, incluindo salto para o mapa e abertura do painel técnico
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
 - Codex: plotar caixa_emenda no mapa via `vw_caixas_emenda_mapa`
 - Codex: painel de rupturas via `vw_rupturas_abertas`
 - Codex: conectar `execRast()` ao RPC `fn_tracer_bfs` (BUG 2 — ainda pendente)
-- Codex: evoluir `flag` para suportar também caixas, DGO e eventualmente cabos por vértice/trecho
+- Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
