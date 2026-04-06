@@ -487,6 +487,25 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 
 ### DGO oficial no mapa
 
+- `mapa-rede-optica.html` agora tambem consome a tabela `dgo`
+- dados oficiais sao normalizados no front em:
+  - `officialDgos`
+- os DGOs oficiais agora:
+  - aparecem no mapa
+  - entram na aba lateral `Ativos`
+  - entram na resolucao de referencias (`findDraftPoint`)
+  - abrem painel proprio de banco oficial
+  - podem receber `flag`
+- o menu contextual de DGO agora diferencia:
+  - rascunho local
+  - banco oficial
+- `jumpToRef` agora respeita DGO oficial:
+  - se a referencia apontar para `officialDgos`, o painel aberto eh `showPanDgoOficial`
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`
+
+### DGO oficial no mapa
+
 - `mapa-rede-optica.html` agora tambem consome a tabela `dgo` do banco
 - dados oficiais sao normalizados no front em:
   - `officialDgos`

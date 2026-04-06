@@ -1098,9 +1098,9 @@ function normalizeDgoRow(row){
     id:String(row.id||row.codigo||row.nome||crypto.randomUUID()),
     codigo:row.codigo||row.sigla||row.nome||'DGO',
     nome:row.nome||row.codigo||'DGO oficial',
-    site_id:row.site_id||row.siteId||row.site?.id||null,
-    site_codigo:row.site_codigo||row.site?.codigo||row.site_ref||row.site_nome||'',
-    site_nome:row.site_nome||row.site?.nome||'',
+    site_id:row.site_id||row.siteId||null,
+    site_codigo:row.site_codigo||row.site_ref||row.site_nome||'',
+    site_nome:row.site_nome||'',
     rack:row.rack||'',
     fila:row.fila||'',
     bastidor:row.bastidor||'',
@@ -1898,8 +1898,6 @@ function renderSiteClusters(){
   if(!siteClusterGroup) return;
   siteClusterGroup.clearLayers();
   const visibleMarkers = [];
-  
-  // Renderizar Sites
   allS.forEach(s => {
     const cv = camVis(s.camada, s.tipo);
     const layerId = getSiteLayer(cv);
@@ -1919,101 +1917,2785 @@ function renderSiteClusters(){
        visibleMarkers.push(mk);
     }
   });
-
-  // Renderizar Caixas Oficiais
-  officialCaixas.forEach(cx => {
-    if(!cx._pt) return;
-    const mk = L.marker(cx._pt, {
-      icon: L.divIcon({
-        className: '',
-        iconSize: [20, 20],
-        iconAnchor: [10, 10],
-        html: `<div style="width:20px;height:20px;border-radius:6px;background:${cx.status==='operacional'?'#3ecf8e':cx.status==='manutencao'?'#ffb648':'#ff5a68'};border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#000">📦</div>`
-      }),
-      zIndexOffset: 2000
-    }).on('click', e => {
-      L.DomEvent.stopPropagation(e);
-      if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
-      showPanCaixaOficial(cx);
-    });
-    
-    attachMarkerFieldActions(mk, () => ({
-      title: `Caixa: ${cx.codigo}`,
-      subtitle: `${esc(cx.tipo || '—')} | ${esc(cx.modelo || '—')}<br>Status: ${esc(cx.status || '—')}`,
-      actions: [
-        {label: '📋 Ver detalhes', action: () => showPanCaixaOficial(cx)},
-        {label: '✏️ Editar caixa', action: () => editarCaixaOficial(cx.id)},
-        {label: '🚨 Nova ruptura', warn: true, action: () => abrirNovaRupturaContextual(cx, cx._pt[0], cx._pt[1])},
-        {label: '📋 Copiar coordenadas', action: () => copiarCoordenadasAt(cx._pt[0], cx._pt[1])}
-      ]
-    }));
-    
-    visibleMarkers.push(mk);
-  });
-
   siteClusterGroup.addLayers(visibleMarkers);
 }
-
-function showPanCaixaOficial(cx){
-  closePan();
-  const rows = [
-    ['Código', cx.codigo],
-    ['Tipo', cx.tipo || '—'],
-    ['Modelo', cx.modelo || '—'],
-    ['Fabricante', cx.fabricante || '—'],
-    ['Status', cx.status || '—', TC(cx.status)],
-    ['Fibras Livres', cx.fibras_livres || '—'],
-    ['Observação', cx.observacao || '—']
-  ];
-  
-  showPan(`Caixa: ${cx.codigo}`, rows, [
-    {l: 'Editar', c: 'g', fn: `editarCaixaOficial('${cx.id}')`},
-    {l: 'Nova ruptura', c: 'r', fn: `abrirNovaRupturaContextual('${esc(cx.codigo).replace(/'/g,"\\'")}', ${cx._pt[0]}, ${cx._pt[1]})`},
-    {l: 'Ponto A', c: 'b', fn: `usarComoPontoSegmento('${esc(cx.codigo).replace(/'/g,"\\'")}', 'sg-a')`},
-    {l: 'Ponto B', c: 'b', fn: `usarComoPontoSegmento('${esc(cx.codigo).replace(/'/g,"\\'")}', 'sg-b')`},
-    sessao.perfil==='admin' && {l: 'Excluir', c: 'r', fn: `del('caixa_emenda', '${cx.id}')`}
-  ].filter(Boolean));
+function setAll(on){Object.keys(VIS).forEach(k=>VIS[k]=on);buildLayerPanel();applyVis();savePref();}
+function applyPreset(name){
+  const next=getLayerPresetMap(name);
+  Object.keys(VIS).forEach(k=>VIS[k]=!!next[k]);
+  if(name==='limpo'){Object.keys(OVIS).forEach(k=>OVIS[k]=false);}
+  if(name==='campo'){OVIS.ov_draft=true;OVIS.ov_pending=true;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
+  if(name==='transporte'){OVIS.ov_draft=false;OVIS.ov_pending=false;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
+  if(name==='incidentes'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;}
+  buildLayerPanel();applyVis();savePref();
 }
+function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));}
+function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}}
 
-async function editarCaixaOficial(id){
-  toast('Carregando dados da caixa...','in');
+async function syncGraphRPC(){
+  toast('Sincronizando grafos no banco...','in');
   try {
-    const res = await fetch(`${SU}/rest/v1/caixa_emenda?id=eq.${id}&select=*`, {headers:RH});
-    const cx = (await res.json())[0];
-    if(!cx) throw new Error('Caixa não encontrada');
-    
-    goTab('cadastro', document.querySelector('.nt[onclick*="cadastro"]'));
-    $('cx-codigo').value = cx.codigo || '';
-    $('cx-nome').value = cx.nome || '';
-    $('cx-inst').value = cx.tipo_instalacao || 'aereo';
-    $('cx-modelo').value = cx.modelo || '';
-    $('cx-fab').value = cx.fabricante || '';
-    $('cx-status').value = cx.status || 'ativo';
-    $('cx-obs').value = cx.observacao || '';
-    $('cx-vist').checked = !!cx.vistoriada;
-    $('cx-troca').checked = !!cx.precisa_troca;
-    
-    const pt = PP(cx.localizacao);
-    if(pt){
-      $('cx-lat').value = pt[0].toFixed(6);
-      $('cx-lng').value = pt[1].toFixed(6);
-    }
-    
-    $('cx-msg').innerHTML = `<span style="color:var(--am)">Editando caixa oficial (ID: ${id})</span>`;
-    $('cx-msg').dataset.editId = id;
-    
-    closeM();
-    toast('Dados carregados para edição','ok');
-  } catch(err) {
-    toast(err.message, 'er');
+    const r1 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos`, {method:'POST', headers:RH});
+    const r2 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos_dgo`, {method:'POST', headers:RH});
+    if(r1.ok && r2.ok) toast('✓ Grafos sincronizados com sucesso!','ok');
+    else toast('⚠ Falha parcial na sincronização do grafo.','wn');
+  } catch (e) {
+    toast('Erro ao conectar para sincronizar grafo.','er');
   }
 }
 
-async function editarDgoOficial(id){
-  toast('Carregando dados do DGO...','in');
+async function syncLocalDrafts(){
+  const store = getInvStore();
+  let total = 0, ok = 0;
+  toast('Iniciando sincronização de rascunhos...','in');
+
+  // Sincronizar Caixas
+  for(const cx of store.caixas){
+    if(cx._synced) continue; total++;
+    const payload = {
+      codigo: cx.codigo, nome: cx.nome, tipo_instalacao: cx.tipo_instalacao,
+      modelo: cx.modelo, fabricante: cx.fabricante, status: cx.status,
+      vistoriada: !!cx.vistoriada, precisa_troca: !!cx.precisa_troca,
+      localizacao: cx.lat && cx.lng ? `SRID=4326;POINT(${cx.lng} ${cx.lat})` : null,
+      observacao: cx.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/caixa_emenda`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ cx._synced = true; ok++; }
+  }
+
+  // Sincronizar DGOs
+  for(const dg of store.dgos){
+    if(dg._synced) continue; total++;
+    const site = allS.find(s=>s.codigo===dg.site || s.nome===dg.site);
+    if(site && site.id && String(site.id).indexOf('science-')!==0){
+      const payload = {
+        codigo: dg.codigo, nome: dg.nome, site_id: site.id,
+        rack: dg.rack, fila: dg.fila, bastidor: dg.bastidor,
+        modelo: dg.modelo, fabricante: dg.fabricante, status: dg.status,
+        observacao: dg.observacao
+      };
+      const res = await fetch(`${SU}/rest/v1/dgo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+      if(res.ok){ dg._synced = true; ok++; }
+    }
+  }
+
+  // Sincronizar Segmentos
+  for(const seg of store.segmentos){
+    if(seg._synced) continue; total++;
+    let trajeto = null;
+    if(Array.isArray(seg.geometria_pts)){
+       const coords = seg.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
+       trajeto = `SRID=4326;LINESTRING(${coords})`;
+    }
+    const payload = {
+      cabo: seg.cabo, ponto_a: seg.ponto_a, ponto_b: seg.ponto_b,
+      tipo_lancamento: seg.tipo_lancamento, metragem_m: seg.metragem_m,
+      fabricante: seg.fabricante, modelo: seg.modelo, lote: seg.lote,
+      trajeto: trajeto, observacao: seg.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/segmento_cabo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ seg._synced = true; ok++; }
+  }
+
+  // Sincronizar Rupturas
+  for(const rp of store.rupturas){
+    if(rp._synced) continue; total++;
+    const payload = {
+      cabo_segmento: rp.cabo_segmento,
+      distancia_otdr_m: rp.distancia_otdr_m,
+      metragem_lancada_m: rp.metragem_lancada_m,
+      nova_caixa: rp.nova_caixa,
+      tipo_reparo: rp.tipo_reparo,
+      localizacao: rp.lat && rp.lng ? `SRID=4326;POINT(${rp.lng} ${rp.lat})` : null,
+      observacao: rp.observacao,
+      data_hora: rp.data_hora || new Date().toISOString()
+    };
+    const res = await fetch(`${SU}/rest/v1/evento_ruptura`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
+    if(res.ok){ rp._synced = true; ok++; }
+  }
+
+  saveInvStore(store);
+  if(total===0) toast('Nada novo para sincronizar.','in');
+  else toast(`✓ Sincronizados ${ok} de ${total} itens.` , ok===total?'ok':'wn');
+  if(ok > 0) loadMap();
+}
+
+// SIDEBAR
+function renderSidebarFilters(){
+  const el=$('sbflt');
+  if(!el)return;
+  if(sbMode!=='ativos'&&sbMode!=='continu'){
+    el.classList.remove('on');
+    el.innerHTML='';
+    return;
+  }
+  const opts=[
+    ['todos','Todos'],
+    ['quebrado','Quebrados'],
+    ['pendente','Pendentes'],
+    ['confirmado','Confirmados'],
+  ];
+  el.innerHTML=opts.map(([id,label])=>`<button class="overlay-chip ${sbStatusFilter===id?'on':''}" onclick="setSidebarStatusFilter('${id}')">${label}</button>`).join('');
+  el.classList.add('on');
+}
+function setSidebarStatusFilter(next){
+  sbStatusFilter=next||'todos';
+  renderSidebarFilters();
+  renderSB($('si')?.value||'');
+}
+function matchesSidebarStatus(status){
+  const s=String(status||'').toLowerCase();
+  if(sbStatusFilter==='todos')return true;
+  if(sbStatusFilter==='quebrado')return s.includes('quebrado')||s.includes('sem continuidade');
+  if(sbStatusFilter==='pendente')return s.includes('pend')||s.includes('montagem')||s.includes('rascunho');
+  if(sbStatusFilter==='confirmado')return s.includes('confirmado')||s.includes('registrada')||s.includes('ativo')||s.includes('pronto');
+  return true;
+}
+function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';renderSidebarFilters();if(m!=='camadas')renderSB($('si').value);}
+function filterSB(q){
+  if(sbMode!=='camadas') renderSB(q);
+  else execBuscaGlobal(q);
+}
+
+function execBuscaGlobal(q){
+  const el=$('sbl'); 
+  if(!q || q.length < 2) { 
+    if(sbMode==='camadas') { el.style.display='none'; return; }
+    renderSB(''); return; 
+  }
+  
+  el.style.display='block';
+  q = q.toLowerCase();
+  const res = [];
+  
+  // Sites
+  allS.forEach(s => {
+    if((s.codigo||'').toLowerCase().includes(q) || (s.nome||'').toLowerCase().includes(q)){
+      res.push({tipo:'site', label:s.codigo||s.nome, sub:s.municipio||'site', id:s.id, pt:PP(s.localizacao)});
+    }
+  });
+  
+  // Cabos
+  allC.forEach(c => {
+    if((c.nome||'').toLowerCase().includes(q)){
+      res.push({tipo:'cabo', label:c.nome, sub:c.tipo||'cabo', id:c.id});
+    }
+  });
+  
+  // Rascunhos (Caixas/DGOs)
+  const store = getInvStore();
+  store.caixas.forEach(cx => {
+    if((cx.codigo||'').toLowerCase().includes(q)){
+      res.push({tipo:'caixa', label:cx.codigo, sub:'rascunho caixa', id:cx.id, pt:[cx.lat, cx.lng]});
+    }
+  });
+
+  if(!res.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado global</div>';
+    return;
+  }
+
+  el.innerHTML=`<div class="gh"><span>RESULTADOS DA BUSCA</span><span>${res.length}</span></div>` + 
+    res.slice(0,50).map(r => `
+      <div class="si" onclick="fmap['${r.tipo.charAt(0)}-${r.id}'] ? fmap['${r.tipo.charAt(0)}-${r.id}']() : (['caixa','site'].includes('${r.tipo}') && map.setView([${r.pt}],17))">
+        <div class="sii" style="background:${r.tipo==='site'?'var(--gr)':r.tipo==='cabo'?'var(--bl)':'var(--cy)'}"></div>
+        <div class="sin">${esc(r.label)}</div>
+        <div class="sis">${esc(r.sub)}</div>
+      </div>
+    `).join('');
+}
+function renderSB(q=''){
+  const el=$('sbl');q=(q||'').toLowerCase();
+  let data=sbMode==='cabos'?allC:allS;
+  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
+  if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
+  if(sbMode==='sites'){
+    const byCn={};
+    data.forEach(i=>{
+      const cn=normText(i.cn)||'Sem CN';
+      const loc=normText(i.localidade)||normText(i.municipio)||'Sem localidade';
+      if(!byCn[cn])byCn[cn]={};
+      if(!byCn[cn][loc])byCn[cn][loc]=[];
+      byCn[cn][loc].push(i);
+    });
+    let h='';
+    Object.keys(byCn).sort(cnSort).forEach(cn=>{
+      const localMap=byCn[cn];
+      const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
+      h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
+      Object.keys(localMap).sort((a,b)=>a.localeCompare(b,'pt-BR')).forEach(loc=>{
+        const arr=localMap[loc].sort((a,b)=>(a.nome||a.codigo||'').localeCompare(b.nome||b.codigo||'','pt-BR'));
+        h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--ta);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
+        arr.slice(0,120).forEach(i=>{
+          const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+          const sub=[i.municipio,i.codigo&&`Código ${i.codigo}`,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+          h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+        });
+        if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
+  const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
+  let h='';
+  Object.entries(G).sort().forEach(([g,arr])=>{
+    h+=`<div class="gh"><span>${g}</span><span>${arr.length}</span></div>`;
+    arr.slice(0,80).forEach(i=>{
+      const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+      const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
+      const sub=i.municipio||km(i.comprimento)||'';
+      const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
+      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin">${esc(i.nome||i.codigo||'—')}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+    });
+    if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} — refine a busca</div>`;
+  });
+  el.innerHTML=h;
+}
+function renderSBv2(q=''){
+  const el=$('sbl');q=(q||'').toLowerCase();
+  if(sbMode==='continu'){
+    const store=getInvStore();
+    const segs=store.segmentos.map(seg=>{
+      const st=getSegmentOperationalState(seg);
+      return {
+        kind:'segmento',
+        id:seg.id,
+        label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+        sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
+        status:st.status,
+        cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+      };
+    });
+    const rupts=[
+      ...store.rupturas.map(rp=>({
+        kind:'ruptura',
+        id:rp.id,
+        label:rp.cabo_segmento||'Ruptura local',
+        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
+        status:rp._synced?'registrada':'rascunho',
+        cls:rp._synced?'tok':'twn'
+      })),
+      ...officialRupturas.map(rp=>({
+        kind:'ruptura_oficial',
+        id:rp.id,
+        label:rp.cabo_segmento||'Ruptura oficial',
+        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`,'banco oficial'].filter(Boolean).join(' • '),
+        status:rp.status||'aberta',
+        cls:String(rp.status||'').toLowerCase().includes('fech')?'tok':'ter'
+      }))
+    ];
+    const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
+    if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
+    let h='';
+    const groups=[
+      ['segmento','Segmentos físicos','#22d3ee'],
+      ['ruptura','Rupturas / reparos','#e84455'],
+      ['ruptura_oficial','Rupturas oficiais','#ff7a8c']
+    ];
+    groups.forEach(([kind,label,color])=>{
+      const arr=items.filter(i=>i.kind===kind).sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'));
+      if(!arr.length)return;
+      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      arr.forEach(i=>{
+        const id=kind==='segmento'?`seg-${i.id}`:(kind==='ruptura_oficial'?`rp-db-${i.id}`:`rp-${i.id}`);
+        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${kind==='segmento'?'ln':''}" style="background:${color}${kind==='segmento'?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
+  if(sbMode==='ativos'){
+    const store=getInvStore();
+    const ativos=[
+      ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+      ...officialCaixas.map(cx=>({kind:'caixa_oficial',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'ativo',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+      ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)})),
+      ...officialDgos.map(dg=>({kind:'dgo_oficial',id:dg.id,label:dg.codigo||dg.nome||dg.site_codigo||'DGO',sub:[dg.site_codigo||dg.site_nome,dg.rack,dg.fila,dg.bastidor,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site_codigo||'')||{}).status||dg.status||'ativo',flag:getFlagIndicatorHtml('dgo',dg.id)}))
+    ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
+    if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
+    const groups={
+      caixas:ativos.filter(a=>a.kind==='caixa'||a.kind==='caixa_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
+      dgos:ativos.filter(a=>a.kind==='dgo'||a.kind==='dgo_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
+    };
+    let h='';
+    const groupDefs=[['caixas','Caixas / emendas'],['dgos','DGOs']];
+    groupDefs.forEach(([key,label])=>{
+      const arr=groups[key];
+      if(!arr.length)return;
+      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      arr.forEach(i=>{
+        const tone=i.kind==='caixa'||i.kind==='caixa_oficial'?'#3ecf8e':'#7c93ff';
+        const id=i.kind==='caixa_oficial'?`cx-db-${i.id}`:(i.kind==='dgo_oficial'?`dg-db-${i.id}`:`${i.kind==='caixa'?'cx':'dg'}-${i.id}`);
+        const cls=i.status&&String(i.status).toLowerCase().includes('quebrado')?'ter':i.status&&String(i.status).toLowerCase().includes('pend')?'twn':'tok';
+        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii" style="background:${tone}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${i.flag}<span>${esc(i.label)}</span></div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${cls}">${esc(i.status||'ativo')}</span></div>`;
+      });
+    });
+    el.innerHTML=h;
+    return;
+  }
+  let data=sbMode==='cabos'?allC:allS;
+  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
+  if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
+  if(sbMode==='sites'){
+    try{
+      const byCn={};
+      data.forEach(i=>{
+        const cn=normText(i.cn)||normText(i.science?.cn)||'Sem CN';
+        const loc=normText(i.localidade)||normText(i.science?.localidade)||normText(i.municipio)||'Sem localidade';
+        if(!byCn[cn])byCn[cn]={};
+        if(!byCn[cn][loc])byCn[cn][loc]=[];
+        byCn[cn][loc].push(i);
+      });
+      let h='';
+      Object.keys(byCn).sort(cnSort).forEach(cn=>{
+        const localMap=byCn[cn];
+        const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
+        h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
+        Object.keys(localMap).sort((a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR')).forEach(loc=>{
+          const arr=localMap[loc].sort((a,b)=>codeFirstLabel(a).localeCompare(codeFirstLabel(b),'pt-BR'));
+          h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
+          arr.slice(0,120).forEach(i=>{
+            const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+            const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+            const flag=getFlagIndicatorHtml('site',i.id);
+            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+          });
+          if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
+        });
+      });
+      el.innerHTML=h||'<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum site agrupado</div>';
+      return;
+    }catch(err){
+      console.error('renderSB sites falhou',err);
+      const fallback=data.slice(0,200).map(i=>{
+        const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+        const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.codigo].filter(Boolean).join(' • ');
+        return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
+      }).join('');
+      el.innerHTML=`<div style="padding:8px 10px;font-size:10px;color:var(--am);font-weight:800">Agrupamento CN/localidade falhou. Exibindo lista simples.</div>${fallback}`;
+      return;
+    }
+  }
+  const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
+  let h='';
+  Object.entries(G).sort().forEach(([g,arr])=>{
+    h+=`<div class="gh"><span>${g}</span><span>${arr.length}</span></div>`;
+    arr.slice(0,80).forEach(i=>{
+      const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
+      const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
+      const sub=i.municipio||km(i.comprimento)||'';
+      const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
+      const flag=sbMode==='cabos'?getFlagIndicatorHtml('cabo',i.id):getFlagIndicatorHtml('site',i.id);
+      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+    });
+    if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} refine a busca</div>`;
+  });
+  el.innerHTML=h;
+}
+renderSB=renderSBv2;
+function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
+function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
+function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
+function getPointSummary(ref){
+  const p=findDraftPoint(ref||'');
+  if(!p)return null;
+  const store=getInvStore();
+  const code=(p.codigo||p.nome||ref||'').toUpperCase();
+  const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===code||String(s.ponto_b||'').toUpperCase()===code).length;
+  const conns=store.conexoes.filter(c=>String(c.caixa_codigo||c.dgo_codigo||'').toUpperCase()===code).length;
+  const pend=store.pendencias.filter(x=>String(x.referencia||'').toUpperCase()===code).length;
+  return {p,segs,conns,pend};
+}
+function buildOperationalBadges(items){
+  return items.filter(Boolean).map(([label,tone='var(--bl)'])=>`<span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:9px;font-weight:800;color:${tone};text-transform:uppercase;letter-spacing:.08em">${esc(label)}</span>`).join('');
+}
+function getPointOperationalState(ref){
+  const sum=getPointSummary(ref);
+  if(!sum)return null;
+  if(sum.segs===0&&sum.conns===0){
+    return {status:'sem continuidade',tone:'var(--rd)',detail:'Nenhum segmento ou conexão registrado.'};
+  }
+  if(sum.pend>0&&sum.conns===0){
+    return {status:'quebrado',tone:'var(--rd)',detail:'Há pendências abertas e nenhuma conexão confirmada.'};
+  }
+  if(sum.pend>0){
+    return {status:'pendente',tone:'var(--am)',detail:'Existe continuidade parcial, mas ainda há pendências.'};
+  }
+  if(sum.segs>0&&sum.conns>0){
+    return {status:'confirmado',tone:'var(--gr)',detail:'Há segmentos e conexões registradas sem pendências locais.'};
+  }
+  if(sum.segs>0){
+    return {status:'em montagem',tone:'var(--bl)',detail:'Há segmentos ligados, mas falta confirmar conexão operacional.'};
+  }
+  return {status:'indefinido',tone:'var(--t2)',detail:'Sem dados suficientes para classificar este ativo.'};
+}
+function getCableOperationalState(c,lenCalc){
+  const rel=getCableDraftRelations(c.nome||'');
+  const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):0;
+  if(rel.rupts.length){
+    return {status:'com ruptura',tone:'var(--rd)',detail:`${rel.rupts.length} ruptura(s) local(is) associada(s).`,rel,diff};
+  }
+  if(!rel.segs.length){
+    return {status:'sem inventário local',tone:'var(--am)',detail:'Ainda não há segmentos locais conectados a este cabo.',rel,diff};
+  }
+  if(diff>1000){
+    return {status:'revisar metragem',tone:'var(--am)',detail:'Diferença alta entre o comprimento cadastrado e o calculado.',rel,diff};
+  }
+  return {status:'operacional',tone:'var(--gr)',detail:'Cabo com segmentos locais e sem ruptura local registrada.',rel,diff};
+}
+function getSegmentOperationalState(seg){
+  const hasA=!!String(seg.ponto_a||'').trim();
+  const hasB=!!String(seg.ponto_b||'').trim();
+  const hasGeo=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2;
+  if(!hasA||!hasB){
+    return {status:'quebrado',tone:'var(--rd)',detail:'Segmento sem ponto A ou ponto B definido.'};
+  }
+  if(!hasGeo){
+    return {status:'pendente geometria',tone:'var(--am)',detail:'Segmento com A/B definidos, mas ainda sem geometria desenhada.'};
+  }
+  return {status:'pronto para campo',tone:'var(--gr)',detail:'Segmento com pontas definidas e geometria disponível para navegação.'};
+}
+function operationalSummaryHtml(ref){
+  const sum=getPointSummary(ref);
+  if(!sum)return '';
+  const state=getPointOperationalState(ref);
+  const badges=buildOperationalBadges([
+    [`${sum.segs} segmento(s)`,'var(--bl)'],
+    [sum.conns?`${sum.conns} conexão(ões)`:'sem conexão',sum.conns?'var(--gr)':'var(--am)'],
+    [sum.pend?`${sum.pend} pendência(s)`:'sem pendência',sum.pend?'var(--rd)':'var(--gr)'],
+    state&&[state.status,state.tone],
+  ]);
+  return `<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Resumo operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${badges}</div>${state?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${state.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(state.status)}</b><br>${esc(state.detail)}</div>`:''}</div>`;
+}
+function getCableDraftRelations(name){
+  const store=getInvStore();
+  const key=String(name||'').toUpperCase();
+  const segs=store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===key);
+  const rupts=store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key));
+  return {segs,rupts};
+}
+function findRupturaDraft(id){
+  return getInvStore().rupturas.find(r=>r.id===id)||null;
+}
+function jumpToRef(ref){
+  const p=findDraftPoint(ref||'');
+  if(!p||!map){toast('Referência não localizada no mapa','wn');return;}
+  map.setView([p.lat,p.lng],17);
+  if(p.tipo==='caixa')p.item?._kind==='caixa_oficial'?showPanCaixaOficial(p.item):showPanCaixaDraft(p.item);
+  else if(p.tipo==='dgo')p.item?._kind==='dgo_oficial'?showPanDgoOficial(p.item):showPanDgoDraft(p.item);
+  else if(p.tipo==='site')showPanSite(p.item,[p.lat,p.lng]);
+}
+function jumpToSegmentDraft(id){
+  const seg=getInvStore().segmentos.find(x=>x.id===id);
+  if(!seg){toast('Segmento não encontrado','wn');return;}
+  const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
+    ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(Boolean)
+    : (()=>{const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b); return a&&b?[[a.lat,a.lng],[b.lat,b.lng]]:[];})();
+  if(path.length>=2)map.fitBounds(L.latLngBounds(path),{padding:[40,40],maxZoom:18});
+  showPanSegmentoDraft(seg);
+}
+function jumpToRupturaDraft(id){
+  const rp=findRupturaDraft(id);
+  if(!rp){toast('Ruptura não encontrada','wn');return;}
+  if(rp.lat&&rp.lng)map.setView([rp.lat,rp.lng],18);
+  showPanRupturaDraft(rp);
+}
+function relatedSegmentsByRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  return getInvStore().segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key);
+}
+function buildRefLinksHtml(ref){
+  const segs=relatedSegmentsByRef(ref).slice(0,8);
+  if(!segs.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Ativos relacionados</div><div style="display:flex;flex-direction:column;gap:6px">${segs.map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+}
+function buildSegmentLinksHtml(seg){
+  const refs=[seg.ponto_a,seg.ponto_b].filter(Boolean);
+  if(!refs.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Navegação rápida</div><div style="display:flex;gap:6px;flex-wrap:wrap">${refs.map(r=>`<button class="pac" onclick="jumpToRef('${String(r).replace(/'/g,"\\'")}')">${esc(r)}</button>`).join('')}</div></div>`;
+}
+function buildRupturaLinksHtml(rupts){
+  if(!rupts?.length)return '';
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Rupturas ligadas</div><div style="display:flex;flex-direction:column;gap:6px">${rupts.slice(0,6).map(r=>`<button class="pac" style="width:100%" onclick="jumpToRupturaDraft('${r.id}')">${esc(r.cabo_segmento||'Ruptura')} • OTDR ${km(r.distancia_otdr_m||0)}</button>`).join('')}</div></div>`;
+}
+function abrirDgoNoSite(siteRef){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('dg-site').value=siteRef||'';
+  $('dg-codigo').focus();
+  msgField('dg-msg',`Site ${siteRef||'—'} aplicado ao novo DGO.`,'ok');
+  toast('Cadastro de DGO contextualizado pelo site','ok');
+}
+function abrirCaixaContextual(ref='',lat=null,lng=null){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(lat!==null&&lng!==null){$('cx-lat').value=Number(lat).toFixed(6);$('cx-lng').value=Number(lng).toFixed(6);}
+  if(ref){
+    const prev=gv('cx-obs');
+    $('cx-obs').value=(prev?prev+'\n':'')+`Referência operacional: ${ref}`;
+  }
+  $('cx-codigo').focus();
+  msgField('cx-msg','Cadastro de caixa contextualizado a partir do mapa.','ok');
+  toast('Nova caixa preparada com contexto do ativo','ok');
+}
+function abrirCaboPorReferencia(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  if(!key){toast('Cabo não informado','wn');return;}
+  const c=allC.find(x=>String(x.nome||x.codigo||'').toUpperCase()===key||key.includes(String(x.nome||'').toUpperCase()));
+  if(!c){toast('Cabo não localizado no mapa','wn');return;}
+  const pts=PL(c.trajeto)||[];
+  if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:18});
+  showPanCabo(c,pts,c.comprimento||0);
+}
+function abrirAuditoriaRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  const pend=getInvStore().pendencias.filter(p=>String(p.referencia||'').toUpperCase()===key);
+  rodarAuditoriaIA(true);
+  if(pend.length){
+    showPanPendencia(pend[0]);
+    toast(`${pend.length} pendência(s) ligada(s) a ${ref}`,'wn');
+  }else{
+    toast(`Sem pendência local aberta para ${ref}`,'ok');
+  }
+}
+function abrirAuditoriaRuptura(caboSeg){
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  rodarAuditoriaIA(true);
+  const rel=getCableDraftRelations(caboSeg||'');
+  if(rel.rupts.length){
+    showPanRupturaDraft(rel.rupts[0]);
+    toast(`${rel.rupts.length} ruptura(s) local(is) ligada(s) a ${caboSeg}`,'wn');
+  }else{
+    toast(`Auditoria aberta para ${caboSeg||'ruptura'}`,'ok');
+  }
+}
+
+// PAINEL
+function showPanSite(s,pt){
+  closePan();
+  const canEdit=!s.somente_science&&String(s.id||'').indexOf('science-')!==0;
+  const siteFlag=getFlagForAsset('site',s.id);
+  const rows=[
+    s.codigo&&['Sigla / codigo',s.codigo],
+    ['Tipo',s.tipo||'-'],['Camada',s.camada||'-'],
+    s.cn&&['CN / DDD',s.cn],
+    s.localidade&&['Localidade',s.localidade],
+    s.municipio&&['Municipio',(s.municipio||'')+(s.uf?'/'+s.uf:'')],
+    s.seq_site&&['SEQ Site',s.seq_site],
+    s.id_financeiro&&['ID financeiro',s.id_financeiro],
+    s.endereco&&['Endereco',s.endereco],
+    s.endereco_ssi&&['Endereco SSI',s.endereco_ssi],
+    s.tipo_site&&['Tipo Science',s.tipo_site],
+    s.descricao_tipo_site&&['Descricao',s.descricao_tipo_site],
+    s.tipo_estrutura&&['Estrutura',s.tipo_estrutura],
+    s.categoria_site&&['Categoria',s.categoria_site],
+    s.subcategoria_site&&['Subcategoria',s.subcategoria_site],
+    s.supervisor&&['Supervisor',s.supervisor],
+    s.site_vip&&['Site VIP',s.site_vip],
+    s.restricao_acesso&&['Restricao acesso',s.restricao_acesso],
+    s.fonte&&['Fonte',s.fonte],
+    s.responsavel&&['Responsavel',s.responsavel],
+    s.status&&['Status',s.status,TC(s.status)],
+    s.observacao&&['Obs',s.observacao.substring(0,200)],
+  ].filter(Boolean);
+  showPan(codeFirstLabel(s),rows,[
+    sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
+    {l:siteFlag?'🚩 Editar flag':'🚩 Marcar',c:siteFlag?'a':'b',fn:`openFlagEditor('site','${String(s.id).replace(/'/g,"\\'")}')`},
+    {l:'Novo DGO',c:'b',fn:`abrirDgoNoSite('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')`},
+    {l:'Nova caixa',c:'b',fn:`abrirCaixaContextual('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}',${pt[0]},${pt[1]})`},
+    {l:'Ponto A',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-a')`},
+    {l:'Ponto B',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-b')`},
+    sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil!=='leitura'&&{l:'Falha',c:'r',fn:`regFalha(${pt[0]},${pt[1]},'${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
+    {l:'Nova ruptura',c:'a',fn:`abrirNovaRupturaContextual('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}',${pt[0]},${pt[1]})`},
+    {l:'Rota',fn:`abrirRastreamento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')` },
+    sessao.perfil==='admin'&&canEdit&&{l:'Excluir',c:'r',fn:`del('sites','${s.id}')`},
+  ].filter(Boolean));
+  if(siteFlag){
+    $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [siteFlag.priority||'normal',siteFlag.color||'var(--am)'],
+      [siteFlag.category||'operacao',siteFlag.color||'var(--am)']
+    ])}</div>${siteFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(siteFlag.note)}</div>`:''}</div>`;
+  }
+  $('pb').innerHTML+=operationalSummaryHtml(s.codigo||s.nome||'');
+  $('pb').innerHTML+=buildRefLinksHtml(s.codigo||s.nome||'');
+  focI('s-'+s.id);
+}
+function showPanCabo(c,pts,lenCalc){
+  closePan();
+  highlightCable(c.id);
+  const caboFlag=getFlagForAsset('cabo',c.id);
+  const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
+  const cableState=getCableOperationalState(c,lenCalc);
+  const rel=cableState.rel;
+  showPan(codeFirstLabel(c),[
+    ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
+    ['Comprimento cad.',km(c.comprimento)],
+    ['Comprimento calc.',km(lenCalc)],
+    diff!==null&&['Diferença',km(diff)+(diff>1000?' ⚠':'')],
+    c.status&&['Status',c.status,TC(c.status)],
+    c.observacao&&['Obs',c.observacao.substring(0,200)],
+  ],[
+    {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${String(c.id).replace(/'/g,"\\'")}')`},
+    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${c.id}')`},
+    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
+    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
+  ].filter(Boolean));
+  if(caboFlag){
+    $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [caboFlag.priority||'normal',caboFlag.color||'var(--am)'],
+      [caboFlag.category||'operacao',caboFlag.color||'var(--am)']
+    ])}</div>${caboFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caboFlag.note)}</div>`:''}</div>`;
+  }
+  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+    [cableState.status,cableState.tone],
+    [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
+    [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
+  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${cableState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(cableState.status)}</b><br>${esc(cableState.detail)}</div></div>`;
+  if(rel.segs.length){
+    $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+  }
+  $('pb').innerHTML+=buildRupturaLinksHtml(rel.rupts);
+  focI('c-'+c.id);
+}
+function showPan(t,rows,acts){
+  $('pt').textContent=t;
+  $('pb').innerHTML=rows.filter(Boolean).map(([l,v,c])=>`<div class="pr"><span class="pl">${l}</span><span class="pv">${c?`<span class="stg ${c}">${v}</span>`:esc(String(v||'—'))}</span></div>`).join('');
+  $('pa').innerHTML=acts.filter(Boolean).map(a=>`<button class="pac ${a.c||''}" onclick="${a.fn}">${a.l}</button>`).join('');
+  $('pan').style.display='block';
+}
+function closePan(){$('pan').style.display='none';}
+
+// FERRAMENTAS
+function goLoc(){navigator.geolocation.getCurrentPosition(p=>{if(locMk)map.removeLayer(locMk);locMk=L.marker([p.coords.latitude,p.coords.longitude],{icon:mkLoc(),zIndexOffset:3000}).addTo(map);map.setView([p.coords.latitude,p.coords.longitude],17);toast('Localização atual','in');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:12000});}
+function toggleEdit(){editMode=!editMode;$('bed').classList.toggle('on',editMode);if(editMode){map.on('click',editClick);toast('Clique no mapa para criar site','wn');}else map.off('click',editClick);}
+function editClick(e){if(!drawMode&&!medMode&&!incMode&&!moveMode)openM('site',null,e.latlng.lat,e.latlng.lng);}
+function toggleCaixaMap(){caixaMapMode=!caixaMapMode;$('bcx').classList.toggle('on-b',caixaMapMode);if(caixaMapMode){map.on('click',caixaMapClick);toast('Clique no mapa para lançar caixa de emenda','in');}else map.off('click',caixaMapClick);}
+function caixaMapClick(e){
+  if(drawMode||medMode||incMode||moveMode)return;
+  $('cx-lat').value=e.latlng.lat.toFixed(6);
+  $('cx-lng').value=e.latlng.lng.toFixed(6);
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  caixaMapMode=false;
+  $('bcx').classList.remove('on-b');
+  map.off('click',caixaMapClick);
+  toast('Preencha os dados da nova caixa no cadastro','ok');
+}
+function toggleMed(){if(medMode){cancelMed();return;}medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);toast('Medição ativa','in');}
+function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#4da6ff',fillOpacity:1,weight:2}).addTo(map));if(medPts.length>=2){if(medLn)map.removeLayer(medLn);medLn=L.polyline(medPts,{color:'#4da6ff',weight:2.5,dashArray:'5 4',opacity:.9}).addTo(map);}const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);$('med-info').textContent=medPts.length>1?`${medPts.length} pts • ${km(d)}`:'1 ponto';if(medPts.length>1)$('h-med').textContent=`📏 ${medPts.length} pts • ${km(d)} — duplo clique p/ finalizar`;}
+function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
+function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
+function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
+function startDraw(seedPts=[],target='segmento'){
+  if(drawMode){cancelDraw();return;}
+  drawMode=true;
+  drawTarget=target||'segmento';
+  drawPts=[];
+  $('bdc').classList.add('on-g');
+  $('h-draw').style.display='block';
+  $('drawbar').style.display='flex';
+  clearDrawLines();
+  map.on('click',addDrawPt);
+  map.on('dblclick',finishDraw);
+  if(Array.isArray(seedPts)&&seedPts.length){
+    seedPts.forEach(p=>{
+      const latlng=Array.isArray(p)?L.latLng(p[0],p[1]):L.latLng(p.lat,p.lng);
+      drawPts.push(latlng);
+      drawMks.push(L.circleMarker(latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));
+    });
+    if(drawPts.length>=2){
+      drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);
+      const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);
+      $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;
+    }
+    toast('Ajuste a linha e finalize com duplo clique','in');
+    return;
+  }
+  toast(drawTarget==='cabo'?'Trace o novo trajeto do cabo':'Trace o segmento físico','in');
+}
+function addDrawPt(e){if(!drawMode)return;drawPts.push(e.latlng);drawMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#3ecf8e',fillOpacity:1,weight:2}).addTo(map));if(drawPts.length>=2){if(drawLn)map.removeLayer(drawLn);drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);}if(drawPts.length>=2){const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);$('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;}else{$('h-draw').textContent='🔌 1 ponto marcado • continue ou cancele';}}
+function finishDraw(e){
+  L.DomEvent.stopPropagation(e);
+  if(drawPts.length<2)return;
+  const d=Math.round(drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0));
+  const pts=drawPts.map(p=>[Number(p.lat.toFixed(6)),Number(p.lng.toFixed(6))]);
+  cancelDraw();
+  if(drawTarget==='cabo'){
+    if($('ec-geo'))$('ec-geo').value=JSON.stringify(pts);
+    if($('ec-comp'))$('ec-comp').value=d;
+    if($('ec-msg'))msgField('ec-msg','Geometria do cabo pronta. Revise e salve.','ok');
+    toast('Trajeto do cabo atualizado. Revise e salve.','ok');
+    return;
+  }
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if($('sg-metr'))$('sg-metr').value=d;
+  if($('sg-geo'))$('sg-geo').value=JSON.stringify(pts);
+  if($('sg-obs'))$('sg-obs').value=(($('sg-obs').value||'').trim()?$('sg-obs').value.trim()+' | ':'')+`Trajeto desenhado com ${pts.length} ponto(s)`;
+  msgField('sg-msg','Geometria do segmento pronta. Revise A/B e salve.','ok');
+  toast('Preencha os pontos A/B e salve o segmento físico','ok');
+}
+function undoDrawPt(){
+  if(!drawMode||!drawPts.length)return;
+  drawPts.pop();
+  const last=drawMks.pop();
+  if(last)map.removeLayer(last);
+  if(drawLn){map.removeLayer(drawLn);drawLn=null;}
+  if(drawPts.length>=2){
+    drawLn=L.polyline(drawPts,{color:'#3ecf8e',weight:2.5,dashArray:'6 4',opacity:.9}).addTo(map);
+    const d=drawPts.reduce((a,p,i)=>i===0?0:a+drawPts[i-1].distanceTo(p),0);
+    $('h-draw').textContent=`🔌 ${drawPts.length} pts • ${km(d)} — finalize pela barra`;
+  }else{
+    $('h-draw').textContent='🔌 Trace o cabo • finalize pela barra';
+  }
+}
+function finishDrawManual(){
+  if(!drawMode||drawPts.length<2){toast('Adicione pelo menos 2 pontos','wn');return;}
+  finishDraw({stopPropagation(){}});
+}
+function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('drawbar').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
+function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
+function redesenharSegmentoAtual(){
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  let seed=[];
+  try{
+    const raw=$('sg-geo')?.value||'';
+    if(raw)seed=JSON.parse(raw);
+  }catch{}
+  startDraw(seed,'segmento');
+}
+function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
+function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
+function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);openM('incidente',null,lat,lng,null,null,site);}
+function moverIniciar(id,nome){closePan();moveMode=true;$('h-move').style.display='block';toast('Clique no novo local de '+nome,'wn');map.once('click',async e=>{moveMode=false;$('h-move').style.display='none';const{lat,lng}=e.latlng;const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({localizacao:`SRID=4326;POINT(${lng} ${lat})`})});if([200,204].includes(r.status)){toast('✓ Site movido!');loadMap();}else toast('Erro ao mover','er');});}
+
+// RASTREAMENTO
+function abrirRastreamento(siteNome){
+  siteNome=siteNome||'';
+  $('mtt').textContent='🔍 Rastreamento ponta a ponta';
+  $('mbd').innerHTML=`
+    <div style="font-size:11px;color:var(--t2);margin-bottom:10px;background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;line-height:1.6">Destaque todos os cabos entre dois sites.</div>
+    <div class="mfgr">
+      <div class="mfg"><label>Origem *</label><input id="rt-a" value="${esc(siteNome)}" placeholder="SAG, JCT..."></div>
+      <div class="mfg"><label>Destino *</label><input id="rt-b" placeholder="ESL, BMJ..."></div>
+    </div>
+    <div class="mfg"><label>Filtrar camada</label><select id="rt-c"><option value="">Todas</option><option>backbone</option><option>metro_alta</option><option>metro_dist</option><option>acesso</option></select></div>
+    <div id="rt-res" style="display:none;margin:8px 0"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="limparRast()">Limpar</button><button class="btn2 p" onclick="execRast()">🔍 Rastrear</button></div>`;
+  $('mbg').classList.add('show');
+}
+async function findNodeId(ref){
+  const key=String(ref||'').trim().toUpperCase();
+  if(!key)return null;
+  // Busca em network_nodes por sigla ou nome
+  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(sigla.ilike.*${key}*,nome.ilike.*${key}*)&limit=1`,{headers:RH});
+  if(!r.ok)return null;
+  const d=await r.json();
+  return d?.[0]?.id || null;
+}
+
+async function execRast(){
+  const orig=($('rt-a')?.value||'').trim().toUpperCase();
+  const dest=($('rt-b')?.value||'').trim().toUpperCase();
+  const cam=$('rt-c')?.value||'';
+  if(!orig||!dest){toast('Informe origem e destino','er');return;}
+  
+  const el=$('rt-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Buscando nós no grafo...</div>';
+  
+  const [idA, idB] = await Promise.all([findNodeId(orig), findNodeId(dest)]);
+  if(!idA || !idB){
+    el.innerHTML=`<div style="color:var(--rd);padding:8px">Nó(s) não localizado(s) no grafo: ${!idA?orig:''} ${!idB?dest:''}</div>`;
+    return;
+  }
+
+  el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando rota (BFS)...</div>';
+  limparRast();rastLayer=L.layerGroup().addTo(map);
+
   try {
-    const res = await fetch(`${SU}/rest/v1/dgo?id=eq.${id}&select=*,site:site_id(codigo,nome)`, {headers:RH});
-    const dg = (await res.json())[0];
-    if(!dg) throw new Error('DGO não encontrado');
+    const r=await fetch(`${SU}/rest/v1/rpc/fn_tracer_bfs`,{
+      method:'POST',
+      headers:{...RH,'Content-Type':'application/json'},
+      body:JSON.stringify({p_node_inicio:idA, p_node_fim:idB, p_max_hops:50})
+    });
     
-    goTab('cadastro', document.querySelector('.nt[onclick*="cadas
+    if(!r.ok){
+      const err=await r.json();
+      el.innerHTML=`<div style="color:var(--rd);padding:8px">Erro no tracer: ${err.message||r.status}</div>`;
+      return;
+    }
+    
+    const path = await r.json();
+    if(!path || path.length===0){
+      el.innerHTML='<div style="color:var(--am);padding:8px">Nenhum caminho encontrado entre os pontos.</div>';
+      return;
+    }
+
+    const bounds=[]; let dist=0, nc=0;
+    // O retorno do BFS costuma ser uma lista de 'passos' (nodes/edges)
+    // Vamos iterar e desenhar as geometrias das edges
+    path.forEach(step => {
+      if(step.edge_geom){
+        // Converter PostGIS hex/EWKB ou GeoJSON para Leaflet (assumindo que o RPC retorne algo tratável)
+        // Se o RPC retornar GeoJSON direto na edge_geom:
+        const pts = step.edge_geom.type === 'LineString' ? step.edge_geom.coordinates.map(p=>[p[1],p[0]]) : null;
+        if(pts){
+          const cor = step.camada==='backbone'?'#f0a500':step.camada==='metro_alta'?'#f97316':step.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
+          addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${step.ativo_nome||'Cabo'}</b><br>${step.ativo_tabela||'—'} | ${km(step.peso_distancia_m)}`});
+          pts.forEach(p=>bounds.push(p));
+          dist += Number(step.peso_distancia_m)||0; nc++;
+        }
+      }
+    });
+
+    if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
+    el.innerHTML=`<div style="color:var(--gr);padding:8px;font-size:11px">✓ <b>Caminho encontrado!</b><br>${nc} saltos | ${km(dist)}</div>`;
+    closeM(); toast(`🔍 Rota: ${nc} saltos | ${km(dist)}`,'ok');
+
+  } catch (err) {
+    el.innerHTML=`<div style="color:var(--rd);padding:8px">Falha na requisição: ${err.message}</div>`;
+  }
+}
+function limparRast(){if(rastLayer){map.removeLayer(rastLayer);rastLayer=null;}}
+
+// OTDR
+function abrirOTDR(caboId,caboNome,compTotal){
+  caboId=caboId||'';caboNome=caboNome||'';compTotal=Number(compTotal)||0;
+  $('mtt').textContent='📡 Localizar rompimento OTDR';
+  const opts=allC.filter(c=>Number(c.comprimento)>0).sort((a,b)=>(a.nome||'').localeCompare(b.nome||'')).map(c=>`<option value="${c.id}" data-comp="${c.comprimento}"${c.id===caboId?' selected':''}>${c.nome||c.id.slice(0,8)} (${km(c.comprimento)})</option>`).join('');
+  $('mbd').innerHTML=`
+    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.25);border-radius:7px;padding:9px 11px;margin-bottom:12px;font-size:11px;color:var(--t2);line-height:1.6">📡 Insira a distância do OTDR. O ponto será plotado no mapa com marcador vermelho pulsante.</div>
+    <div class="mfg"><label>Cabo afetado *</label><select id="ot-cb"><option value="">-- Selecione --</option>${opts}</select></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Distância OTDR da ponta A (m) *</label><input id="ot-d" type="number" step="1" min="0" placeholder="3500"></div>
+      <div class="mfg"><label>Cabo lançado após rompimento (m)</label><input id="ot-lc" type="number" step="1" min="0" placeholder="200"></div>
+    </div>
+    <div class="mfg"><label>Descrição da falha</label><input id="ot-desc" placeholder="Rompimento por obra, vandalismo, causa natural..."></div>
+    <div id="ot-res" style="display:none;margin:8px 0"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="limparOTDR()">Limpar</button><button class="btn2 p" onclick="plotarOTDR()">📍 Localizar</button></div>`;
+  $('mbg').classList.add('show');
+}
+async function plotarOTDR(){
+  const caboId=$('ot-cb')?.value;
+  const dist=parseFloat($('ot-d')?.value);
+  const lanc=parseFloat($('ot-lc')?.value||0);
+  const desc=$('ot-desc')?.value||'';
+  if(!caboId){toast('Selecione o cabo','er');return;}
+  if(!dist||dist<=0){toast('Informe a distância','er');return;}
+  const cabo=allC.find(c=>c.id===caboId);
+  if(!cabo){toast('Cabo não encontrado','er');return;}
+  const el=$('ot-res');el.style.display='block';el.innerHTML='<div style="text-align:center;padding:8px;color:var(--t2)">Calculando...</div>';
+  let lat=null,lng=null,pct=0;
+  try{
+    const r=await fetch(`${SU}/rest/v1/rpc/ponto_no_cabo`,{method:'POST',headers:{...RH,'Content-Type':'application/json'},body:JSON.stringify({cabo_id:caboId,distancia_m:dist})});
+    if(r.ok){const d=await r.json();if(d&&d[0]){lat=d[0].lat;lng=d[0].lng;pct=d[0].pct;}}
+  }catch{}
+  if(!lat&&cabo.trajeto?.coordinates){
+    const coords=cabo.trajeto.coordinates;const comp=Number(cabo.comprimento)||1;
+    pct=Math.min(dist/comp,1.0);const idx=Math.round(pct*(coords.length-1));
+    const c2=coords[Math.min(idx,coords.length-1)];lng=c2[0];lat=c2[1];
+  }
+  if(!lat){el.innerHTML='<div style="color:var(--rd);padding:8px">Não foi possível calcular — cabo sem geometria.</div>';return;}
+  limparOTDR();otdrLayer=L.layerGroup().addTo(map);
+  // Marcador de rompimento vermelho pulsante
+  L.marker([lat,lng],{icon:mkRomp(),zIndexOffset:4000})
+    .bindPopup(`<b>📡 Rompimento OTDR</b><br><b>Cabo:</b> ${esc(cabo.nome||'—')}<br><b>Distância:</b> ${dist}m (${Math.round(pct*100)}%)<br><b>Coords:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}${lanc?`<br><b>Cabo lançado:</b> ${lanc}m`:''}<br><b>Falha:</b> ${esc(desc)||'—'}`)
+    .openPopup().addTo(otdrLayer);
+  // Se tem cabo lançado, mostrar marcador de nova caixa
+  if(lanc>0){
+    const angulo=Math.random()*Math.PI*2;
+    const latN=lat+Math.cos(angulo)*lanc/111320;
+    const lngN=lng+Math.sin(angulo)*lanc/(111320*Math.cos(lat*Math.PI/180));
+    L.marker([latN,lngN],{icon:mkNovaBox(lanc),zIndexOffset:3900}).bindPopup(`<b>📦 Nova caixa / emenda</b><br>+${lanc}m de cabo lançado após rompimento`).addTo(otdrLayer);
+    addCableVisual(otdrLayer,[[lat,lng],[latN,lngN]],{color:'#3ecf8e',weight:4,dashArray:'6 4',opacity:.95,className:'otdr-line',popup:`Cabo novo lançado: ${lanc}m`});
+  }
+  // Trecho percorrido e após rompimento
+  if(cabo.trajeto?.coordinates){
+    const pts=cabo.trajeto.coordinates.map(c2=>[c2[1],c2[0]]);
+    const idx=Math.round(pct*(pts.length-1));
+    if(idx>0)addCableVisual(otdrLayer,pts.slice(0,idx+1),{color:'#f0a500',weight:6,opacity:.96,className:'otdr-line',popup:'Trecho percorrido: '+dist+'m'});
+    if(idx<pts.length-1)addCableVisual(otdrLayer,pts.slice(idx),{color:'#e84455',weight:6,opacity:.96,dashArray:'8 5',className:'trace-line',popup:'Trecho após rompimento'});
+  }
+  map.setView([lat,lng],16);
+  const nomeEsc=(cabo.nome||'').replace(/'/g,"\\'");const descEsc=desc.replace(/'/g,"\\'");
+  el.innerHTML=`<div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.3);border-radius:8px;padding:10px 12px">
+    <div style="font-size:12px;font-weight:700;color:var(--rd);margin-bottom:6px">📍 Rompimento localizado!</div>
+    <div style="font-size:11px;color:var(--t2);line-height:2">
+      Cabo: <b>${esc(cabo.nome||'—')}</b><br>
+      Distância: <b>${dist}m</b> (${Math.round(pct*100)}% do cabo)<br>
+      Coords: <b>${lat.toFixed(5)}, ${lng.toFixed(5)}</b><br>
+      ${lanc?`Cabo lançado: <b>${lanc}m</b> após rompimento<br>`:''}
+    </div>
+    <button onclick="regIncOTDR(${lat},${lng},'${nomeEsc}',${dist},${lanc},'${descEsc}')"
+      style="margin-top:8px;width:100%;padding:8px;border-radius:6px;border:1px solid var(--rd);background:rgba(232,68,85,.15);color:var(--rd);cursor:pointer;font-size:11px;font-weight:600;font-family:inherit">
+      🚨 Registrar como incidente SLA 5h
+    </button>
+  </div>`;
+  closeM();toast(`📍 Rompimento: ${dist}m da ponta A`,'er');
+}
+function limparOTDR(){if(otdrLayer){map.removeLayer(otdrLayer);otdrLayer=null;}}
+async function regIncOTDR(lat,lng,cabo,dist,lanc,desc){
+  const obs=`Localizado por OTDR a ${dist}m da ponta A. Coords: ${lat.toFixed(5)},${lng.toFixed(5)}.${lanc?` Cabo novo lançado: ${lanc}m.`:''} ${desc||''}`.trim();
+  const reg={titulo:`Rompimento OTDR: ${cabo} a ${dist}m`,descricao:obs,tipo:'rompimento',severidade:'critica',lat_falha:lat,lng_falha:lng,distancia_otdr_m:dist,status:'aberto',sla_horas:5,responsavel:sessao?.nome||'Sistema'};
+  const r=await fetch(`${SU}/rest/v1/incidentes`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('🚨 Incidente registrado!','er');loadIncidentes();loadRompimentosNoMapa();}else toast('Erro ao registrar','er');
+}
+
+// NAVEGAÇÃO
+function goTab(tab,el){
+  document.querySelectorAll('.nt').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  if(el)el.classList.add('on');$('pg-'+tab).classList.add('on');
+  if(tab==='rotas')loadRotas();if(tab==='incidentes')loadIncidentes();if(tab==='usuarios')loadUsuarios();if(tab==='auditoria')rodarAuditoriaIA(true);
+}
+
+// INCIDENTES
+async function loadIncidentes(){
+  const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,criado_em.desc&limit=50`,{headers:RH});
+  const incs=r.ok?await r.json():[];
+  const ab=incs.filter(i=>i.status!=='resolvido').length;
+  const badge=$('ibadge');badge.style.display=ab>0?'inline':'none';if(ab>0)badge.textContent=ab;
+  $('inc-list').innerHTML=incs.length?incs.map(i=>{
+    const dt=i.abertura_em||i.criado_em||new Date().toISOString();
+    const h=(Date.now()-new Date(dt))/3600000;
+    const sla=i.sla_horas||5;const pct=Math.min(h/sla*100,100);
+    const cor=i.status==='resolvido'?'#3ecf8e':pct>=100?'#e84455':pct>=70?'#f0a500':'#4da6ff';
+    return`<div class="lcard"><div class="lct">
+      <span style="font-size:15px">${i.severidade==='critica'?'🔴':i.severidade==='alta'?'🟠':'🟡'}</span>
+      <div class="lctt">${esc(i.titulo)}</div>
+      <span class="tag ${i.status==='resolvido'?'tg':i.status==='em_atendimento'?'ta':'tr'}">${i.status}</span>
+    </div>
+    <div class="lcsb">${i.site_afetado?`<span>📍 ${esc(i.site_afetado)}</span>`:''}
+    <span>⏱ ${h.toFixed(1)}h/${sla}h SLA</span>${i.responsavel?`<span>👤 ${esc(i.responsavel)}</span>`:''}</div>
+    <div class="sla-bar"><div class="sla-p" style="width:${pct}%;background:${cor}"></div></div>
+    ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<div style="margin-top:8px;display:flex;gap:6px">
+      <button onclick="resolverInc('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✓ Resolver</button>
+    </div>`:''}
+    </div>`;
+  }).join(''):`<div style="padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">✅</div>Nenhum incidente ativo</div>`;
+}
+async function resolverInc(id){
+  if(!confirm('Marcar como resolvido?'))return;
+  const r=await fetch(`${SU}/rest/v1/incidentes?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({status:'resolvido',resolvido_em:new Date().toISOString()})});
+  if([200,204].includes(r.status)){toast('✓ Incidente resolvido!');loadIncidentes();loadRompimentosNoMapa();}else toast('Erro ao resolver','er');
+}
+
+// ROTAS
+async function loadRotas(){
+  const r=await fetch(`${SU}/rest/v1/rotas?select=*&order=criado_em.desc&limit=50`,{headers:RH});
+  allR=r.ok?await r.json():[];
+  $('rotas-list').innerHTML=allR.length?allR.map(rt=>`
+    <div class="lcard"><div class="lct">
+      <span style="font-size:14px">${rt.tipo==='anel'?'⭕':rt.tipo==='rota_protecao'?'🔵':'➡'}</span>
+      <div class="lctt">${esc(rt.nome)}</div>
+      <span class="tag tg">${rt.status||'ativo'}</span>
+    </div>
+    <div class="lcsb">
+      <span>📍 ${esc(rt.site_a||'?')} ↔ ${esc(rt.site_b||'?')}</span>
+      ${rt.distancia_total_m?`<span>📏 ${km(rt.distancia_total_m)}</span>`:''}
+      ${rt.n_emendas?`<span>🔴 ${rt.n_emendas} emendas</span>`:''}
+      ${rt.hierarquias?.length?`<span>📶 ${rt.hierarquias.join(', ')}</span>`:''}
+    </div></div>`).join(''):`<div style="padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">🔗</div>Nenhuma rota cadastrada</div>`;
+}
+
+// USUÁRIOS
+async function loadUsuarios(){
+  const r=await fetch(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:RH});
+  const us=r.ok?await r.json():[];
+  const PC={admin:'tp',supervisor:'tb2',colaborador:'tg',leitura:'ta'};
+  $('user-list').innerHTML=us.map(u=>`
+    <div class="lcard"><div class="lct">
+      <span style="font-size:14px">${u.perfil==='admin'?'👑':u.perfil==='supervisor'?'🔵':'👤'}</span>
+      <div class="lctt">${esc(u.nome)}</div>
+      <span class="tag ${PC[u.perfil]||'ta'}">${u.perfil}</span>
+      <span class="tag ${u.ativo?'tg':'ter'}">${u.ativo?'ativo':'inativo'}</span>
+    </div>
+    <div class="lcsb">
+      <span>✉ ${esc(u.email)}</span>
+      ${u.ultimo_acesso?`<span>🕐 ${new Date(u.ultimo_acesso).toLocaleDateString('pt-BR')}</span>`:'<span style="color:var(--t3)">Nunca acessou</span>'}
+    </div>
+    ${sessao.perfil==='admin'?`<div style="margin-top:8px;display:flex;gap:6px">
+      <button onclick="editarUsuario('${u.id}')" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--bl);background:transparent;color:var(--bl);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✏ Editar</button>
+      ${u.id!==sessao.id?`<button onclick="toggleUsuario('${u.id}',${!u.ativo})" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">${u.ativo?'⊘ Inativar':'✓ Ativar'}</button>`:''}</div>`:''}</div>`).join('');
+}
+async function editarUsuario(id){
+  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
+  const us=r.ok?await r.json():[];if(!us.length)return;
+  const u=us[0];
+  $('mtt').textContent='Editar colaborador';
+  $('mbd').innerHTML=`
+    <div class="mfg"><label>Nome *</label><input id="eu-nome" value="${esc(u.nome||'')}"></div>
+    <div class="mfg"><label>E-mail *</label><input id="eu-email" type="email" value="${esc(u.email||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Perfil</label><select id="eu-perfil">${['colaborador','supervisor','leitura','admin'].map(p=>`<option ${u.perfil===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Nova senha (deixe em branco para manter)</label><input id="eu-senha" type="password" placeholder="••••••••"></div>
+    </div>
+    <div id="eu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarUsuarioEdit('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarUsuarioEdit(id){
+  const nome=($('eu-nome')?.value||'').trim();
+  const email=($('eu-email')?.value||'').trim().toLowerCase();
+  const perfil=$('eu-perfil')?.value;
+  const senha=($('eu-senha')?.value||'').trim();
+  const msg=$('eu-msg');
+  if(!nome||!email){msg.textContent='Nome e e-mail são obrigatórios';msg.style.color='var(--rd)';return;}
+  const reg={nome,email,perfil};
+  if(senha)reg.senha_texto=senha;
+  const rs=await authUpdateUsuario(id,reg);
+  if(rs.ok){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
+  else{msg.textContent='Erro ao salvar: '+(rs.error||'falha desconhecida');msg.style.color='var(--rd)';}
+}
+async function toggleUsuario(id,ativo){
+  const rs=await authUpdateUsuario(id,{ativo});
+  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast(rs.error||'Erro ao atualizar usuário','er');
+}
+
+function auditCard(title,detail,tone='in'){
+  return `<div class="audit-card ${tone}"><div class="title">${esc(title)}</div><div class="detail">${esc(detail)}</div></div>`;
+}
+function auditIssueCard(issue){
+  const tone=issue.severity==='critico'?'#e84455':issue.severity==='alto'?'#f0a500':'#4da6ff';
+  return `<div class="audit-issue" style="border-left:4px solid ${tone}">
+    <div class="audit-row">
+      <div class="audit-title">${esc(issue.title)}</div>
+      <div class="audit-chip-row">
+        ${issue.domain?`<span class="stg tok">${esc(issue.domain)}</span>`:''}
+        ${issue.kind?`<span class="stg tok">${esc(issue.kind)}</span>`:''}
+        <span class="stg ${issue.severity==='critico'?'ter':issue.severity==='alto'?'twn':'tok'}">${esc(issue.severity)}</span>
+      </div>
+    </div>
+    <div class="audit-detail">${esc(issue.detail)}</div>
+    <div class="audit-note">${esc(issue.action)}</div>
+    ${issue.fn?`<div class="audit-cta"><button class="pac ${issue.severity==='critico'||issue.severity==='alto'?'a':'b'}" style="width:100%" onclick="${issue.fn}">${esc(issue.fnLabel||'Abrir correção')}</button></div>`:''}
+  </div>`;
+}
+function auditPriority(issue){
+  const sev={critico:400,alto:300,medio:200,baixo:100}[issue.severity]||0;
+  const kind={campo:40,continuidade:35,ruptura:35,topologia:30,dados:20,ux:10}[issue.kind]||0;
+  const domain={mapa:30,segmento:28,ativo:26,cabo:24,dgo:22,science:18,performance:16,offline:14}[issue.domain]||0;
+  return sev+kind+domain;
+}
+function sortAuditIssues(issues){
+  return [...issues].sort((a,b)=>{
+    const diff=auditPriority(b)-auditPriority(a);
+    if(diff!==0)return diff;
+    return String(a.title||'').localeCompare(String(b.title||''),'pt-BR');
+  });
+}
+function openFirstBrokenSegment(){
+  const seg=getInvStore().segmentos.find(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b));
+  if(!seg){toast('Nenhum segmento quebrado encontrado','wn');return;}
+  jumpToSegmentDraft(seg.id);
+}
+function openFirstBrokenPoint(){
+  const refs=[
+    ...getInvStore().caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...getInvStore().dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const found=refs.find(ref=>{
+    const st=getPointOperationalState(ref);
+    return st&&(st.status==='quebrado'||st.status==='sem continuidade');
+  });
+  if(!found){toast('Nenhum ativo quebrado encontrado','wn');return;}
+  jumpToRef(found);
+}
+function openFirstPendingPoint(){
+  const refs=[
+    ...getInvStore().caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...getInvStore().dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const found=refs.find(ref=>{
+    const st=getPointOperationalState(ref);
+    return st&&(st.status==='pendente'||st.status==='em montagem');
+  });
+  if(!found){toast('Nenhum ativo pendente encontrado','wn');return;}
+  jumpToRef(found);
+}
+function openFirstSegmentPendingGeometry(){
+  const seg=getInvStore().segmentos.find(s=>getSegmentOperationalState(s).status==='pendente geometria');
+  if(!seg){toast('Nenhum segmento pendente de geometria','wn');return;}
+  showPanSegmentoDraft(seg);
+}
+function openFirstCableWithRupture(){
+  const found=allC.find(c=>getCableOperationalState(c,c.comprimento||0).status==='com ruptura');
+  if(!found){toast('Nenhum cabo com ruptura local encontrado','wn');return;}
+  const rel=getCableDraftRelations(found.nome||'');
+  if(rel.rupts[0])jumpToRupturaDraft(rel.rupts[0].id);
+  else showPanCabo(found,PL(found.trajeto)||[],found.comprimento||0);
+}
+function openFirstDgoUnresolved(){
+  const dg=getInvStore().dgos.find(d=>!findDraftPoint(d.site||''));
+  if(!dg){toast('Nenhum DGO pendente de site encontrado','wn');return;}
+  editarDgoDraft(dg.id);
+}
+function openFirstDgoPendencia(){
+  const p=getInvStore().pendencias.find(x=>String(x.tipo||'').startsWith('dgo_'));
+  if(!p){toast('Nenhuma pendência de DGO encontrada','wn');return;}
+  showPanPendencia(p);
+}
+function activateFieldPreset(){
+  applyPreset('campo');
+  if(!fieldMode)applyFieldMode(true,'Preset de campo ativado pela auditoria.');
+  else toast('Preset de campo reforçado para uso operacional','ok');
+}
+function auditMetrics(){
+  const store=getInvStore();
+  const sciOnly=allS.filter(s=>s.fonte==='science').length;
+  const merged=allS.filter(s=>s.fonte==='supabase+science').length;
+  const cnReady=allS.filter(s=>normText(s.cn)||normText(s.science?.cn)).length;
+  const semGeo=allS.filter(s=>!PP(s.localizacao)).length;
+  const segBroken=store.segmentos.filter(s=>!findDraftPoint(s.ponto_a)||!findDraftPoint(s.ponto_b)).length;
+  const dgoResolved=store.dgos.filter(d=>findDraftPoint(d.site||'')).length;
+  const activeVis=Object.values(VIS).filter(Boolean).length;
+  const cacheReady=!!loadMapCache();
+  const pointRefs=[
+    ...store.caixas.map(cx=>cx.codigo||cx.nome||''),
+    ...store.dgos.map(dg=>dg.codigo||dg.site||'')
+  ].filter(Boolean);
+  const pointStates=pointRefs.map(ref=>getPointOperationalState(ref)).filter(Boolean);
+  const pointBroken=pointStates.filter(s=>s.status==='quebrado'||s.status==='sem continuidade').length;
+  const pointPending=pointStates.filter(s=>s.status==='pendente'||s.status==='em montagem').length;
+  const pointReady=pointStates.filter(s=>s.status==='confirmado').length;
+  const segStates=store.segmentos.map(getSegmentOperationalState);
+  const segReady=segStates.filter(s=>s.status==='pronto para campo').length;
+  const segPendingGeo=segStates.filter(s=>s.status==='pendente geometria').length;
+  const cabStates=allC.slice(0,300).map(c=>getCableOperationalState(c,c.comprimento||0));
+  const cabNoInventory=cabStates.filter(s=>s.status==='sem inventário local').length;
+  const cabWithRupture=cabStates.filter(s=>s.status==='com ruptura').length;
+  return{store,sciOnly,merged,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,pointReady,segReady,segPendingGeo,cabNoInventory,cabWithRupture};
+}
+function collectAuditIssues(){
+  const {store,sciOnly,cnReady,semGeo,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,segReady,segPendingGeo,cabNoInventory,cabWithRupture}=auditMetrics();
+  const issues=[];
+  
+  // Sincronização e Rascunhos
+  const unsyncedCaixas = store.caixas.filter(x => !x._synced);
+  const unsyncedDgos = store.dgos.filter(x => !x._synced);
+  const unsyncedSegs = store.segmentos.filter(x => !x._synced);
+  const unsyncedRups = store.rupturas.filter(x => !x._synced);
+  const totalUnsynced = unsyncedCaixas.length + unsyncedDgos.length + unsyncedSegs.length + unsyncedRups.length;
+  
+  if(totalUnsynced > 0){
+    const oldest = [...unsyncedCaixas, ...unsyncedDgos, ...unsyncedSegs, ...unsyncedRups]
+      .map(x => new Date(x.criado_em || 0)).sort((a,b) => a-b)[0];
+    const hours = oldest ? (new Date() - oldest) / 36e5 : 0;
+    
+    issues.push({
+      severity: hours > 24 ? 'alto' : 'medio',
+      domain: 'sincronizacao',
+      kind: 'dados',
+      title: `${totalUnsynced} rascunho(s) pendente(s) de nuvem`,
+      detail: hours > 24 ? `Há rascunhos locais criados há mais de ${Math.round(hours)}h sem sincronização.` : `Existem ${totalUnsynced} itens salvos apenas localmente.`,
+      action: 'Clique em "Sincronizar Tudo" na aba Auditoria para persistir no banco.',
+      fn: 'syncLocalDrafts()',
+      fnLabel: '☁ Sincronizar agora'
+    });
+  }
+
+  if(store.rupturas.length > 0) {
+    issues.push({
+      severity: 'baixo',
+      domain: 'incidente',
+      kind: 'campo',
+      title: `${store.rupturas.length} ruptura(s) registrada(s)`,
+      detail: `Há incidentes de campo documentados no rascunho local.`,
+      action: 'Validar se a correção já foi feita antes de arquivar.'
+    });
+  }
+
+  if(!allS.length)issues.push({severity:'critico',domain:'mapa',kind:'campo',title:'Mapa sem sites carregados',detail:'A camada principal de sites está vazia. Sem isso o mapa não é operacional.',action:'Bloquear publicação até a carga voltar.'});
+  if(!allC.length)issues.push({severity:'alto',domain:'mapa',kind:'continuidade',title:'Mapa sem cabos carregados',detail:'Os cabos não foram carregados ou a consulta falhou. Isso quebra continuidade e OTDR.',action:'Validar consulta de cabos e publicar só após retorno.'});
+  if(!scienceSites.length)issues.push({severity:'alto',domain:'science',kind:'dados',title:'Base Science ausente',detail:'O arquivo science_sites_mg.json não foi carregado. A aba Sites perde CN/localidade e parte da cobertura.',action:'Regenerar JSON da Science antes do publish.'});
+  if(scienceSites.length && !cnReady)issues.push({severity:'alto',domain:'science',kind:'dados',title:'Agrupamento CN/localidade indisponível',detail:'A base Science existe, mas os sites do mapa não ficaram enriquecidos com CN/localidade.',action:'Validar mescla Science + Supabase antes de publicar.'});
+  if(semGeo>0)issues.push({severity:'medio',domain:'mapa',kind:'dados',title:'Sites sem coordenada utilizável',detail:`Foram encontrados ${semGeo} site(s) sem geometrias válidas para mapa.`,action:'Corrigir origem ou filtrar no front.'});
+  if(sciOnly>0)issues.push({severity:'medio',domain:'science',kind:'dados',title:'Sites só na Science',detail:`Há ${sciOnly} site(s) aparecendo apenas da Science, ainda sem contraparte no Supabase.`,action:'Avaliar sincronização gradual para banco.'});
+  if(segBroken>0)issues.push({severity:'alto',domain:'segmento',kind:'continuidade',title:'Segmentos sem resolução ponta a ponta',detail:`Existem ${segBroken} segmento(s) de rascunho com ponto A ou B não resolvido.`,action:'Corrigir nomes dos pontos ou completar cadastro.',fn:'openFirstBrokenSegment()',fnLabel:'Abrir primeiro segmento quebrado'});
+  if(pointBroken>0)issues.push({severity:'alto',domain:'ativo',kind:'continuidade',title:'Ativos operacionais quebrados',detail:`Há ${pointBroken} ativo(s) locais classificados como quebrados ou sem continuidade.`,action:'Usar o resumo operacional e as pendências para fechar continuidade antes de consolidar.',fn:'openFirstBrokenPoint()',fnLabel:'Ir para primeiro ativo quebrado'});
+  if(pointPending>0)issues.push({severity:'medio',domain:'ativo',kind:'campo',title:'Ativos ainda pendentes',detail:`Existem ${pointPending} ativo(s) em montagem ou com continuidade parcial.`,action:'Validar em campo e confirmar conexões para reduzir pendências.',fn:'openFirstPendingPoint()',fnLabel:'Ir para primeiro ativo pendente'});
+  if(segPendingGeo>0)issues.push({severity:'medio',domain:'segmento',kind:'campo',title:'Segmentos sem geometria suficiente',detail:`Há ${segPendingGeo} segmento(s) com pontas definidas, mas sem geometria desenhada.`,action:'Redesenhar os segmentos antes de usar em campo.',fn:'openFirstSegmentPendingGeometry()',fnLabel:'Abrir primeiro segmento sem geometria'});
+  if(cabWithRupture>0)issues.push({severity:'alto',domain:'cabo',kind:'ruptura',title:'Cabos com ruptura local associada',detail:`Foram detectados ${cabWithRupture} cabo(s) com ruptura local registrada.`,action:'Revisar rapidamente os cabos com OTDR/ruptura antes de publicação operacional.',fn:'openFirstCableWithRupture()',fnLabel:'Abrir primeira ruptura ligada'});
+  if(cabNoInventory>0)issues.push({severity:'medio',domain:'cabo',kind:'dados',title:'Cabos sem inventário local',detail:`Pelo menos ${cabNoInventory} cabo(s) avaliados ainda não têm segmento local associado.`,action:'Tratar isso como lacuna de inventário, não necessariamente falha do mapa.'});
+  if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',domain:'dgo',kind:'continuidade',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.',fn:'openFirstDgoUnresolved()',fnLabel:'Abrir primeiro DGO pendente'});
+  const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
+  if(dgoPend)issues.push({severity:'medio',domain:'dgo',kind:'continuidade',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.',fn:'openFirstDgoPendencia()',fnLabel:'Abrir primeira pendência de DGO'});
+  if(activeVis>6)issues.push({severity:'medio',domain:'performance',kind:'campo',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.',fn:'activateFieldPreset()',fnLabel:'Ativar preset de campo'});
+  if(!cacheReady)issues.push({severity:'medio',domain:'offline',kind:'campo',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
+  if(!issues.length)issues.push({severity:'baixo',domain:'mapa',kind:'campo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
+  return sortAuditIssues(issues);
+}
+function renderAuditUI(issues){
+  const {store,sciOnly,merged,segBroken,dgoResolved,activeVis,cacheReady,pointBroken,pointPending,pointReady,segReady,segPendingGeo,cabNoInventory}=auditMetrics();
+  const crit=issues.filter(i=>i.severity==='critico').length;
+  const alto=issues.filter(i=>i.severity==='alto').length;
+  const medio=issues.filter(i=>i.severity==='medio').length;
+  let score=100-(crit*25+alto*12+medio*6);
+  if(score<0)score=0;
+  const scoreTone=score>=85?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
+  const topIssues=issues.slice(0,3);
+  $('aud-score').textContent=score;
+  $('aud-score').style.color=scoreTone;
+  $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
+  $('aud-resumo').innerHTML=[
+    auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
+    auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
+    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
+    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
+    auditCard('Estados operacionais',`Confirmados ${pointReady} | Pendentes ${pointPending} | Quebrados ${pointBroken}`,pointBroken?'wn':'ok'),
+    auditCard('Pronto para campo',`Segmentos prontos ${segReady} | sem geometria ${segPendingGeo} | cabos sem inventário ${cabNoInventory}`,segPendingGeo?'wn':'ok')
+  ].join('');
+  $('aud-acoes').innerHTML=[
+    auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),
+    auditCard('Pode publicar incrementalmente',crit||alto?'Ainda não. Corrija os itens altos primeiro.':'Sim, como versão incremental com auditoria local ativa.',crit||alto?'wn':'ok'),
+    auditCard('DGOs já auditáveis',`${dgoResolved}/${store.dgos.length||0} DGO(s) resolvidos via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'ok')
+  ].join('');
+  const fila=[
+    {title:'Persistir DGO no banco',detail:'Criar tabela/view REST para DGO e plugar o painel local.',priority:'Alta'},
+    {title:'Consolidar segmentos físicos',detail:'Salvar segmento_cabo real em vez de só rascunho local.',priority:'Alta'},
+    {title:'Auditoria automática agendada',detail:'Rodar checklist local antes de cada publish e gerar snapshot.',priority:'Média'},
+    {title:'Correções sugeridas por IA',detail:'Transformar achados auditados em sugestões executáveis para o usuário.',priority:'Média'}
+  ];
+  $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
+  $('aud-achados').innerHTML=`
+    <div class="audit-priority">
+      <div class="audit-priority-head">Prioridade operacional agora</div>
+      <div class="audit-priority-list">
+        ${topIssues.map((issue,idx)=>`<div class="audit-priority-item"><div class="audit-priority-rank" style="background:${idx===0?'rgba(232,68,85,.18)':idx===1?'rgba(240,165,0,.16)':'rgba(77,166,255,.16)'};color:${idx===0?'#e84455':idx===1?'#f0a500':'#4da6ff'}">${idx+1}</div><div style="flex:1"><div class="name">${esc(issue.title)}</div><div class="meta">${esc(issue.domain||'mapa')} • ${esc(issue.kind||'campo')} • ${esc(issue.severity)}</div></div></div>`).join('')}
+      </div>
+    </div>
+    ${issues.map(auditIssueCard).join('')}
+  `;
+}
+async function rodarAuditoriaIA(silent=false){
+  if(!silent)toast('Rodando auditoria operacional...','in');
+  renderInventarioResumo();
+  renderPendencias();
+  const issues=collectAuditIssues();
+  renderAuditUI(issues);
+  if(!silent)toast('Auditoria atualizada.','ok');
+}
+function abrirFilaAuditoria(){
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  toast('Fila de implementação aberta.','in');
+}
+// SALVAR FORMS INLINE
+const gv=id=>$(id)?.value?.trim()||null;
+const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
+function gpsF(li,lo){navigator.geolocation.getCurrentPosition(p=>{$(li).value=p.coords.latitude.toFixed(6);$(lo).value=p.coords.longitude.toFixed(6);toast('GPS capturado!');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:8000});}
+function limpar(pre){
+  document.querySelectorAll(`[id^="${pre}-"]`).forEach(el=>{
+    if(el.type==='checkbox')el.checked=false;
+    else if(el.tagName==='SELECT')el.selectedIndex=0;
+    else el.value='';
+  });
+  if($(pre+'-msg'))$(pre+'-msg').textContent='';
+}
+function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
+const INV_KEY='redeoptica_inventario_rascunho_v1';
+function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
+function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();}
+function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
+function updateInvItem(tipo,id,patch){
+  const store=getInvStore();
+  const idx=store[tipo].findIndex(x=>x.id===id);
+  if(idx<0)return false;
+  store[tipo][idx]={...store[tipo][idx],...patch,atualizado_em:new Date().toISOString()};
+  saveInvStore(store);
+  return true;
+}
+function renderInventarioResumo(){
+  const store=getInvStore();
+  const linhas=[
+    `Caixas: ${store.caixas.length}`,
+    `DGOs: ${store.dgos.length}`,
+    `Segmentos: ${store.segmentos.length}`,
+    `Rupturas: ${store.rupturas.length}`,
+    `Conexões: ${store.conexoes.length}`,
+    `Pendências: ${store.pendencias.length}`,
+    '',
+    ...store.caixas.slice(-3).map(x=>`CX ${x.codigo} | ${x.tipo_instalacao} | ${x.status}`),
+    ...store.dgos.slice(-3).map(x=>`DGO ${x.codigo} | site ${x.site}`),
+    ...store.segmentos.slice(-3).map(x=>`SEG ${x.cabo} | ${x.ponto_a} -> ${x.ponto_b}`),
+    ...store.rupturas.slice(-3).map(x=>`RUP ${x.cabo_segmento} | OTDR ${x.distancia_otdr_m||0}m | lanc ${x.metragem_lancada_m||0}m`),
+    ...store.conexoes.slice(-3).map(x=>`CON ${x.caixa_codigo} | ${x.cabo_entrada||'—'} -> ${x.cabo_saida||'—'}`),
+    ...store.pendencias.slice(-3).map(x=>`PEND ${x.tipo} | ${x.referencia||'—'}`)
+  ];
+  if($('inv-resumo'))$('inv-resumo').value=linhas.join('\n').trim();
+  renderInventarioDrafts();
+}
+function limparInventarioRascunho(){
+  if(!confirm('Limpar todos os rascunhos locais do inventário?'))return;
+  localStorage.removeItem(INV_KEY);
+  renderInventarioResumo();
+  renderPendencias();
+  msgField('inv-msg','Rascunhos locais removidos.','ok');
+}
+function getConexoesCaixa(codigo){return getInvStore().conexoes.filter(x=>(x.caixa_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function getConexoesDgo(codigo){return getInvStore().conexoes.filter(x=>(x.dgo_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function findDraftPoint(ref){
+  const key=(ref||'').toUpperCase().trim();
+  if(!key)return null;
+  const store=getInvStore();
+  const cx=store.caixas.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(cx&&cx.lat&&cx.lng)return{tipo:'caixa',codigo:cx.codigo||cx.nome,lat:cx.lat,lng:cx.lng,item:cx};
+  const ocx=officialCaixas.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(ocx&&ocx.lat&&ocx.lng)return{tipo:'caixa',codigo:ocx.codigo||ocx.nome,lat:ocx.lat,lng:ocx.lng,item:ocx};
+  const dg=store.dgos.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(dg){
+    const site=allS.find(s=>((s.codigo||'').toUpperCase()===((dg.site||'').toUpperCase()))||((s.nome||'').toUpperCase()===((dg.site||'').toUpperCase())));
+    const pt=PP(site?.localizacao);
+    if(pt)return{tipo:'dgo',codigo:dg.codigo||dg.nome,lat:pt[0],lng:pt[1],item:dg,site};
+  }
+  const odg=officialDgos.find(x=>(x.codigo||x.nome||x.site_codigo||'').toUpperCase()===key);
+  if(odg){
+    const site=resolveOfficialDgoSite(odg);
+    if(site)return{tipo:'dgo',codigo:odg.codigo||odg.nome,lat:site.lat,lng:site.lng,item:odg,site};
+  }
+  const st=allS.find(s=>((s.codigo||'').toUpperCase()===key)||((s.nome||'').toUpperCase()===key));
+  const pt=PP(st?.localizacao);
+  if(pt)return{tipo:'site',codigo:st.codigo||st.nome,lat:pt[0],lng:pt[1],item:st};
+  return null;
+}
+function resolveOfficialDgoSite(dg){
+  if(!dg)return null;
+  const site=allS.find(s=>String(s.id||'')===String(dg.site_id||''))||
+    allS.find(s=>String(s.codigo||'').toUpperCase()===String(dg.site_codigo||'').toUpperCase())||
+    allS.find(s=>String(s.nome||'').toUpperCase()===String(dg.site_nome||'').toUpperCase());
+  const pt=PP(site?.localizacao);
+  return pt?{lat:pt[0],lng:pt[1],item:site}:null;
+}
+function buildDgoConnectionDiagram(codigo){
+  const segs=getInvStore().segmentos.filter(s=>((s.ponto_a||'').toUpperCase()===(codigo||'').toUpperCase())||((s.ponto_b||'').toUpperCase()===(codigo||'').toUpperCase()));
+  if(!segs.length)return'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhum segmento ligado a este DGO.</div>';
+  return `<div style="display:flex;flex-direction:column;gap:8px">${segs.map(s=>`
+    <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03)">
+      <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(s.ponto_a||'—')} <span style="color:var(--t3)">→</span> ${esc(s.ponto_b||'—')}</div>
+      <div style="margin-top:5px;font-size:10px;color:var(--t3)">${esc(s.tipo_lancamento||'—')} | ${km(s.metragem_m)}${s.lote?` | lote ${esc(s.lote)}`:''}</div>
+    </div>`).join('')}</div>`;
+}
+function showPanDgoDraft(dg){
+  if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
+  closePan();
+  const dgoFlag=getFlagForAsset('dgo',dg.id);
+  const conexoes=getConexoesDgo(dg.codigo);
+  const resumo=operationalSummaryHtml(dg.codigo||'');
+  $('pt').textContent=`${dg.codigo||'DGO'}${dg.site?` — ${dg.site}`:''}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site||'—')}</span></div>
+    ${buildOccupancyBarHtml(conexoes, 24)}
+    <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
+    <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
+    <div class="pr"><span class="pl">Bastidor</span><span class="pv">${esc(dg.bastidor||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(dg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(dg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(dg.status||'—')}</span></div>
+    ${dgoFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [dgoFlag.priority||'normal',dgoFlag.color||'var(--am)'],
+      [dgoFlag.category||'operacao',dgoFlag.color||'var(--am)']
+    ])}</div>${dgoFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dgoFlag.note)}</div>`:''}</div>`:''}
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Continuidade</div>
+      ${buildDgoConnectionDiagram(dg.codigo)}
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Conexões registradas</div>
+      ${conexoes.length?conexoes.map(c=>`<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03);margin-bottom:6px">
+        <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(c.cabo_entrada||'—')} <span style="color:var(--t3)">→</span> ${esc(c.cabo_saida||'—')}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.tipo||'pendente_confirmacao')}</div>
+        ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
+      </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma conexão registrada.</div>'}
+    </div>
+    ${resumo}
+    ${buildRefLinksHtml(dg.codigo||'')}
+    ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
+  $('pan').style.display='block';
+}
+function showPanDgoOficial(dg){
+  if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
+  closePan();
+  const dgoFlag=getFlagForAsset('dgo',dg.id);
+  const resumo=operationalSummaryHtml(dg.codigo||dg.nome||dg.site_codigo||'');
+  $('pt').textContent=`${dg.codigo||'DGO oficial'}${dg.site_codigo?` — ${dg.site_codigo}`:''}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site_codigo||dg.site_nome||'—')}</span></div>
+    <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
+    <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
+    <div class="pr"><span class="pl">Bastidor</span><span class="pv">${esc(dg.bastidor||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(dg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(dg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(dg.status||'—')}</span></div>
+    ${dgoFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [dgoFlag.priority||'normal',dgoFlag.color||'var(--am)'],
+      [dgoFlag.category||'operacao',dgoFlag.color||'var(--am)']
+    ])}</div>${dgoFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dgoFlag.note)}</div>`:''}</div>`:''}
+    ${resumo}
+    ${buildRefLinksHtml(dg.codigo||dg.nome||dg.site_codigo||'')}
+    ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('DGO oficial carregado do banco','ok')">✓ Oficial</button>`;
+  $('pan').style.display='block';
+}
+function getNearbyCabos(lat,lng,maxDist=35){
+  const out=[];
+  allC.forEach(c=>{
+    const pts=PL(c.trajeto); if(!pts||pts.length<2)return;
+    const near=pts.some(p=>map.distance([lat,lng],p)<=maxDist);
+    if(near)out.push(c);
+  });
+  return out;
+}
+function recomputePendencias(){
+  const store=getInvStore();
+  const pend=[];
+  const refs=new Map();
+  store.segmentos.forEach(seg=>{
+    const a=(seg.ponto_a||'').toUpperCase(),b=(seg.ponto_b||'').toUpperCase();
+    if(a){if(!refs.has(a))refs.set(a,0);refs.set(a,refs.get(a)+1);}
+    if(b){if(!refs.has(b))refs.set(b,0);refs.set(b,refs.get(b)+1);}
+  });
+  store.caixas.forEach(cx=>{
+    const code=(cx.codigo||'').toUpperCase();
+    const qtd=refs.get(code)||0;
+    if(qtd===0){
+      pend.push({id:`pend_${code}_sem_conexao`,tipo:'caixa_sem_conexao',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa cadastrada sem segmento ligado. Confirmar em campo ou completar continuidade.'});
+    }else if(qtd===1){
+      pend.push({id:`pend_${code}_ponta_solta`,tipo:'ponta_solta',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'A caixa possui apenas um lado conectado. Revisar continuidade, emenda ou saída pendente.'});
+    }
+    if(cx.vistoriada!==true){
+      pend.push({id:`pend_${code}_vistoria`,tipo:'vistoria_pendente',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa ainda não marcada como vistoriada.'});
+    }
+    if(cx.precisa_troca===true){
+      pend.push({id:`pend_${code}_troca`,tipo:'caixa_precisa_troca',referencia:cx.codigo,lat:cx.lat,lng:cx.lng,observacao:'Caixa marcada para substituição ou correção física.'});
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    if(!seg.ponto_a||!seg.ponto_b){
+      pend.push({id:`pend_${seg.id}_incompleto`,tipo:'segmento_incompleto',referencia:seg.cabo||seg.id,observacao:'Segmento sem ponto A ou ponto B definido.'});
+    }
+  });
+  store.dgos.forEach(dg=>{
+    const code=(dg.codigo||'').toUpperCase();
+    const qtd=refs.get(code)||0;
+    const site=findDraftPoint(dg.site||'');
+    if(!site){
+      pend.push({id:`pend_${code}_site`,tipo:'dgo_sem_site_resolvido',referencia:dg.codigo,observacao:'DGO sem site/localizacao resolvida para continuidade.'});
+      return;
+    }
+    if(qtd===0){
+      pend.push({id:`pend_${code}_sem_conexao`,tipo:'dgo_sem_conexao',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO cadastrado sem segmento ligado. Completar terminacao ou continuidade.'});
+    }else if(qtd===1){
+      pend.push({id:`pend_${code}_incompleto`,tipo:'dgo_incompleto',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO possui apenas um lado conectado. Revisar entrada, saida ou passagem.'});
+    }
+    if((dg.status||'').toLowerCase()!=='ativo'){
+      pend.push({id:`pend_${code}_status`,tipo:'dgo_pendente',referencia:dg.codigo,lat:site.lat,lng:site.lng,observacao:'DGO marcado com status pendente de campo ou vistoria.'});
+    }
+  });
+  store.pendencias=pend;
+  localStorage.setItem(INV_KEY,JSON.stringify(store));
+  return pend;
+}
+function renderPendencias(){
+  if(!pendingLayer)return;
+  pendingLayer.clearLayers();
+  const pend=recomputePendencias();
+  pend.filter(p=>p.lat&&p.lng).slice(0,300).forEach(p=>{
+    L.marker([p.lat,p.lng],{icon:mkPendNode(),zIndexOffset:3800})
+      .bindPopup(`<b>⚠ ${esc(p.tipo)}</b><br>${esc(p.referencia||'—')}<br>${esc(p.observacao||'')}`)
+      .on('click',()=>showPanPendencia(p))
+      .addTo(pendingLayer);
+  });
+}
+function showPanPendencia(p){
+  closePan();
+  const relatedRef=String(p.referencia||'');
+  const isDgo=String(p.tipo||'').startsWith('dgo_');
+  const isCaixa=String(p.tipo||'').includes('caixa')||String(p.tipo||'').includes('ponta_solta')||String(p.tipo||'').includes('vistoria');
+  $('pt').textContent='⚠ Pendência operacional';
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Tipo</span><span class="pv">${esc(p.tipo||'—')}</span></div>
+    <div class="pr"><span class="pl">Referência</span><span class="pv">${esc(p.referencia||'—')}</span></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(p.observacao||'Pendência sem descrição')}</div>
+  `;
+  $('pa').innerHTML=`${relatedRef?`<button class="pac b" onclick="jumpToRef('${relatedRef.replace(/'/g,"\\'")}')">🔎 Ir para referência</button>`:''}${isCaixa?`<button class="pac g" onclick="abrirCaixaPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🧰 Corrigir caixa</button>`:''}${isDgo?`<button class="pac g" onclick="abrirDgoPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🗄 Corrigir DGO</button>`:''}<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
+  $('pan').style.display='block';
+}
+// Lógica de Auditoria de Trecho (GeoSite Plus)
+function auditarTrechoFalha(siteRef, latFalha, lngFalha){
+  const site = allS.find(s => s.codigo === siteRef);
+  if(!site) return [];
+  
+  const ptSite = PP(site.localizacao);
+  const ptFalha = [latFalha, lngFalha];
+  
+  // Busca todas as caixas em um raio de 5km para auditoria
+  const caixasNoTrecho = getInvStore().caixas.filter(cx => {
+     const d = map.distance(ptSite, [cx.lat, cx.lng]);
+     return d < 5000; 
+  });
+  
+  // Ordena por distância do site
+  caixasNoTrecho.sort((a,b) => map.distance(ptSite, [a.lat, a.lng]) - map.distance(ptSite, [b.lat, b.lng]));
+  
+  return caixasNoTrecho.map((cx, i) => ({
+    ordem: i+1,
+    codigo: cx.codigo,
+    distancia: map.distance(ptSite, [cx.lat, cx.lng]).toFixed(0) + 'm',
+    status: cx.vistoriada ? '✓' : '⚠'
+  }));
+}
+
+function showPanRupturaDraft(rp){
+  closePan();
+  const rel=getCableDraftRelations(rp.cabo_segmento||'');
+  $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura'}`;
+  
+  let htmlCadeia = '';
+  let siteRef = null;
+  let causa = rp.tipo_reparo || 'rompimento';
+  
+  if(rp.lat && rp.lng){
+     const siteMatch = rp.observacao?.match(/Site:\s*([A-Z0-9]+)/i);
+     siteRef = siteMatch ? siteMatch[1].toUpperCase() : null;
+     
+     if(siteRef){
+        const cadeia = auditarTrechoFalha(siteRef, rp.lat, rp.lng);
+        const tempoEst = estimarTempoReparo(causa, cadeia.length);
+        
+        if(Array.isArray(cadeia)){
+           htmlCadeia = `
+             <div style="margin-top:15px;border-top:1px solid var(--bd);padding-top:12px">
+               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                 <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em">Cadeia de emendas no trecho</div>
+                 <div style="font-size:10px;color:${tempoEst > 5 ? 'var(--rd)' : 'var(--gr)'};font-weight:800">ETA: ${tempoEst}h</div>
+               </div>
+               <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-left:15px">
+                 <div style="position:absolute;left:4px;top:5px;bottom:10px;width:2px;background:linear-gradient(180deg, var(--gr), var(--rd))"></div>
+                 
+                 <!-- Estação -->
+                 <div style="position:relative;margin-bottom:12px">
+                   <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--gr);border:2px solid var(--bg)"></div>
+                   <div style="font-size:11px;color:var(--t)"><b>Estação ${siteRef}</b></div>
+                   <div style="font-size:9px;color:var(--t3)">KM 0</div>
+                 </div>
+
+                 ${cadeia.map(cx => `
+                   <div style="position:relative;margin-bottom:12px">
+                     <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:2px;background:var(--bl);border:2px solid var(--bg)"></div>
+                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
+                       <div style="font-size:11px;color:var(--t2)">Caixa <b>${cx.codigo}</b></div>
+                       <a href="javascript:void(0)" onclick="jumpToRef('${cx.codigo}')" style="font-size:9px;color:var(--bl);text-decoration:none">👁 mapa</a>
+                     </div>
+                     <div style="font-size:9px;color:var(--t3)">Dist: ${cx.distancia} | Vis: ${cx.status}</div>
+                   </div>
+                 `).join('')}
+
+                 <div style="position:relative">
+                   <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--rd);border:2px solid var(--bg)"></div>
+                   <div style="font-size:11px;color:var(--rd);font-weight:800">ALVO DA FALHA</div>
+                 </div>
+               </div>
+               <button class="tb g" style="width:100%;margin-top:12px;padding:8px" onclick="gerarRelatorioAsBuilt('${rp.cabo_segmento}','${siteRef}',${rp.lat},${rp.lng},'${causa}','${rp.observacao||''}')">📄 Gerar Relatório de Intervenção</button>
+             </div>
+           `;
+        }
+     }
+  }
+
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
+    <div class="pr"><span class="pl">Causa provável</span><span class="pv">${esc(causa)}</span></div>
+    <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
+    ${htmlCadeia}
+    ${buildRupturaLinksHtml(rel.rupts.filter(x=>x.id!==rp.id))}
+    ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac b" onclick="abrirCaboPorReferencia('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🧵 Ir para cabo</button><button class="pac a" onclick="abrirAuditoriaRuptura('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar em campo</button>`;
+  $('pan').style.display='block';
+}
+function showPanRupturaOficial(rp){
+  closePan();
+  const rel=getCableDraftRelations(rp.cabo_segmento||'');
+  $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura oficial'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(rp.status||'aberta')}</span></div>
+    <div class="pr"><span class="pl">Causa / reparo</span><span class="pv">${esc(rp.tipo_reparo||'—')}</span></div>
+    <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
+    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_lancada_m||0)}</span></div>
+    <div class="pr"><span class="pl">Nova caixa</span><span class="pv">${esc(rp.nova_caixa||'—')}</span></div>
+    ${buildRupturaLinksHtml(rel.rupts)}
+    ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac a" onclick="abrirNovaRupturaContextual('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}',${Number(rp.lat||0)},${Number(rp.lng||0)})">✏ Abrir no cadastro</button><button class="pac b" onclick="abrirCaboPorReferencia('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🧵 Ir para cabo</button><button class="pac a" onclick="abrirAuditoriaRuptura('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Ruptura oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pan').style.display='block';
+}
+function abrirAssistenteConexaoCaixa(codigo,lat,lng){
+  const cabos=getNearbyCabos(lat,lng,45);
+  const opts='<option value="">-- selecione --</option>'+cabos.map(c=>`<option value="${esc(c.nome||c.id)}">${esc(c.nome||c.id)}${c.tipo?` (${esc(c.tipo)})`:''}</option>`).join('');
+  $('mtt').textContent=`Assistente de conexão — ${codigo}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.25);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      O sistema encontrou <b>${cabos.length}</b> cabo(s) próximo(s) desta caixa. Use isso como sugestão operacional e confirme em campo antes de consolidar.
+    </div>
+    <div class="mfg"><label>Cabo entrada</label><select id="ac-in">${opts}</select></div>
+    <div class="mfg"><label>Cabo saída</label><select id="ac-out">${opts}</select></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Fibra / tubo entrada</label><input id="ac-fin" placeholder="T1 F21-22"></div>
+      <div class="mfg"><label>Fibra / tubo saída</label><input id="ac-fout" placeholder="T2 F15-16"></div>
+    </div>
+    <div class="mfg"><label>Tipo</label><select id="ac-tipo"><option>emenda</option><option>carona</option><option>passagem</option><option>pendente_confirmacao</option></select></div>
+    <div class="mfg"><label>Observação</label><textarea id="ac-obs" placeholder="Descreva a continuidade, carona, necessidade de campo, DGO relacionado, ponta solta, etc."></textarea></div>
+    <div id="ac-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarConexaoCaixa('${codigo.replace(/'/g,"\\'")}',${lat},${lng})">💾 Salvar pré-conexão</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+function salvarConexaoCaixa(codigo,lat,lng){
+  const caboIn=gv('ac-in'),caboOut=gv('ac-out');
+  if(!caboIn&&!caboOut){msgField('ac-msg','Escolha ao menos um cabo para registrar a conexão.');return;}
+  addInvItem('conexoes',{
+    caixa_codigo:codigo,lat,lng,cabo_entrada:caboIn,cabo_saida:caboOut,
+    fibra_entrada:gv('ac-fin'),fibra_saida:gv('ac-fout'),
+    tipo:gv('ac-tipo'),observacao:gv('ac-obs')
+  });
+  msgField('ac-msg','✓ Pré-conexão salva como pendente de confirmação.','ok');
+  setTimeout(()=>{closeM();showPanCaixaDraft(getInvStore().caixas.find(c=>(c.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
+}
+function abrirAssistenteConexaoDgo(codigo){
+  const dg=getInvStore().dgos.find(x=>(x.codigo||'').toUpperCase()===String(codigo||'').toUpperCase());
+  if(!dg){toast('DGO nao encontrado','er');return;}
+  const site=findDraftPoint(dg.site||'');
+  const cabos=site?getNearbyCabos(site.lat,site.lng,45):[];
+  const opts='<option value="">-- selecione --</option>'+cabos.map(c=>`<option value="${esc(c.nome||c.id)}">${esc(c.nome||c.id)}${c.tipo?` (${esc(c.tipo)})`:''}</option>`).join('');
+  $('mtt').textContent=`Conexao do DGO - ${codigo}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(124,147,255,.08);border:1px solid rgba(124,147,255,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      O sistema usou o site <b>${esc(dg.site||'—')}</b> como referencia de posicao para sugerir cabos proximos. Confirme em campo antes de consolidar.
+    </div>
+    <div class="mfg"><label>Cabo entrada</label><select id="ad-in">${opts}</select></div>
+    <div class="mfg"><label>Cabo saida</label><select id="ad-out">${opts}</select></div>
+    <div class="mfg"><label>Tipo</label><select id="ad-tipo"><option>terminacao</option><option>passagem</option><option>carona</option><option>pendente_confirmacao</option></select></div>
+    <div class="mfg"><label>Observacao</label><textarea id="ad-obs" placeholder="Descreva a terminacao, fila, bandeja, fibras e pendencias de campo."></textarea></div>
+    <div id="ad-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarConexaoDgo('${codigo.replace(/'/g,"\\'")}')">Salvar conexao</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+function salvarConexaoDgo(codigo){
+  const caboIn=gv('ad-in'),caboOut=gv('ad-out');
+  if(!caboIn&&!caboOut){msgField('ad-msg','Escolha ao menos um cabo para registrar a conexao.');return;}
+  addInvItem('conexoes',{dgo_codigo:codigo,cabo_entrada:caboIn,cabo_saida:caboOut,tipo:gv('ad-tipo'),observacao:gv('ad-obs')});
+  msgField('ad-msg','Conexao do DGO salva como pendente de confirmacao.','ok');
+  setTimeout(()=>{closeM();showPanDgoDraft(getInvStore().dgos.find(d=>(d.codigo||'').toUpperCase()===codigo.toUpperCase()));},500);
+}
+function openContextMenu(ev){
+  if(!map)return;
+  ctxLatLng=ev.latlng;
+  const near=nearestSiteTo(ev.latlng.lat,ev.latlng.lng,180);
+  const nearTxt=near?`Referência próxima: <b>${esc(codeFirstLabel(near.site))}</b> a ${Math.round(near.dist)}m.`:'Sem site de referência próximo.';
+  openActionMenu({
+    title:'Menu de campo',
+    subtitle:`${nearTxt}<br>Coordenada: ${ev.latlng.lat.toFixed(6)}, ${ev.latlng.lng.toFixed(6)}`,
+    latlng:ev.latlng,
+    clientX:ev.originalEvent.clientX||120,
+    clientY:ev.originalEvent.clientY||120,
+    actions:[
+      {label:'🧰 Criar caixa aqui',primary:true,action:()=>contextNovaCaixa()},
+      {label:'🚨 Registrar ruptura aqui',warn:true,action:()=>contextNovaRuptura()},
+      {label:'🗄 Criar DGO com site próximo',action:()=>contextNovoDgo()},
+      {label:'📋 Copiar coordenadas',action:()=>contextCopiarCoord()},
+    ]
+  });
+}
+function hideContextMenu(){if($('ctxm'))$('ctxm').style.display='none';}
+function contextNovaCaixa(){
+  if(!ctxLatLng)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-lat').value=ctxLatLng.lat.toFixed(6);
+  $('cx-lng').value=ctxLatLng.lng.toFixed(6);
+  $('cx-obs').value=(gv('cx-obs')?gv('cx-obs')+'\n':'')+`Lançado via clique direito no mapa em ${new Date().toLocaleString('pt-BR')}.`;
+  hideContextMenu();
+  toast('Coordenada aplicada no cadastro da caixa','ok');
+}
+function contextNovaRuptura(){
+  if(!ctxLatLng)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-lat').value=ctxLatLng.lat.toFixed(6);
+  $('rp-lng').value=ctxLatLng.lng.toFixed(6);
+  hideContextMenu();
+  toast('Coordenada aplicada no cadastro de ruptura','ok');
+}
+function contextNovoDgo(){
+  if(!ctxLatLng)return;
+  const near=nearestSiteTo(ctxLatLng.lat,ctxLatLng.lng,180);
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(near?.site)$('dg-site').value=near.site.codigo||near.site.nome||'';
+  hideContextMenu();
+  toast(near?.site?'Site de referência aplicado ao DGO':'Nenhum site próximo. Informe manualmente o site.','wn');
+}
+async function contextCopiarCoord(){
+  if(!ctxLatLng)return;
+  const txt=`${ctxLatLng.lat.toFixed(6)}, ${ctxLatLng.lng.toFixed(6)}`;
+  try{await navigator.clipboard.writeText(txt);toast('Coordenadas copiadas','ok');}
+  catch{toast(txt,'wn');}
+  hideContextMenu();
+}
+function getMapCenterLatLng(){
+  if(!map)return null;
+  const c=map.getCenter();
+  return {lat:c.lat,lng:c.lng};
+}
+function novaCaixaNoCentro(){
+  const c=getMapCenterLatLng(); if(!c)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-lat').value=Number(c.lat).toFixed(6);
+  $('cx-lng').value=Number(c.lng).toFixed(6);
+  msgField('cx-msg','Centro do mapa aplicado no cadastro da caixa.','ok');
+  toast('Centro do mapa aplicado para nova caixa','ok');
+}
+function novaRupturaNoCentro(){
+  const c=getMapCenterLatLng(); if(!c)return;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-lat').value=Number(c.lat).toFixed(6);
+  $('rp-lng').value=Number(c.lng).toFixed(6);
+  msgField('rp-msg','Centro do mapa aplicado no cadastro da ruptura.','ok');
+  toast('Centro do mapa aplicado para nova ruptura','ok');
+}
+window.addEventListener('offline',()=>setOfflineState(true,'Sem rede. O app vai tentar usar o último cache local.'));
+window.addEventListener('online',()=>setOfflineState(false,'Conexão restabelecida.'));
+function abrirCaixaPorPendencia(p){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const ref=String(p.referencia||'');
+  const cx=getInvStore().caixas.find(x=>String(x.codigo||'').toUpperCase()===ref.toUpperCase());
+  if(cx)editarCaixaDraft(cx.id);
+  else{
+    $('cx-codigo').value=ref||$('cx-codigo').value;
+    if(p.lat&&p.lng){$('cx-lat').value=Number(p.lat).toFixed(6);$('cx-lng').value=Number(p.lng).toFixed(6);}
+    $('cx-obs').value=(gv('cx-obs')?gv('cx-obs')+'\n':'')+`Abertura por pendência: ${p.tipo||'pendencia'} — ${p.observacao||''}`;
+    msgField('cx-msg','Pendência carregada no cadastro da caixa.','ok');
+  }
+}
+function abrirDgoPorPendencia(p){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const ref=String(p.referencia||'');
+  const dg=getInvStore().dgos.find(x=>String(x.codigo||'').toUpperCase()===ref.toUpperCase());
+  if(dg)editarDgoDraft(dg.id);
+  else{
+    $('dg-codigo').value=ref||$('dg-codigo').value;
+    $('dg-obs').value=(gv('dg-obs')?gv('dg-obs')+'\n':'')+`Abertura por pendência: ${p.tipo||'pendencia'} — ${p.observacao||''}`;
+    msgField('dg-msg','Pendência carregada no cadastro do DGO.','ok');
+  }
+}
+function abrirRupturaPorContexto(rp){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('rp-cabo').value=rp.cabo_segmento||'';
+  $('rp-otdr').value=rp.distancia_otdr_m||'';
+  $('rp-lanc').value=rp.metragem_lancada_m||'';
+  $('rp-caixa').value=rp.nova_caixa||'';
+  $('rp-reparo').value=rp.tipo_reparo||'fusao';
+  $('rp-lat').value=rp.lat||'';
+  $('rp-lng').value=rp.lng||'';
+  $('rp-obs').value=rp.observacao||'';
+  msgField('rp-msg','Ruptura carregada no formulário para ajuste.','ok');
+}
+function usarComoPontoSegmento(ref,target){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  const el=$(target);
+  if(el)el.value=ref||'';
+  msgField('sg-msg',`${target==='sg-a'?'Ponto A':'Ponto B'} definido como ${ref}`,'ok');
+  toast(`${target==='sg-a'?'Ponto A':'Ponto B'} = ${ref}`,'ok');
+}
+function abrirNovaRupturaContextual(caboOuRef,lat,lng){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(caboOuRef)$('rp-cabo').value=caboOuRef;
+  if(lat&&lng){$('rp-lat').value=Number(lat).toFixed(6);$('rp-lng').value=Number(lng).toFixed(6);}
+  msgField('rp-msg','Contexto aplicado para nova ruptura.','ok');
+}
+function abrirCaixaPorPendenciaId(id){
+  const p=getInvStore().pendencias.find(x=>x.id===id);
+  if(!p){toast('Pendência não encontrada','wn');return;}
+  abrirCaixaPorPendencia(p);
+}
+function abrirDgoPorPendenciaId(id){
+  const p=getInvStore().pendencias.find(x=>x.id===id);
+  if(!p){toast('Pendência não encontrada','wn');return;}
+  abrirDgoPorPendencia(p);
+}
+
+async function pushToSupabase(tbl, payload, msgId){
+  try {
+    const r = await fetch(`${SU}/rest/v1/${tbl}`, {
+      method: 'POST',
+      headers: { ...WH, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify(payload)
+    });
+    if([200, 201].includes(r.status)){
+      msgField(msgId, '✓ Sincronizado com a nuvem.', 'ok');
+      return true;
+    } else {
+      const err = await r.json();
+      msgField(msgId, '⚠ Erro nuvem: ' + (err.message || r.status));
+      return false;
+    }
+  } catch (e) {
+    msgField(msgId, '⚠ Sem conexão para sincronizar agora.');
+    return false;
+  }
+}
+
+async function salvarCaixa(){
+  const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
+  const editId=$('cx-edit-id')?.value||'';
+  const lat=gf('cx-lat'), lng=gf('cx-lng');
+  const payload={
+    codigo,nome:gv('cx-nome'),tipo_instalacao:gv('cx-inst'),modelo:gv('cx-modelo'),
+    fabricante:gv('cx-fab'),status:gv('cx-status'),vistoriada:$('cx-vist')?.checked||false,
+    precisa_troca:$('cx-troca')?.checked||false,lat,lng,observacao:gv('cx-obs')
+  };
+  
+  if(editId){
+    updateInvItem('caixas',editId,payload);
+    msgField('cx-msg','✓ Caixa atualizada em rascunho local.','ok');
+  }else{
+    addInvItem('caixas',payload);
+    msgField('cx-msg','✓ Caixa salva em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela caixa_emenda)
+    const dbPayload = {
+      codigo: payload.codigo,
+      nome: payload.nome,
+      tipo_instalacao: payload.tipo_instalacao,
+      modelo: payload.modelo,
+      fabricante: payload.fabricante,
+      status: payload.status,
+      vistoriada: payload.vistoriada,
+      precisa_troca: payload.precisa_troca,
+      localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
+      observacao: payload.observacao
+    };
+    await pushToSupabase('caixa_emenda', dbPayload, 'cx-msg');
+  }
+  limpar('cx');
+}
+
+async function salvarDgo(){
+  const codigo=gv('dg-codigo'),siteRef=gv('dg-site'); 
+  if(!codigo||!siteRef){msgField('dg-msg','Código e site são obrigatórios');return;}
+  const editId=$('dg-edit-id')?.value||'';
+  const payload={
+    codigo,site:siteRef,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
+    modelo:gv('dg-modelo'),fabricante:gv('dg-fab'),status:gv('dg-status'),observacao:gv('dg-obs')
+  };
+  
+  if(editId){
+    updateInvItem('dgos',editId,payload);
+    msgField('dg-msg','✓ DGO atualizado em rascunho local.','ok');
+  }else{
+    addInvItem('dgos',payload);
+    msgField('dg-msg','✓ DGO salvo em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela dgo)
+    // Precisa do site_id (UUID)
+    const site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
+    if(site && site.id && String(site.id).indexOf('science-')!==0){
+      const dbPayload = {
+        codigo: payload.codigo,
+        nome: payload.nome,
+        site_id: site.id,
+        rack: payload.rack,
+        fila: payload.fila,
+        bastidor: payload.bastidor,
+        modelo: payload.modelo,
+        fabricante: payload.fabricante,
+        status: payload.status,
+        observacao: payload.observacao
+      };
+      await pushToSupabase('dgo', dbPayload, 'dg-msg');
+    } else {
+      msgField('dg-msg', '✓ Salvo local. Site não localizado no banco para sincronizar.', 'wn');
+    }
+  }
+  limpar('dg');
+}
+
+async function salvarSegmento(){
+  const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); 
+  if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
+  const editId=$('sg-edit-id')?.value||'';
+  let geometriaPts=null;
+  try{geometriaPts=JSON.parse($('sg-geo')?.value||'null');}catch{}
+  const payload={
+    cabo,ponto_a:pontoA,ponto_b:pontoB,tipo_lancamento:gv('sg-tipo'),
+    metragem_m:gf('sg-metr'),fabricante:gv('sg-fab'),modelo:gv('sg-modelo'),
+    lote:gv('sg-lote'),observacao:gv('sg-obs'),geometria_pts:Array.isArray(geometriaPts)&&geometriaPts.length>=2?geometriaPts:null
+  };
+  
+  if(editId){
+    updateInvItem('segmentos',editId,payload);
+    msgField('sg-msg','✓ Segmento atualizado em rascunho local.','ok');
+  }else{
+    addInvItem('segmentos',payload);
+    msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok');
+    
+    // Tenta persistir no banco (tabela segmento_cabo)
+    let trajeto = null;
+    if(Array.isArray(payload.geometria_pts)){
+       const coords = payload.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
+       trajeto = `SRID=4326;LINESTRING(${coords})`;
+    }
+    const dbPayload = {
+      cabo: payload.cabo,
+      ponto_a: payload.ponto_a,
+      ponto_b: payload.ponto_b,
+      tipo_lancamento: payload.tipo_lancamento,
+      metragem_m: payload.metragem_m,
+      fabricante: payload.fabricante,
+      modelo: payload.modelo,
+      lote: payload.lote,
+      trajeto: trajeto,
+      observacao: payload.observacao
+    };
+    await pushToSupabase('segmento_cabo', dbPayload, 'sg-msg');
+  }
+  limpar('sg');
+  if($('sg-edit-id'))$('sg-edit-id').value='';
+}
+async function salvarRuptura(){
+  const caboSegmento=gv('rp-cabo'); if(!caboSegmento){msgField('rp-msg','Cabo ou segmento é obrigatório');return;}
+  const lat=gf('rp-lat'), lng=gf('rp-lng');
+  const payload={
+    cabo_segmento:caboSegmento,distancia_otdr_m:gf('rp-otdr'),metragem_lancada_m:gf('rp-lanc'),
+    nova_caixa:gv('rp-caixa'),tipo_reparo:gv('rp-reparo'),lat,lng,
+    observacao:gv('rp-obs'), data_hora: new Date().toISOString()
+  };
+  addInvItem('rupturas',payload);
+  msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok');
+  
+  // Tenta persistir no banco (tabela evento_ruptura)
+  const dbPayload = {
+    cabo_segmento: payload.cabo_segmento,
+    distancia_otdr_m: payload.distancia_otdr_m,
+    metragem_lancada_m: payload.metragem_lancada_m,
+    nova_caixa: payload.nova_caixa,
+    tipo_reparo: payload.tipo_reparo,
+    localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
+    observacao: payload.observacao,
+    data_hora: payload.data_hora
+  };
+  await pushToSupabase('evento_ruptura', dbPayload, 'rp-msg');
+  
+  limpar('rp');
+}
+function buildDraftConnectionDiagram(ref){
+  const store=getInvStore();
+  const code=(ref||'').toUpperCase().trim();
+  const ligados=store.segmentos.filter(s=>((s.ponto_a||'').toUpperCase()===code)||((s.ponto_b||'').toUpperCase()===code));
+  if(!ligados.length)return '<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhum segmento ligado neste rascunho.</div>';
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${ligados.map(s=>{
+    const ladoA=esc(s.ponto_a||'—'),ladoB=esc(s.ponto_b||'—');
+    return `<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 10px;background:rgba(255,255,255,.03)">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px">${esc(s.cabo||'Segmento')}</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--t2);font-weight:700">
+        <span>${ladoA}</span>
+        <span style="color:var(--t3)">→</span>
+        <span>${ladoB}</span>
+      </div>
+      <div style="margin-top:5px;font-size:10px;color:var(--t3)">${esc(s.tipo_lancamento||'—')} | ${km(s.metragem_m)}${s.lote?` | lote ${esc(s.lote)}`:''}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+function buildOccupancyBarHtml(conexoes, total=12){
+  const count = conexoes.length;
+  const pct = Math.min((count / total) * 100, 100);
+  const cor = pct >= 90 ? 'var(--rd)' : pct >= 70 ? 'var(--am)' : 'var(--gr)';
+  return `
+    <div style="margin-top:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">
+        <span>Capacidade de Fibras</span>
+        <span>${count} / ${total} ocupadas</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+        <div style="height:100%;width:${pct}%;background:${cor};box-shadow:0 0 10px ${cor}44;transition:0.3s"></div>
+      </div>
+    </div>
+  `;
+}
+
+function showPanCaixaDraft(cx){
+  if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
+  closePan();
+  const caixaFlag=getFlagForAsset('caixa',cx.id);
+  const conexoes=getConexoesCaixa(cx.codigo);
+  const resumo=operationalSummaryHtml(cx.codigo||'');
+  $('pt').textContent=`🧰 ${cx.codigo||'Caixa'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
+    ${buildOccupancyBarHtml(conexoes, 12)}
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(cx.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(cx.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Instalação</span><span class="pv">${esc(cx.tipo_instalacao||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(cx.status||'—')}</span></div>
+    <div class="pr"><span class="pl">Vistoria</span><span class="pv">${cx.vistoriada?'vistoriada':'pendente'}</span></div>
+    <div class="pr"><span class="pl">Troca</span><span class="pv">${cx.precisa_troca?'necessária':'não'}</span></div>
+    ${caixaFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [caixaFlag.priority||'normal',caixaFlag.color||'var(--am)'],
+      [caixaFlag.category||'operacao',caixaFlag.color||'var(--am)']
+    ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Diagrama de conexão</div>
+      ${buildDraftConnectionDiagram(cx.codigo)}
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Pré-conexões registradas</div>
+      ${conexoes.length?conexoes.map(c=>`<div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px;background:rgba(255,255,255,.03);margin-bottom:6px">
+        <div style="font-size:11px;color:var(--t2);font-weight:700">${esc(c.cabo_entrada||'—')} <span style="color:var(--t3)">→</span> ${esc(c.cabo_saida||'—')}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.tipo||'pendente_confirmacao')}${c.fibra_entrada||c.fibra_saida?` | ${esc((c.fibra_entrada||'—')+' → '+(c.fibra_saida||'—'))}`:''}</div>
+        ${c.observacao?`<div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(c.observacao)}</div>`:''}
+      </div>`).join(''):'<div style="padding:10px 0;color:var(--t3);font-size:11px">Nenhuma pré-conexão registrada.</div>'}
+    </div>
+    ${resumo}
+    ${buildRefLinksHtml(cx.codigo||'')}
+    ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
+  $('pan').style.display='block';
+}
+function showPanCaixaOficial(cx){
+  if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
+  closePan();
+  const caixaFlag=getFlagForAsset('caixa',cx.id);
+  $('pt').textContent=`🧰 ${cx.codigo||'Caixa oficial'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(cx.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(cx.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Instalação</span><span class="pv">${esc(cx.tipo_instalacao||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(cx.status||'—')}</span></div>
+    <div class="pr"><span class="pl">Vistoria</span><span class="pv">${cx.vistoriada?'vistoriada':'pendente'}</span></div>
+    <div class="pr"><span class="pl">Troca</span><span class="pv">${cx.precisa_troca?'necessária':'não'}</span></div>
+    ${caixaFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [caixaFlag.priority||'normal',caixaFlag.color||'var(--am)'],
+      [caixaFlag.category||'operacao',caixaFlag.color||'var(--am)']
+    ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
+    ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pan').style.display='block';
+}
+function showPanSegmentoDraft(seg){
+  if(mapPointTarget)return;
+  closePan();
+  const segState=getSegmentOperationalState(seg);
+  $('pt').textContent=`📏 ${seg.cabo||'Segmento físico'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Ponto A</span><span class="pv">${esc(seg.ponto_a||'—')}</span></div>
+    <div class="pr"><span class="pl">Ponto B</span><span class="pv">${esc(seg.ponto_b||'—')}</span></div>
+    <div class="pr"><span class="pl">Lançamento</span><span class="pv">${esc(seg.tipo_lancamento||'—')}</span></div>
+    <div class="pr"><span class="pl">Metragem</span><span class="pv">${km(seg.metragem_m)}</span></div>
+    <div class="pr"><span class="pl">Geometria</span><span class="pv">${Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?`${seg.geometria_pts.length} ponto(s)`:'reta simples entre A/B'}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(seg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(seg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([[segState.status,segState.tone]])}</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${segState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(segState.status)}</b><br>${esc(segState.detail)}</div>
+    </div>
+    ${buildSegmentLinksHtml(seg)}
+    ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button><button class="pac a" onclick="abrirNovaRupturaContextual('${String(seg.cabo||'').replace(/'/g,"\\'")}')">🚨 Nova ruptura</button>`;
+  $('pan').style.display='block';
+}
+function editarSegmentoDraft(id){
+  const seg=getInvStore().segmentos.find(x=>x.id===id);
+  if(!seg){toast('Segmento não encontrado','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if($('sg-edit-id'))$('sg-edit-id').value=seg.id;
+  $('sg-cabo').value=seg.cabo||'';
+  $('sg-a').value=seg.ponto_a||'';
+  $('sg-b').value=seg.ponto_b||'';
+  $('sg-tipo').value=seg.tipo_lancamento||'aereo';
+  $('sg-metr').value=seg.metragem_m||'';
+  $('sg-fab').value=seg.fabricante||'';
+  $('sg-modelo').value=seg.modelo||'';
+  $('sg-lote').value=seg.lote||'';
+  $('sg-obs').value=seg.observacao||'';
+  $('sg-geo').value=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?JSON.stringify(seg.geometria_pts):'';
+  msgField('sg-msg','Editando segmento existente. Salve para atualizar.','in');
+  closePan();
+}
+function redefinirPontoSegmento(id,target){
+  editarSegmentoDraft(id);
+  armarSelecaoPonto(target);
+  toast(`Selecione no mapa o novo ${target==='sg-a'?'Ponto A':'Ponto B'}`,'in');
+}
+function redesenharSegmentoDraft(id){
+  editarSegmentoDraft(id);
+  let seed=[];
+  try{
+    const seg=getInvStore().segmentos.find(x=>x.id===id);
+    if(Array.isArray(seg?.geometria_pts))seed=seg.geometria_pts;
+  }catch{}
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  startDraw(seed);
+}
+function editarCaixaDraft(id){
+  const cx=getInvStore().caixas.find(x=>x.id===id);
+  if(!cx){toast('Caixa não encontrada','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('cx-edit-id').value=cx.id;
+  $('cx-codigo').value=cx.codigo||'';
+  $('cx-nome').value=cx.nome||'';
+  $('cx-inst').value=cx.tipo_instalacao||'aereo';
+  $('cx-modelo').value=cx.modelo||'ETK';
+  $('cx-fab').value=cx.fabricante||'';
+  $('cx-status').value=cx.status||'ativo';
+  $('cx-vist').checked=!!cx.vistoriada;
+  $('cx-troca').checked=!!cx.precisa_troca;
+  $('cx-lat').value=cx.lat||'';
+  $('cx-lng').value=cx.lng||'';
+  $('cx-obs').value=cx.observacao||'';
+  msgField('cx-msg','Editando caixa existente. Salve para atualizar.','ok');
+  closePan();
+}
+function editarDgoDraft(id){
+  const dg=getInvStore().dgos.find(x=>x.id===id);
+  if(!dg){toast('DGO não encontrado','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('dg-edit-id').value=dg.id;
+  $('dg-codigo').value=dg.codigo||'';
+  $('dg-site').value=dg.site||'';
+  $('dg-rack').value=dg.rack||'';
+  $('dg-fila').value=dg.fila||'';
+  $('dg-bast').value=dg.bastidor||'';
+  $('dg-modelo').value=dg.modelo||'';
+  $('dg-fab').value=dg.fabricante||'';
+  $('dg-status').value=dg.status||'ativo';
+  $('dg-obs').value=dg.observacao||'';
+  msgField('dg-msg','Editando DGO existente. Salve para atualizar.','ok');
+  closePan();
+}
+function renderInventarioDrafts(){
+  if(!draftInvLayer)return;
+  draftInvLayer.clearLayers();
+  const store=getInvStore();
+  store.caixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(!!cx._synced),zIndexOffset:3600})
+        .bindPopup(`<b>🧰 ${esc(cx.codigo||'Caixa')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}<br>${cx.precisa_troca?'⚠ Precisa troca<br>':''}${cx.vistoriada?'✓ Vistoriada<br>':''}${esc(cx.observacao||'')}`)
+        .on('click',()=>showPanCaixaDraft(cx))
+        .addTo(draftInvLayer);
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    const a=allS.find(s=>((s.nome||'').toUpperCase()===(seg.ponto_a||'').toUpperCase())||((s.codigo||'').toUpperCase()===(seg.ponto_a||'').toUpperCase()));
+    const b=allS.find(s=>((s.nome||'').toUpperCase()===(seg.ponto_b||'').toUpperCase())||((s.codigo||'').toUpperCase()===(seg.ponto_b||'').toUpperCase()));
+    const pa=PP(a?.localizacao),pb=PP(b?.localizacao);
+    if(pa&&pb){
+      addCableVisual(draftInvLayer,[pa,pb],{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:seg._synced?0.92:0.6,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>📏 ${esc(seg.cabo||'Segmento')}</b><br>${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg)});
+    }
+  });
+  store.rupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
+        .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'—')}<br>${esc(rp.observacao||'')}`)
+        .addTo(draftInvLayer);
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
+      }
+    }
+  });
+}
+function renderInventarioDraftsV2(){
+  if(!draftInvLayer)return;
+  draftInvLayer.clearLayers();
+  const store=getInvStore();
+  officialCaixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(true),zIndexOffset:3500})
+        .bindPopup(`<b>🧰 ${esc(cx.codigo||'Caixa')}</b><br>${esc(cx.nome||'Caixa oficial')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}<br>${esc(cx.status||'ativo')} • banco oficial`)
+        .on('click',()=>showPanCaixaOficial(cx))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
+      fmap['cx-db-'+cx.id]=()=>{map.setView([Number(cx.lat),Number(cx.lng)],18);showPanCaixaOficial(cx);};
+    }
+  });
+  store.caixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(!!cx._synced),zIndexOffset:3600})
+        .bindPopup(`<b>Caixa ${esc(cx.codigo||'Rascunho')}</b><br>${esc(cx.nome||'Rascunho local')}<br>${esc(cx.tipo_instalacao||'-')} | ${esc(cx.modelo||'-')}<br>${cx.precisa_troca?'Precisa troca<br>':''}${cx.vistoriada?'Vistoriada<br>':''}${esc(cx.observacao||'')}`)
+        .on('click',()=>showPanCaixaDraft(cx))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
+      attachMarkerEditShortcut(mk,()=>editarCaixaDraft(cx.id),'caixa');
+      fmap['cx-'+cx.id]=()=>{map.setView([Number(cx.lat),Number(cx.lng)],18);showPanCaixaDraft(cx);};
+    }
+  });
+  officialDgos.forEach(dg=>{
+    const site=resolveOfficialDgoSite(dg);
+    if(site?.lat&&site?.lng){
+      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.12),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D</div>`});
+      const mk=L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3600})
+        .bindPopup(`<b>DGO ${esc(dg.codigo||'Oficial')}</b><br>Site: ${esc(dg.site_codigo||dg.site_nome||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')} • banco oficial`)
+        .on('click',()=>showPanDgoOficial(dg))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkDgoMenu(dg,site));
+      fmap['dg-db-'+dg.id]=()=>{map.setView([Number(site.lat),Number(site.lng)],18);showPanDgoOficial(dg);};
+    }
+  });
+  store.dgos.forEach(dg=>{
+    const site=findDraftPoint(dg.site||'');
+    if(site?.lat&&site?.lng){
+      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D${mkSyncIndicator(!!dg._synced)}</div>`});
+      const mk=L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3650})
+        .bindPopup(`<b>DGO ${esc(dg.codigo||'Rascunho')}</b><br>Site: ${esc(dg.site||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')}`)
+        .on('click',()=>showPanDgoDraft(dg))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkDgoMenu(dg,site));
+      attachMarkerEditShortcut(mk,()=>editarDgoDraft(dg.id),'DGO');
+      fmap['dg-'+dg.id]=()=>{map.setView([Number(site.lat),Number(site.lng)],18);showPanDgoDraft(dg);};
+    }
+  });
+  store.segmentos.forEach(seg=>{
+    const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b);
+    const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
+      ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(p=>p&&p.length===2)
+      : (a?.lat&&a?.lng&&b?.lat&&b?.lng?[[a.lat,a.lng],[b.lat,b.lng]]:null);
+    if(path&&path.length>=2){
+      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#8d6bff':seg.tipo_lancamento==='misto'?'#ffb648':'#22d3ee',weight:4.5,opacity:seg._synced?0.92:0.6,dashArray:seg.tipo_lancamento==='subterraneo'?'3 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}`,click:()=>showPanSegmentoDraft(seg),dblclick:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        editarSegmentoDraft(seg.id);
+        toast('Edição rápida de segmento','in');
+      },contextmenu:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        const oe=ev.originalEvent||{};
+        openActionMenu({...mkSegmentoMenu(seg,path),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
+      }});
+      const bounds=L.latLngBounds(path.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]));
+      fmap['seg-'+seg.id]=()=>{map.fitBounds(bounds,{padding:[50,50],maxZoom:18});showPanSegmentoDraft(seg);};
+    }
+  });
+  store.rupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
+        .bindPopup(`<b>Ruptura ${esc(rp.cabo_segmento||'-')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'-')}<br>${esc(rp.observacao||'')}`)
+        .on('click',()=>showPanRupturaDraft(rp))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
+      attachMarkerEditShortcut(mk,()=>abrirRupturaPorContexto(rp),'ruptura');
+      fmap['rp-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaDraft(rp);};
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
+      }
+    }
+  });
+  officialRupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(true),zIndexOffset:3950})
+        .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${km(rp.distancia_otdr_m||0)}<br>Cabo lançado: ${km(rp.metragem_lancada_m||0)}<br>${esc(rp.status||'aberta')} • banco oficial`)
+        .on('click',()=>showPanRupturaOficial(rp))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
+      fmap['rp-db-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaOficial(rp);};
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3920}).addTo(draftInvLayer);
+      }
+    }
+  });
+}
+renderInventarioDrafts=renderInventarioDraftsV2;
+function roundCoord(n){return Number(n).toFixed(5);}
+function sugerirConexoesCabos(){
+  if(!suggestLayer)return;
+  suggestLayer.clearLayers();
+  const pontos={};
+  allC.forEach(c=>{
+    const pts=PL(c.trajeto);
+    if(!pts||pts.length<2)return;
+    pts.forEach((p,idx)=>{
+      const key=`${roundCoord(p[0])}|${roundCoord(p[1])}`;
+      if(!pontos[key])pontos[key]={lat:p[0],lng:p[1],cabos:new Map(),hits:0,tipos:new Set(),vertice:idx===0||idx===pts.length-1};
+      pontos[key].cabos.set(c.id,c.nome||c.id);
+      pontos[key].tipos.add(c.tipo||'distribuicao');
+      pontos[key].hits++;
+      if(idx===0||idx===pts.length-1)pontos[key].vertice=true;
+    });
+  });
+  Object.values(pontos)
+    .filter(p=>p.cabos.size>=2 && p.vertice)
+    .slice(0,250)
+    .forEach(p=>{
+      const nomes=[...p.cabos.values()].slice(0,6);
+      L.marker([p.lat,p.lng],{icon:mkSuggestNode(),zIndexOffset:3700})
+        .bindPopup(`<b>⚠ Possível caixa/emenda</b><br>${p.cabos.size} cabo(s) convergem neste ponto.<br><br><b>Cabos:</b><br>${nomes.map(n=>`• ${esc(n)}`).join('<br>')}<br><br><span style="color:#ffb648;font-weight:700">Confirmar em campo antes de consolidar.</span>`)
+        .on('click',()=>showPanSugestaoConexao(p))
+        .addTo(suggestLayer);
+    });
+}
+function showPanSugestaoConexao(p){
+  closePan();
+  $('pt').textContent='⚠ Sugestão automática de conexão';
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Status</span><span class="pv">pendente de confirmação</span></div>
+    <div class="pr"><span class="pl">Cabos</span><span class="pv">${p.cabos.size}</span></div>
+    <div class="pr"><span class="pl">Coordenada</span><span class="pv">${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}</span></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">
+      O sistema detectou encontro de cabos neste ponto com base na geometria.
+      Isso <b>não confirma</b> que exista caixa de emenda real no local.
+      O usuário deve validar em campo, confirmar, ajustar ou descartar.
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px">Cabos envolvidos</div>
+    ${[...p.cabos.values()].map(n=>`<div style="font-size:11px;color:var(--t2);margin-bottom:4px">• ${esc(n)}</div>`).join('')}
+  `;
+  const cabosTxt=[...p.cabos.values()].join(' | ').replace(/'/g,"\\'");
+  $('pa').innerHTML=`
+    <button class="pac g" onclick="confirmarCaixaSugestao(${p.lat},${p.lng},'${cabosTxt}')">🧰 Criar caixa rascunho</button>
+    <button class="pac a" onclick="toast('Sugestão mantida para vistoria de campo','wn')">📍 Validar em campo</button>
+  `;
+  $('pan').style.display='block';
+}
+function confirmarCaixaSugestao(lat,lng,cabosTxt){
+  $('cx-lat').value=Number(lat).toFixed(6);
+  $('cx-lng').value=Number(lng).toFixed(6);
+  $('cx-obs').value=`Sugestão automática de conexão entre cabos: ${cabosTxt}. Necessário confirmar em campo, ajustar ou descartar.`;
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  closePan();
+  toast('Preencha e confirme a caixa sugerida antes de salvar','in');
+}
+
+async function salvarSite(){
+  const nome=gv('cs-nome');
+  if(!nome){msgField('cs-msg','Nome é obrigatório');return;}
+  const lat=gf('cs-lat'),lng=gf('cs-lng');
+  const reg={nome,tipo:gv('cs-tipo')||'site',camada:gv('cs-cam')||'acesso',municipio:gv('cs-mun'),uf:gv('cs-uf')||'MG',status:gv('cs-status')||'ativo',responsavel:gv('cs-resp'),observacao:gv('cs-obs')};
+  if(lat&&lng)reg.localizacao=`SRID=4326;POINT(${lng} ${lat})`;
+  Object.keys(reg).forEach(k=>{if(!reg[k])delete reg[k];});
+  msgField('cs-msg','Salvando...','in');
+  const r=await fetch(`${SU}/rest/v1/sites`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){msgField('cs-msg','✓ Site salvo com sucesso!','ok');limpar('cs');if(lat&&lng)loadMap();}
+  else{const err=await r.json().catch(()=>({}));msgField('cs-msg','Erro: '+(err.message||err.details||r.status));}
+}
+
+async function salvarEnlace(){
+  const pa=gv('ce-a'),pb=gv('ce-b');
+  if(!pa||!pb){msgField('ce-msg','Ponta A e Ponta B são obrigatórias');return;}
+  const reg={
+    nome:`${pa}-${pb}`,
+    camada:gv('ce-cam')||'backbone',
+    status:'ativo',
+    ponta_a_site:pa,ponta_b_site:pb,
+    ponta_a_equip:gv('ce-eqa'),ponta_b_equip:gv('ce-eqb'),
+    ponta_a_dgo:gv('ce-dgoa'),ponta_b_dgo:gv('ce-dgob'),
+    ponta_a_rack:gv('ce-rka'),ponta_b_rack:gv('ce-rkb'),
+    ponta_a_posicao:gv('ce-posa'),ponta_b_posicao:gv('ce-posb'),
+    potencia_tx_a:gf('ce-txa'),potencia_rx_b:gf('ce-rxb'),
+    distancia_m:gf('ce-dist')?Math.round(gf('ce-dist')):null,
+    atenuacao_ida:gf('ce-aten'),
+    cabo_nome:gv('ce-cabo'),
+    emendas_caminho:gv('ce-em'),
+    observacao:gv('ce-obs'),
+    responsavel:sessao.nome
+  };
+  // hierarquias como texto na observação (campo não existe como array no banco)
+  if(gv('ce-hier'))reg.observacao=(reg.observacao?reg.observacao+' | ':'')+'Hierarquias: '+gv('ce-hier');
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  msgField('ce-msg','Salvando...','in');
+  const r=await fetch(`${SU}/rest/v1/enlaces`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){msgField('ce-msg','✓ Enlace salvo!','ok');limpar('ce');}
+  else{const err=await r.json().catch(()=>({}));msgField('ce-msg','Erro: '+(err.message||err.details||r.status));}
+}
+
+async function salvarRota(){
+  const nome=gv('cr-nome');
+  if(!nome){msgField('cr-msg','Nome é obrigatório');return;}
+  const hier=gv('cr-hier');
+  const reg={
+    nome,tipo:gv('cr-tipo')||'anel',camada:gv('cr-cam')||'backbone',
+    site_a:gv('cr-a'),site_b:gv('cr-b'),
+    distancia_total_m:gf('cr-dist')?Math.round(gf('cr-dist')):null,
+    n_emendas:gf('cr-nem')?Math.round(gf('cr-nem')):null,
+    hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,
+    observacao:gv('cr-seq'),status:'ativo'
+  };
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  msgField('cr-msg','Salvando...','in');
+  const r=await fetch(`${SU}/rest/v1/rotas`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){msgField('cr-msg','✓ Rota salva!','ok');limpar('cr');loadRotas();}
+  else{const err=await r.json().catch(()=>({}));msgField('cr-msg','Erro: '+(err.message||err.details||r.status));}
+}
+
+// EDITAR SITE e CABO via modal
+async function editarSite(id){
+  const s=allS.find(x=>x.id===id);if(!s){toast('Site não encontrado em memória','er');return;}
+  const pt=PP(s.localizacao)||[];
+  $('mtt').textContent='✏ Editar site';
+  $('mbd').innerHTML=`
+    <div class="mfg"><label>Nome *</label><input id="es-nome" value="${esc(s.nome||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Tipo</label><select id="es-tipo">${['site','caixa','ERB','equipamento','POP'].map(t=>`<option ${s.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Camada</label><select id="es-cam">${['backbone','metro_alta','metro_dist','acesso','b2b'].map(c=>`<option ${s.camada===c?'selected':''}>${c}</option>`).join('')}</select></div>
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Município</label><input id="es-mun" value="${esc(s.municipio||'')}"></div>
+      <div class="mfg"><label>UF</label><input id="es-uf" value="${esc(s.uf||'MG')}" maxlength="2"></div>
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Latitude</label><input id="es-lat" type="number" step="0.000001" value="${pt[0]||''}"></div>
+      <div class="mfg"><label>Longitude</label><input id="es-lng" type="number" step="0.000001" value="${pt[1]||''}"></div>
+    </div>
+    <div class="mfg"><button type="button" class="btn2 s" style="padding:7px" onclick="gpsF('es-lat','es-lng')">📍 GPS atual</button></div>
+    <div class="mfg"><label>Status</label><select id="es-st">${['ativo','inativo','previsto','em_obra'].map(v=>`<option ${s.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div class="mfg"><label>Responsável</label><input id="es-resp" value="${esc(s.responsavel||'')}"></div>
+    <div class="mfg"><label>Observação</label><textarea id="es-obs">${esc(s.observacao||'')}</textarea></div>
+    <div id="es-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarEditSite('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarEditSite(id){
+  const nome=($('es-nome')?.value||'').trim();
+  if(!nome){const m=$('es-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const lat=parseFloat($('es-lat')?.value),lng=parseFloat($('es-lng')?.value);
+  const reg={nome,tipo:$('es-tipo')?.value,camada:$('es-cam')?.value,municipio:($('es-mun')?.value||'').trim()||null,uf:($('es-uf')?.value||'MG'),status:$('es-st')?.value,responsavel:($('es-resp')?.value||'').trim()||null,observacao:($('es-obs')?.value||'').trim()||null};
+  if(!isNaN(lat)&&!isNaN(lng)&&lat&&lng)reg.localizacao=`SRID=4326;POINT(${lng} ${lat})`;
+  const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status)){toast('✓ Site atualizado!');closeM();closePan();loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('es-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function editarCabo(id){
+  const c=allC.find(x=>x.id===id);if(!c)return;
+  const pts=PL(c.trajeto)||[];
+  $('mtt').textContent='✏ Editar cabo';
+  $('mbd').innerHTML=`
+    <input id="ec-geo" type="hidden" value='${esc(JSON.stringify(pts))}'>
+    <div class="mfg"><label>Nome *</label><input id="ec-nome" value="${esc(c.nome||'')}"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Tipo</label><select id="ec-tipo">${['distribuicao','backbone','drop','interligacao'].map(t=>`<option ${c.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="mfg"><label>Status</label><select id="ec-st">${['ativo','inativo','previsto'].map(v=>`<option ${c.status===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <div class="mfg"><label>Comprimento (m)</label><input id="ec-comp" type="number" value="${c.comprimento||''}"></div>
+    <div class="mfg" style="background:rgba(72,168,255,.08);border:1px solid rgba(72,168,255,.2);border-radius:7px;padding:9px">
+      <label style="color:var(--bl)">Geometria atual</label>
+      <div style="font-size:12px;color:var(--t2);margin-top:3px">${pts.length||0} ponto(s)</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" class="btn2 s" onclick="redesenharCaboOficial('${id}')">🧭 Redesenhar no mapa</button>
+      </div>
+    </div>
+    <div class="mfg"><label>Observação</label><textarea id="ec-obs">${esc(c.observacao||'')}</textarea></div>
+    <div id="ec-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarEditCabo('${id}')">💾 Salvar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+async function salvarEditCabo(id){
+  const nome=($('ec-nome')?.value||'').trim();
+  if(!nome){const m=$('ec-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const reg={nome,tipo:$('ec-tipo')?.value,status:$('ec-st')?.value,comprimento:Math.round(parseFloat($('ec-comp')?.value))||null,observacao:($('ec-obs')?.value||'').trim()||null};
+  try{
+    const pts=JSON.parse($('ec-geo')?.value||'null');
+    if(Array.isArray(pts)&&pts.length>=2){
+      const coords=pts.map(p=>`${p[1]} ${p[0]}`).join(',');
+      reg.trajeto=`SRID=4326;LINESTRING(${coords})`;
+    }
+  }catch{}
+  const r=await fetch(`${SU}/rest/v1/cabos?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status)){toast('✓ Cabo atualizado!');closeM();closePan();loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('ec-msg');m.textContent='Erro: '+(err.message||r.status);m.style.color='var(--rd)';}
+}
+function redesenharCaboOficial(id){
+  const c=allC.find(x=>x.id===id);if(!c){toast('Cabo não encontrado','er');return;}
+  const seed=PL(c.trajeto)||[];
+  closeM();
+  closePan();
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  startDraw(seed,'cabo');
+}
+
+// EXCLUIR
+async function del(tbl,id){
+  if(!confirm('Excluir permanentemente? Esta ação não pode ser desfeita.'))return;
+  const r=await fetch(`${SU}/rest/v1/${tbl}?id=eq.${id}`,{method:'DELETE',headers:WH});
+  if([200,204].includes(r.status)){toast('Excluído!');closePan();loadMap();}else toast('Erro ao excluir','er');
+}
+
+// MODAL
+let _mt=null,_mi=null,_dp=null;
+function openM(tipo,id,lat,lng,dpts,dlen,siteRef){
+  _mt=tipo;_mi=id||null;_dp=dpts||null;
+  if(['_rast','_otdr'].includes(tipo))return;
+  if(tipo==='site'){editarSite(id||'__new__');if(!id){$('mtt').textContent='Novo site';/* fallback handled by editarSite check */}return;}
+  if(tipo==='cabo'){editarCabo(id||'__new__');return;}
+  let titulo='',body='';
+  if(tipo==='incidente'){
+    titulo='🚨 Registrar incidente / falha';
+    body=`<div class="mfg"><label>Título *</label><input id="fi-t" placeholder="Rompimento JFA-003 / Alta atenuação SAG-ESL"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="fi-tp"><option>rompimento</option><option>alta_atenuacao</option><option>degradacao</option><option>falha_equip</option><option>outro</option></select></div>
+    <div class="mfg"><label>Severidade</label><select id="fi-sv"><option>critica</option><option>alta</option><option>media</option><option>baixa</option></select></div></div>
+    <div class="mfg"><label>Site afetado</label><input id="fi-sa" value="${esc(siteRef||'')}" placeholder="SAG, ESL, JCT..."></div>
+    <div class="mfgr"><div class="mfg"><label>Lat. falha</label><input id="fi-la" type="number" step="0.000001" value="${lat||''}"></div>
+    <div class="mfg"><label>Lng. falha</label><input id="fi-lo" type="number" step="0.000001" value="${lng||''}"></div></div>
+    <div class="mfg"><button type="button" class="btn2 s" style="padding:7px" onclick="gpsF('fi-la','fi-lo')">📍 GPS atual</button></div>
+    <div class="mfg"><label>Distância OTDR (m)</label><input id="fi-od" type="number" placeholder="3500"></div>
+    <div class="mfg"><label>Cabo lançado após rompimento (m)</label><input id="fi-lc" type="number" placeholder="200"></div>
+    <div class="mfg"><label>Responsável</label><input id="fi-rp" value="${esc(sessao?.nome||'')}" placeholder="Técnico de campo"></div>
+    <div class="mfg"><label>Descrição / Observação</label><textarea id="fi-ob" placeholder="Detalhe: local, causa, estrutura próxima, referências, lote do cabo lançado..."></textarea></div>
+    <div id="fi-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 r" onclick="salvarInc()">🚨 Registrar</button></div>`;
+  }else if(tipo==='rota'){
+    titulo='Nova rota / anel';
+    body=`<div class="mfg"><label>Nome *</label><input id="fr-nm" placeholder="ANEL BH-10 / ROTA SAG-ESL-LUE"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="fr-tp"><option>anel</option><option>rota_principal</option><option>rota_protecao</option></select></div>
+    <div class="mfg"><label>Camada</label><select id="fr-cm"><option>backbone</option><option>metro_alta</option><option>metro_dist</option></select></div></div>
+    <div class="mfgr"><div class="mfg"><label>Site A</label><input id="fr-a" placeholder="SAG"></div>
+    <div class="mfg"><label>Site B</label><input id="fr-b" placeholder="JCT"></div></div>
+    <div class="mfgr"><div class="mfg"><label>Distância total (m)</label><input id="fr-dt" type="number" placeholder="36500"></div>
+    <div class="mfg"><label>Nº emendas</label><input id="fr-ne" type="number" placeholder="12"></div></div>
+    <div class="mfg"><label>Hierarquias</label><input id="fr-hi" placeholder="DWDM, HL4, OLT, DATACOM"></div>
+    <div class="mfg"><label>Trechos / Sequência</label><textarea id="fr-sq" placeholder="SAG → E119 → BMJ → BSR → RAP → JCT"></textarea></div>
+    <div id="fr-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarRotaM()">💾 Salvar</button></div>`;
+  }else if(tipo==='usuario'){
+    titulo='Novo colaborador';
+    body=`<div class="mfg"><label>Nome *</label><input id="fu-nm" placeholder="João Silva"></div>
+    <div class="mfg"><label>E-mail *</label><input id="fu-em" type="email" placeholder="joao@redeop.com.br"></div>
+    <div class="mfgr">
+      <div class="mfg"><label>Perfil</label><select id="fu-pf"><option>colaborador</option><option>supervisor</option><option>leitura</option><option>admin</option></select></div>
+      <div class="mfg"><label>Senha inicial</label><input id="fu-pw" type="password" value="rede2026"></div>
+    </div>
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2);margin-bottom:10px">Senha padrão: <b style="color:var(--am)">rede2026</b> — orientar trocar no primeiro acesso.</div>
+    <div id="fu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarUsuarioM()">✓ Criar</button></div>`;
+  }else if(tipo==='cabo'&&!id){
+    titulo='Novo cabo';
+    body=`<div class="mfg"><label>Nome *</label><input id="nc-nm" placeholder="JFA-UBA-144FO"></div>
+    <div class="mfgr"><div class="mfg"><label>Tipo</label><select id="nc-tp"><option>distribuicao</option><option>backbone</option><option>drop</option><option>interligacao</option></select></div>
+    <div class="mfg"><label>Status</label><select id="nc-st"><option>ativo</option><option>inativo</option><option>previsto</option></select></div></div>
+    ${dlen?`<div class="mfg" style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.25);border-radius:7px;padding:9px"><label style="color:var(--gr)">Trajeto desenhado</label><div style="font-size:12px;color:var(--t2);margin-top:3px">${dpts?.length||0} pontos • ${km(dlen)}</div></div>`:''}
+    <div class="mfg"><label>Comprimento (m)</label><input id="nc-cp" type="number" value="${dlen||''}"></div>
+    <div class="mfg"><label>Lote / Fabricante</label><input id="nc-lt" placeholder="LOT-2023-JFA / Corning 2019"></div>
+    <div class="mfg"><label>Observação</label><textarea id="nc-ob" placeholder="Informe: nº de fibras, tipo, hierarquias que passam, emendas no trajeto..."></textarea></div>
+    <div id="nc-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarCaboM()">💾 Salvar</button></div>`;
+  }
+  $('mtt').textContent=titulo;$('mbd').innerHTML=body;$('mbg').classList.add('show');
+}
+function closeM(){$('mbg').classList.remove('show');}
+
+async function salvarInc(){
+  const titulo=($('fi-t')?.value||'').trim();
+  if(!titulo){const m=$('fi-msg');m.textContent='Título obrigatório';m.style.color='var(--rd)';return;}
+  const reg={titulo,tipo:$('fi-tp')?.value,severidade:$('fi-sv')?.value,site_afetado:($('fi-sa')?.value||'').trim()||null,lat_falha:parseFloat($('fi-la')?.value)||null,lng_falha:parseFloat($('fi-lo')?.value)||null,distancia_otdr_m:parseFloat($('fi-od')?.value)||null,responsavel:($('fi-rp')?.value||'').trim(),descricao:($('fi-ob')?.value||'').trim()||null,status:'aberto',sla_horas:5};
+  if($('fi-lc')?.value)reg.descricao=(reg.descricao?reg.descricao+' | ':'')+'Cabo lançado: '+$('fi-lc').value+'m';
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/incidentes`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('🚨 Incidente registrado!','er');closeM();loadIncidentes();loadRompimentosNoMapa();}
+  else{const err=await r.json().catch(()=>({}));const m=$('fi-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function salvarRotaM(){
+  const nome=($('fr-nm')?.value||'').trim();
+  if(!nome){const m=$('fr-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const hier=($('fr-hi')?.value||'').trim();
+  const reg={nome,tipo:$('fr-tp')?.value,camada:$('fr-cm')?.value,site_a:($('fr-a')?.value||'').trim()||null,site_b:($('fr-b')?.value||'').trim()||null,distancia_total_m:Math.round(parseFloat($('fr-dt')?.value))||null,n_emendas:Math.round(parseFloat($('fr-ne')?.value))||null,hierarquias:hier?hier.split(',').map(h=>h.trim()).filter(Boolean):null,observacao:($('fr-sq')?.value||'').trim()||null,status:'ativo'};
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/rotas`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('✓ Rota salva!');closeM();loadRotas();}
+  else{const err=await r.json().catch(()=>({}));const m=$('fr-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+async function salvarUsuarioM(){
+  const nome=($('fu-nm')?.value||'').trim(),email=($('fu-em')?.value||'').trim().toLowerCase(),perfil=$('fu-pf')?.value,senha=($('fu-pw')?.value||'rede2026').trim();
+  if(!nome||!email){const m=$('fu-msg');m.textContent='Nome e e-mail são obrigatórios';m.style.color='var(--rd)';return;}
+  if(!email.includes('@')){const m=$('fu-msg');m.textContent='E-mail inválido';m.style.color='var(--rd)';return;}
+  const reg={nome,email,senha_texto:senha,perfil,ativo:true};
+  const rs=await authCreateUsuario(reg);
+  if(rs.ok){toast('✓ Usuário criado!');closeM();loadUsuarios();}
+  else{const m=$('fu-msg');m.textContent='Erro: '+(rs.error||'E-mail já cadastrado ou permissão insuficiente');m.style.color='var(--rd)';}
+}
+async function salvarCaboM(){
+  const nome=($('nc-nm')?.value||'').trim();
+  if(!nome){const m=$('nc-msg');m.textContent='Nome obrigatório';m.style.color='var(--rd)';return;}
+  const reg={nome,tipo:$('nc-tp')?.value,status:$('nc-st')?.value,comprimento:Math.round(parseFloat($('nc-cp')?.value))||null,observacao:[($('nc-lt')?.value||''),($('nc-ob')?.value||'')].filter(Boolean).join(' | ')||null};
+  if(_dp?.length>=2){const coords=_dp.map(p=>`${p.lng} ${p.lat}`).join(',');reg.trajeto=`SRID=4326;LINESTRING(${coords})`;}
+  Object.keys(reg).forEach(k=>{if(reg[k]===null||reg[k]==='')delete reg[k];});
+  const r=await fetch(`${SU}/rest/v1/cabos`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201){toast('✓ Cabo salvo!');closeM();_dp=null;loadMap();}
+  else{const err=await r.json().catch(()=>({}));const m=$('nc-msg');m.textContent='Erro: '+(err.message||err.details||r.status);m.style.color='var(--rd)';}
+}
+
+async function abrirEsteiraSigitm(){
+  $('sec-sigitm').style.display='block';
+  const el = $('sigitm-lista');
+  el.innerHTML = '<div style="color:var(--t3)">Carregando fila...</div>';
+  try {
+    const r = await fetch('./sigitm_pendentes.json',{cache:'no-store'});
+    if(!r.ok) { el.innerHTML = 'Fila vazia ou não localizada.'; return; }
+    const dados = await r.json();
+    if(!dados.length) { el.innerHTML = 'Nenhuma TA pendente de validação.'; return; }
+    
+    el.innerHTML = dados.map(item => `
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <b style="color:var(--bl)">TA ${item.numero_ta}</b>
+          <span class="stg twn">Pendente Supervisor</span>
+        </div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Causa:</b> ${item.causa_falha}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Site:</b> ${item.site_afetado}</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:10px"><b>Endereço:</b> ${item.endereco}</div>
+        <div style="display:flex;gap:6px">
+          <button class="tb" onclick="revisarNoMapa('${item.numero_ta}', '${item.site_afetado}', '${item.coordenadas_brutas}')">👁 Revisar</button>
+          <button class="tb g" onclick="validarEventoSigitm('${item.numero_ta}')">✅ Aprovar</button>
+          <button class="tb r" onclick="rejeitarEventoSigitm('${item.numero_ta}')">✕ Rejeitar</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = 'Erro ao carregar dados do SIGITM.';
+  }
+}
+
+async function revisarNoMapa(ta, siteRef, coords){
+  goTab('mapa', document.querySelector('.nt[onclick*="mapa"]'));
+  toast(`Revisando TA ${ta} próxima ao site ${siteRef}`,'in');
+  
+  // Tenta localizar o site para centrar
+  const site = allS.find(s => s.codigo === siteRef || s.nome.includes(siteRef));
+  if(site && site.localizacao){
+    const pt = PP(site.localizacao);
+    map.setView(pt, 15);
+    
+    // Simula marcador da falha (se tiver coord na base brutos)
+    if(coords && coords.includes(',')){
+       const [lat, lng] = coords.split(',').map(Number);
+       if(!isNaN(lat)){
+         L.marker([lat, lng], {icon: mkRomp(false), zIndexOffset: 5000})
+          .bindPopup(`<b>Sugestão SIGITM: TA ${ta}</b><br>${siteRef}<br>Clique para confirmar local`)
+          .addTo(map);
+       }
+    }
+  }
+}
+
+async function validarEventoSigitm(ta){
+  if(!confirm(`Deseja aprovar e publicar a TA ${ta} no inventário oficial?`)) return;
+  // Aqui faríamos o POST para o Supabase oficial
+  toast(`TA ${ta} validada pelo supervisor!`,'ok');
+  // Simula remoção da fila
+  abrirEsteiraSigitm();
+  // Adiciona como rascunho de ruptura para o técnico auditar emendas
+  addInvItem('rupturas', {
+    cabo_segmento: `TA-${ta}`,
+    distancia_otdr_m: 0,
+    observacao: `Evento validado do SIGITM. Aguardando auditoria de trecho.`,
+    _synced: true
+  });
+}
+
+function estimarTempoReparo(causa, numCaixas){
+  let base = 120; // 2h base para deslocamento e análise
+  const causas = {
+    'rompimento': 180,
+    'vandalismo': 240,
+    'alta_atenuacao': 90,
+    'degradacao': 60,
+    'falha_equip': 45
+  };
+  base += (causas[causa.toLowerCase()] || 120);
+  base += (numCaixas * 40); // 40 min por caixa para abrir, testar e fechar
+  return Math.round(base / 60);
+}
+
+function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
+  const cadeia = auditarTrechoFalha(siteRef, lat, lng);
+  const tempoEst = estimarTempoReparo(causa, cadeia.length);
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html>
+    <head>
+      <title>Relatório de Intervenção - TA ${ta}</title>
+      <style>
+        body { font-family: sans-serif; padding: 40px; color: #333; }
+        .h { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .sec { margin-top: 25px; }
+        .t { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+        th { background: #f5f5f5; }
+        .sla-warn { color: red; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="h">
+        <div><h1>Rede Óptica MG</h1><p>Relatório de Auditoria de Trecho</p></div>
+        <div style="text-align:right"><p><b>TA:</b> ${ta}</p><p>Data: ${new Date().toLocaleDateString()}</p></div>
+      </div>
+      <div class="sec">
+        <div class="t">Dados do Evento</div>
+        <p><b>Causa:</b> ${causa} | <b>Estação de Origem:</b> ${siteRef}</p>
+        <p><b>Coordenadas da Falha:</b> ${lat}, ${lng}</p>
+        <p><b>Observação:</b> ${obs}</p>
+      </div>
+      <div class="sec">
+        <div class="t">Estimativa de Reparo</div>
+        <p>Tempo estimado: <b>${tempoEst} horas</b> 
+        ${tempoEst > 5 ? '<span class="sla-warn">(Risco de estouro de SLA de 5h)</span>' : '<span style="color:green">(Dentro do SLA)</span>'}
+        </p>
+      </div>
+      <div class="sec">
+        <div class="t">Cadeia de Emendas para Vistoria</div>
+        <table>
+          <thead><tr><th>Ordem</th><th>Código da Caixa</th><th>Distância da Estação</th><th>Status Vistoria</th></tr></thead>
+          <tbody>
+            ${cadeia.map(c => `<tr><td>${c.ordem}</td><td>${c.codigo}</td><td>${c.distancia}</td><td>${c.status === '✓' ? 'OK' : 'PENDENTE'}</td></tr>`).join('')}
+            <tr><td>-</td><td><b>PONTO DA FALHA</b></td><td>-</td><td>ALVO</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sec" style="margin-top:50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 10px; color: #999;">
+        Documento gerado automaticamente pelo Sistema de Cadastro de Fibra MG.
+      </div>
+      <script>window.print();<\/script>
+    </body>
+    </html>
+  `);
+}
+
+// INIT
+$('le').addEventListener('keydown',e=>{if(e.key==='Enter')$('lp').focus();});
+$('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+loadPref();aplicarTema();
+renderInventarioResumo();
+if(checkSessao()){iniciarApp();}else{$('le').focus();}
+window.addEventListener('resize',()=>{
+  clearTimeout(window.__uiResizeTimer);
+  window.__uiResizeTimer=setTimeout(()=>{
+    applyResponsiveLayout();
+    if(map)map.invalidateSize(false);
+  },120);
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
+  });
+}
+</script>
+</body>
+</html>
