@@ -1055,11 +1055,27 @@ const nearestSiteTo=(lat,lng,maxDist=120)=>{
   return best?{site:best,dist:bestDist}:null;
 };
 function saveMapCache(sites,cabos,science){
-  try{localStorage.setItem(MAP_CACHE_KEY,JSON.stringify({sites,cabos,science,salvo_em:new Date().toISOString()}));}
-  catch(err){console.warn('cache mapa falhou',err);}
+  try{
+    const data = {sites,cabos,science,salvo_em:new Date().toISOString()};
+    localStorage.setItem(MAP_CACHE_KEY, JSON.stringify(data));
+  } catch(err){
+    console.warn('cache mapa falhou (provavelmente limite de storage)', err);
+    // Fallback: salva apenas o essencial (sites e cabos sem science)
+    try {
+      localStorage.setItem(MAP_CACHE_KEY, JSON.stringify({sites: sites.slice(0, 2000), cabos: cabos.slice(0, 1000), salvo_em: new Date().toISOString()}));
+    } catch(e2) {}
+  }
 }
 function loadMapCache(){
-  try{return JSON.parse(localStorage.getItem(MAP_CACHE_KEY)||'null');}catch{return null;}
+  try{
+    const raw = localStorage.getItem(MAP_CACHE_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    // Cache de 12h para uso em campo
+    const exp = 1000 * 60 * 60 * 12;
+    if(new Date() - new Date(data.salvo_em) > exp) return null;
+    return data;
+  } catch(e){ return null; }
 }
 function pointFromAnyGeom(row){
   const cand=[row?.localizacao,row?.geom_falha,row?.geom,row?.geometria,row?.ponto];
@@ -1741,8 +1757,9 @@ async function loadMap(){
       let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
       let caboUrl = `${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`;
       
-      // Se estiver com zoom alto, filtra por BBOX para carregar apenas o necessário mais rápido
-      if(zoom > 10){
+      // Otimização BBOX: Carrega apenas o que está na tela se o zoom for alto (>12)
+      // Para zoom baixo, carrega tudo (backbone) para manter a visão macro
+      if(zoom > 12){
         const bbox = getBBoxString();
         siteUrl += `&localizacao=ov.${bbox}`;
         caboUrl += `&trajeto=ov.${bbox}`;
