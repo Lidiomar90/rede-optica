@@ -1576,9 +1576,11 @@ function mkCaboMenu(c,p2,lenCalc){
     subtitle:`${esc(c.tipo||'—')} | ${km(c.comprimento||lenCalc)}<br>${esc(c.status||'—')}`,
     actions:[
       {label:'📋 Ver detalhes',action:()=>showPanCabo(c,p2,lenCalc)},
+      {label:'🔗 Vincular estações',action:()=>sincronizarCaboEstacoes(c.id)},
+      {label:'🧬 Diagrama de fibras',primary:true,action:()=>openCableFiberDiagram(c.id)},
       {label:flagged?'🚩 Editar flag':'🚩 Marcar cabo',action:()=>openFlagEditor('cabo',c.id)},
       {label:'✏️ Editar cabo',action:()=>editarCabo(c.id)},
-      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharCaboOficial(c.id)},
+      {label:'🧭 Redesenhar no mapa',action:()=>redesenharCaboOficial(c.id)},
       {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(c,latlng.lat,latlng.lng)},
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
     ]
