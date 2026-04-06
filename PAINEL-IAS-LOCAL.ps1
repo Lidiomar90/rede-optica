@@ -36,6 +36,23 @@ function Get-LatestSessions {
         Select-Object -First 6
 }
 
+function Has-RealResponse {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $false }
+    $text = Get-Content -Path $Path -Raw -ErrorAction SilentlyContinue
+    if (-not $text) { return $false }
+    if ($text -match 'Cole aqui a resposta') { return $false }
+    return ($text.Trim().Length -gt 40)
+}
+
+function Get-Badge {
+    param(
+        [string]$Label,
+        [string]$Kind
+    )
+    return "<span class='badge $Kind'>$Label</span>"
+}
+
 if ($DispararFrentes) {
     $params = @{}
     if ($SemGit) { $params.SemGit = $true }
@@ -56,6 +73,28 @@ $sessionCards = foreach ($sessao in $sessions) {
     $manus = Join-Path $sessao.FullName "05_MANUS_PRODUTO_UX.md"
     $kiro = Join-Path $sessao.FullName "06_KIRO_COORDENACAO.md"
     $respostas = Join-Path $sessao.FullName "respostas"
+    $claudeResp = Join-Path $respostas "claude_resposta.md"
+    $geminiResp = Join-Path $respostas "gemini_resposta.md"
+    $deepseekResp = Join-Path $respostas "deepseek_resposta.md"
+    $manusResp = Join-Path $respostas "manus_resposta.md"
+    $kiroResp = Join-Path $respostas "kiro_resposta.md"
+    $consolidado = Join-Path $sessao.FullName "07_RELATORIO_CONSOLIDADO.md"
+    $monitor = Join-Path $sessao.FullName "08_RESUMO_AUTOMATICO.md"
+
+    $readyCount = @(
+        (Has-RealResponse $claudeResp),
+        (Has-RealResponse $geminiResp),
+        (Has-RealResponse $deepseekResp),
+        (Has-RealResponse $manusResp),
+        (Has-RealResponse $kiroResp)
+    ) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
+
+    $badges = @()
+    if (Test-Path $monitor) { $badges += Get-Badge -Label "monitorado" -Kind "ok" }
+    if (Test-Path $consolidado) { $badges += Get-Badge -Label "consolidado" -Kind "info" }
+    if ($readyCount -eq 5) { $badges += Get-Badge -Label "5/5 respostas" -Kind "ok" }
+    elseif ($readyCount -gt 0) { $badges += Get-Badge -Label "$readyCount/5 respostas" -Kind "warn" }
+    else { $badges += Get-Badge -Label "aguardando respostas" -Kind "muted" }
 
 @"
       <article class="session-card">
@@ -64,6 +103,7 @@ $sessionCards = foreach ($sessao in $sessions) {
           <a class="pill" href="$(To-FileUrl $sessao.FullName)">abrir sessao</a>
         </div>
         <p class="session-path">$($sessao.FullName)</p>
+        <div class="badge-row">$($badges -join '')</div>
         <div class="agent-grid">
           <a class="agent-link claude" href="$(To-FileUrl $claude)">Claude</a>
           <a class="agent-link gemini" href="$(To-FileUrl $gemini)">Gemini</a>
@@ -74,6 +114,8 @@ $sessionCards = foreach ($sessao in $sessions) {
         </div>
         <div class="session-actions">
           <a class="subtle-link" href="$(To-FileUrl $respostas)">pasta respostas</a>
+          <a class="subtle-link" href="$(To-FileUrl $monitor)">resumo auto</a>
+          <a class="subtle-link" href="$(To-FileUrl $consolidado)">consolidado</a>
         </div>
       </article>
 "@
@@ -226,6 +268,27 @@ $html = @"
       font-size:13px;
       word-break:break-word;
     }
+    .badge-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      font-size:12px;
+      font-weight:700;
+      letter-spacing:.03em;
+      text-transform:uppercase;
+    }
+    .badge.ok{background:rgba(104,240,142,.12); border-color:rgba(104,240,142,.35); color:#9cf7b8}
+    .badge.warn{background:rgba(255,191,71,.12); border-color:rgba(255,191,71,.35); color:#ffd27f}
+    .badge.info{background:rgba(94,200,255,.12); border-color:rgba(94,200,255,.35); color:#9fdcff}
+    .badge.muted{background:rgba(142,163,194,.12); border-color:rgba(142,163,194,.25); color:#a9b8d0}
     .tools{
       padding:22px;
       display:grid;

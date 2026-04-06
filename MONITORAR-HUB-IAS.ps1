@@ -72,12 +72,14 @@ $claude = Read-All (Join-Path $RespDir "claude_resposta.md")
 $gemini = Read-All (Join-Path $RespDir "gemini_resposta.md")
 $deepseek = Read-All (Join-Path $RespDir "deepseek_resposta.md")
 $manus = Read-All (Join-Path $RespDir "manus_resposta.md")
+$kiro = Read-All (Join-Path $RespDir "kiro_resposta.md")
 
 $estado = [ordered]@{
     Claude = Has-RealResponse $claude
     Gemini = Has-RealResponse $gemini
     DeepSeek = Has-RealResponse $deepseek
     Manus = Has-RealResponse $manus
+    Kiro = Has-RealResponse $kiro
 }
 
 $prontas = @($estado.GetEnumerator() | Where-Object { $_.Value } | ForEach-Object { $_.Key })
@@ -121,6 +123,7 @@ Gerado em: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 - Gemini: $(if($estado.Gemini){'ok'}else{'pendente'})
 - DeepSeek: $(if($estado.DeepSeek){'ok'}else{'pendente'})
 - Manus: $(if($estado.Manus){'ok'}else{'pendente'})
+- Kiro: $(if($estado.Kiro){'ok'}else{'pendente'})
 
 ## Consolidacao
 - Consolidado gerado: $(if($consolidadoGerado){'sim'}else{'nao'})
