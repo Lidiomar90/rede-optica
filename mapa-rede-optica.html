@@ -1050,6 +1050,7 @@ function aplicarTema(){
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -2334,10 +2335,26 @@ function renderSidebarFilters(){
   const el=$('sbflt');
   if(!el)return;
   if(sbMode==='sites'){
-    const total=allS.length;
-    const visiveis=allS.filter(s=>isSiteVisible(s.id)).length;
+    const q=$('si')?.value||'';
+    const baseData=getFilteredSiteData(q);
+    const total=baseData.length;
+    const visiveis=baseData.filter(s=>isSiteVisible(s.id)).length;
+    const cnOptions=[...new Set(allS.map(getSiteQuickCn))].sort(cnSort);
+    const locOptions=[...new Set(allS.filter(s=>siteQuickCn==='todos'||getSiteQuickCn(s)===siteQuickCn).map(getSiteQuickLoc))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+    const statusOpts=[['todos','Todos'],['ativo','Ativos'],['previsto','Previstos'],['pendente','Pendentes'],['outros','Outros']];
     el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
       <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Sites no mapa <span style="color:var(--cy)">${visiveis}/${total}</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="setAllSites(true)">Todos</button><button class="overlay-chip" onclick="setAllSites(false)">Nenhum</button></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${statusOpts.map(([id,label])=>`<button class="overlay-chip ${siteQuickStatus===id?'on':''}" onclick="setSiteQuickStatus('${id}')">${label}</button>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <select onchange="setSiteQuickCn(this.value)" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:7px 9px;font-size:10px;color:var(--t2);font-family:inherit;font-weight:700">
+          <option value="todos"${siteQuickCn==='todos'?' selected':''}>Todos os CN</option>
+          ${cnOptions.map(cn=>`<option value="${esc(cn)}"${siteQuickCn===cn?' selected':''}>CN ${esc(cn)}</option>`).join('')}
+        </select>
+        <select onchange="setSiteQuickLoc(this.value)" style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:7px 9px;font-size:10px;color:var(--t2);font-family:inherit;font-weight:700">
+          <option value="todos"${siteQuickLoc==='todos'?' selected':''}>Todas as cidades</option>
+          ${locOptions.map(loc=>`<option value="${esc(loc)}"${siteQuickLoc===loc?' selected':''}>${esc(loc)}</option>`).join('')}
+        </select>
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="overlay-chip" onclick="setAllSiteGroups(true)">Expandir</button><button class="overlay-chip" onclick="setAllSiteGroups(false)">Recolher</button></div>
     </div>`;
     el.classList.add('on');
@@ -2370,6 +2387,51 @@ function matchesSidebarStatus(status){
   if(sbStatusFilter==='confirmado')return s.includes('confirmado')||s.includes('registrada')||s.includes('ativo')||s.includes('pronto');
   return true;
 }
+function getSiteQuickCn(site){
+  return normText(site.cn)||normText(site.science?.cn)||'Sem CN';
+}
+function getSiteQuickLoc(site){
+  return normText(site.localidade)||normText(site.science?.localidade)||normText(site.municipio)||'Sem localidade';
+}
+function getSiteQuickStatus(site){
+  const s=String(site.status||'').toLowerCase();
+  if(s.includes('prev'))return 'previsto';
+  if(s.includes('pend')||s.includes('mont')||s.includes('rascunho'))return 'pendente';
+  if(s.includes('ativo')||s.includes('confirm')||s.includes('pronto'))return 'ativo';
+  return 'outros';
+}
+function matchesSiteQuickFilters(site){
+  if(siteQuickStatus!=='todos'&&getSiteQuickStatus(site)!==siteQuickStatus)return false;
+  if(siteQuickCn!=='todos'&&getSiteQuickCn(site)!==siteQuickCn)return false;
+  if(siteQuickLoc!=='todos'&&getSiteQuickLoc(site)!==siteQuickLoc)return false;
+  return true;
+}
+function getFilteredSiteData(q=''){
+  q=(q||'').toLowerCase();
+  let data=allS.filter(matchesSiteQuickFilters);
+  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
+  return data;
+}
+function setSiteQuickStatus(next){
+  siteQuickStatus=next||'todos';
+  renderSidebarFilters();
+  renderSB($('si')?.value||'');
+}
+function setSiteQuickCn(next){
+  siteQuickCn=next||'todos';
+  if(siteQuickCn==='todos')siteQuickLoc='todos';
+  else{
+    const validLocs=new Set(allS.filter(s=>siteQuickCn===getSiteQuickCn(s)).map(getSiteQuickLoc));
+    if(siteQuickLoc!=='todos'&&!validLocs.has(siteQuickLoc))siteQuickLoc='todos';
+  }
+  renderSidebarFilters();
+  renderSB($('si')?.value||'');
+}
+function setSiteQuickLoc(next){
+  siteQuickLoc=next||'todos';
+  renderSidebarFilters();
+  renderSB($('si')?.value||'');
+}
 function isSiteVisible(id){
   return SITEVIS[String(id)]!==false;
 }
@@ -2398,12 +2460,11 @@ function setAllSites(on){
   }
 }
 function setAllSiteGroups(open){
-  const q=($('si')?.value||'').toLowerCase();
-  const filtered=allS.filter(i=>!q||[i.codigo,i.nome,i.cidade,i.localidade,i.endereco,i.tipo,i.camada].join(' ').toLowerCase().includes(q));
+  const filtered=getFilteredSiteData($('si')?.value||'');
   const touched=new Set();
   filtered.forEach(i=>{
-    const cn=i.cn_ddd||'sem-cn';
-    const loc=(i.localidade||i.cidade||'sem-localidade');
+    const cn=getSiteQuickCn(i);
+    const loc=getSiteQuickLoc(i);
     touched.add(`cn:${cn}`);
     touched.add(`cn:${cn}|loc:${loc}`);
   });
