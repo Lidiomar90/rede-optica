@@ -87,17 +87,19 @@ color:var(--t);font-family:'Manrope',sans-serif;transition:background .25s,color
 #sb.open{transform:translateX(0)!important}
 #mob-ov{display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:350;transition:opacity .28s;cursor:pointer}
 #mob-ov.show{display:block}
-#sbhero{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,.06);background:
-linear-gradient(145deg,rgba(72,168,255,.16),transparent 48%),
-linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
-.sbk{font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:6px}
-.sbh{font-size:18px;font-weight:800;line-height:1.1;margin-bottom:6px}
-.sbp{font-size:11px;color:var(--t2);line-height:1.55}
-.sbstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
-.sbst{padding:8px 9px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06)}
-.sbst b{display:block;font-size:12px;color:var(--t)}
-.sbst span{display:block;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
-#srch{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+#sbhero{padding:10px 12px 8px;border-bottom:1px solid rgba(255,255,255,.06);background:
+linear-gradient(145deg,rgba(72,168,255,.12),transparent 42%),
+linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-direction:column;gap:8px}
+.sbrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sbk{font-size:9px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:2px}
+.sbh{font-size:15px;font-weight:800;line-height:1.05;margin:0}
+.sbmini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.sbmini .sbst{padding:6px 7px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+.sbst b{display:block;font-size:11px;color:var(--t)}
+.sbst span{display:block;font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+.sbghost{padding:6px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;white-space:nowrap}
+.sbghost:hover{background:rgba(255,255,255,.07);color:var(--t)}
+#srch{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
 #srch input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:11px 12px 11px 36px;font-size:12px;color:var(--t);outline:none;font-family:inherit;transition:.12s;font-weight:700;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%234a506e' stroke-width='2.5'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:12px center}
@@ -336,11 +338,10 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   #nav{padding:0 6px;gap:4px}
   .nt{padding:10px 12px;font-size:10px}
   .pg{height:calc(100vh - 86px)}
-  #sbhero{padding:12px 12px 10px}
-  .sbh{font-size:15px}
-  .sbp{font-size:10px}
-  .sbstats{gap:6px}
-  .sbst{padding:7px 8px}
+  #sbhero{padding:8px 10px 7px}
+  .sbh{font-size:14px}
+  .sbmini{gap:5px}
+  .sbmini .sbst{padding:6px}
   #stabs{gap:6px;padding:8px 10px 6px}
   .stt{padding:8px 2px;font-size:8px}
   #maphead{top:58px;left:10px;right:64px;max-width:none;padding:8px 10px;border-radius:14px}
@@ -459,7 +460,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   <div class="brand">
     <div class="brand-mark">◈</div>
     <div>
-      <div class="opsline">Centro de Operações</div>
+      <div class="opsline">Operação</div>
       <h1>Rede <em>Óptica</em> MG</h1>
     </div>
   </div>
@@ -486,16 +487,20 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 <div class="pg on" id="pg-mapa">
   <div id="sb">
     <div id="sbhero">
-      <div class="sbk">Centro de Operações</div>
-      <div class="sbh">Mapa e inventário da rede</div>
-      <div class="sbp">Sites, cabos, falhas e cadastro em uma tela só.</div>
-      <div class="sbstats">
+      <div class="sbrow">
+        <div>
+          <div class="sbk">Operação</div>
+          <div class="sbh">Rede MG</div>
+        </div>
+        <button class="sbghost" onclick="toggleMapFocus()">▣ Mapa</button>
+      </div>
+      <div class="sbmini">
         <div class="sbst"><b id="ce2">—</b><span>Sites</span></div>
         <div class="sbst"><b id="cc2">—</b><span>Cabos</span></div>
         <div class="sbst"><b id="cs2">—</b><span>Spans</span></div>
       </div>
     </div>
-    <div id="srch"><input id="si" placeholder="Buscar site, cabo, caixa, DGO..." oninput="filterSB(this.value)"></div>
+    <div id="srch"><input id="si" placeholder="Buscar ativo..." oninput="filterSB(this.value)"></div>
     <div id="stabs">
       <div class="stt on" onclick="sbTab('camadas',this)">Camadas</div>
       <div class="stt" onclick="sbTab('sites',this)">Sites</div>
@@ -529,9 +534,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   <div id="mob-ov" onclick="closeSB()"></div>
   <div id="mw">
   <div id="maphead">
-      <div class="mhk">Operação</div>
-      <div class="mht">Rede e cadastro</div>
-      <div class="mhs" id="mapsub">Filtre, localize e aja direto no mapa.</div>
+      <div class="mhk">Mapa</div>
+      <div class="mht">Rede e falhas</div>
+      <div class="mhs" id="mapsub">Filtre e aja direto no mapa.</div>
       <div class="mmeta">
         <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
         <button class="mchip" id="map-focus-chip" onclick="toggleMapFocus()">▣ Foco mapa</button>
@@ -1350,7 +1355,7 @@ function applyResponsiveLayout(){
 }
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
-  const base='Filtre, localize e aja direto no mapa.';
+  const base='Filtre e aja direto no mapa.';
   const badges=[
     mapOffline?`<span class="ctx-off">modo offline</span>`:'',
     fieldMode?`<span class="ctx-off" style="border-color:rgba(69,208,140,.26);background:rgba(69,208,140,.12);color:var(--gr)">modo campo</span>`:'',
