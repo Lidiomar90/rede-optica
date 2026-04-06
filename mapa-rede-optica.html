@@ -3545,7 +3545,7 @@ function showPanDgoOficial(dg){
     ${buildRefLinksHtml(dg.codigo||dg.nome||dg.site_codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('DGO oficial carregado do banco','ok')">✓ Oficial</button>`;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac g" onclick="editarDgoOficial('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
