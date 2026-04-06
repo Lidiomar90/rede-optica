@@ -2932,6 +2932,7 @@ function showPanDgoDraft(dg){
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
     <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site||'—')}</span></div>
+    ${buildOccupancyBarHtml(conexoes, 24)}
     <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
     <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
     <div class="pr"><span class="pl">Bastidor</span><span class="pv">${esc(dg.bastidor||'—')}</span></div>
@@ -3491,6 +3492,23 @@ function buildDraftConnectionDiagram(ref){
     </div>`;
   }).join('')}</div>`;
 }
+function buildOccupancyBarHtml(conexoes, total=12){
+  const count = conexoes.length;
+  const pct = Math.min((count / total) * 100, 100);
+  const cor = pct >= 90 ? 'var(--rd)' : pct >= 70 ? 'var(--am)' : 'var(--gr)';
+  return `
+    <div style="margin-top:12px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px">
+        <span>Capacidade de Fibras</span>
+        <span>${count} / ${total} ocupadas</span>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+        <div style="height:100%;width:${pct}%;background:${cor};box-shadow:0 0 10px ${cor}44;transition:0.3s"></div>
+      </div>
+    </div>
+  `;
+}
+
 function showPanCaixaDraft(cx){
   if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
   closePan();
@@ -3501,6 +3519,7 @@ function showPanCaixaDraft(cx){
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
     <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
+    ${buildOccupancyBarHtml(conexoes, 12)}
     <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(cx.modelo||'—')}</span></div>
     <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(cx.fabricante||'—')}</span></div>
     <div class="pr"><span class="pl">Instalação</span><span class="pv">${esc(cx.tipo_instalacao||'—')}</span></div>
