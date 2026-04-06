@@ -2358,7 +2358,7 @@ function jumpToRef(ref){
   const p=findDraftPoint(ref||'');
   if(!p||!map){toast('Referência não localizada no mapa','wn');return;}
   map.setView([p.lat,p.lng],17);
-  if(p.tipo==='caixa')showPanCaixaDraft(p.item);
+  if(p.tipo==='caixa')p.item?._kind==='caixa_oficial'?showPanCaixaOficial(p.item):showPanCaixaDraft(p.item);
   else if(p.tipo==='dgo')showPanDgoDraft(p.item);
   else if(p.tipo==='site')showPanSite(p.item,[p.lat,p.lng]);
 }
@@ -2395,6 +2395,56 @@ function buildRupturaLinksHtml(rupts){
   if(!rupts?.length)return '';
   return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Rupturas ligadas</div><div style="display:flex;flex-direction:column;gap:6px">${rupts.slice(0,6).map(r=>`<button class="pac" style="width:100%" onclick="jumpToRupturaDraft('${r.id}')">${esc(r.cabo_segmento||'Ruptura')} • OTDR ${km(r.distancia_otdr_m||0)}</button>`).join('')}</div></div>`;
 }
+function abrirDgoNoSite(siteRef){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  $('dg-site').value=siteRef||'';
+  $('dg-codigo').focus();
+  msgField('dg-msg',`Site ${siteRef||'—'} aplicado ao novo DGO.`,'ok');
+  toast('Cadastro de DGO contextualizado pelo site','ok');
+}
+function abrirCaixaContextual(ref='',lat=null,lng=null){
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if(lat!==null&&lng!==null){$('cx-lat').value=Number(lat).toFixed(6);$('cx-lng').value=Number(lng).toFixed(6);}
+  if(ref){
+    const prev=gv('cx-obs');
+    $('cx-obs').value=(prev?prev+'\n':'')+`Referência operacional: ${ref}`;
+  }
+  $('cx-codigo').focus();
+  msgField('cx-msg','Cadastro de caixa contextualizado a partir do mapa.','ok');
+  toast('Nova caixa preparada com contexto do ativo','ok');
+}
+function abrirCaboPorReferencia(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  if(!key){toast('Cabo não informado','wn');return;}
+  const c=allC.find(x=>String(x.nome||x.codigo||'').toUpperCase()===key||key.includes(String(x.nome||'').toUpperCase()));
+  if(!c){toast('Cabo não localizado no mapa','wn');return;}
+  const pts=PL(c.trajeto)||[];
+  if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:18});
+  showPanCabo(c,pts,c.comprimento||0);
+}
+function abrirAuditoriaRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  const pend=getInvStore().pendencias.filter(p=>String(p.referencia||'').toUpperCase()===key);
+  rodarAuditoriaIA(true);
+  if(pend.length){
+    showPanPendencia(pend[0]);
+    toast(`${pend.length} pendência(s) ligada(s) a ${ref}`,'wn');
+  }else{
+    toast(`Sem pendência local aberta para ${ref}`,'ok');
+  }
+}
+function abrirAuditoriaRuptura(caboSeg){
+  goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  rodarAuditoriaIA(true);
+  const rel=getCableDraftRelations(caboSeg||'');
+  if(rel.rupts.length){
+    showPanRupturaDraft(rel.rupts[0]);
+    toast(`${rel.rupts.length} ruptura(s) local(is) ligada(s) a ${caboSeg}`,'wn');
+  }else{
+    toast(`Auditoria aberta para ${caboSeg||'ruptura'}`,'ok');
+  }
+}
 
 // PAINEL
 function showPanSite(s,pt){
@@ -2427,6 +2477,8 @@ function showPanSite(s,pt){
   showPan(codeFirstLabel(s),rows,[
     sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
     {l:siteFlag?'🚩 Editar flag':'🚩 Marcar',c:siteFlag?'a':'b',fn:`openFlagEditor('site','${String(s.id).replace(/'/g,"\\'")}')`},
+    {l:'Novo DGO',c:'b',fn:`abrirDgoNoSite('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')`},
+    {l:'Nova caixa',c:'b',fn:`abrirCaixaContextual('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}',${pt[0]},${pt[1]})`},
     {l:'Ponto A',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-a')`},
     {l:'Ponto B',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-b')`},
     sessao.perfil!=='leitura'&&canEdit&&{l:'Mover',c:'b',fn:`moverIniciar('${s.id}','${esc(s.nome||s.codigo||'').replace(/'/g,"\\'")}')` },
@@ -3223,7 +3275,7 @@ function showPanDgoDraft(dg){
     ${buildRefLinksHtml(dg.codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button>`;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -3400,7 +3452,7 @@ function showPanRupturaDraft(rp){
     ${buildRupturaLinksHtml(rel.rupts.filter(x=>x.id!==rp.id))}
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar em campo</button>`;
+  $('pa').innerHTML=`<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac b" onclick="abrirCaboPorReferencia('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🧵 Ir para cabo</button><button class="pac a" onclick="abrirAuditoriaRuptura('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar em campo</button>`;
   $('pan').style.display='block';
 }
 function showPanRupturaOficial(rp){
@@ -3418,7 +3470,7 @@ function showPanRupturaOficial(rp){
     ${buildRupturaLinksHtml(rel.rupts)}
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac a" onclick="abrirNovaRupturaContextual('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}',${Number(rp.lat||0)},${Number(rp.lng||0)})">✏ Abrir no cadastro</button><button class="pac g" onclick="toast('Ruptura oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pa').innerHTML=`<button class="pac a" onclick="abrirNovaRupturaContextual('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}',${Number(rp.lat||0)},${Number(rp.lng||0)})">✏ Abrir no cadastro</button><button class="pac b" onclick="abrirCaboPorReferencia('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🧵 Ir para cabo</button><button class="pac a" onclick="abrirAuditoriaRuptura('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Ruptura oficial carregada do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function abrirAssistenteConexaoCaixa(codigo,lat,lng){
@@ -3854,7 +3906,7 @@ function showPanCaixaDraft(cx){
     ${buildRefLinksHtml(cx.codigo||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
   $('pan').style.display='block';
 }
 function showPanCaixaOficial(cx){
@@ -3878,7 +3930,7 @@ function showPanCaixaOficial(cx){
     ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){

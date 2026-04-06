@@ -464,3 +464,23 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - `mkRupturaMenu` abre painel oficial quando `_kind === ruptura_oficial`
 - validacao:
   - JavaScript inline continua integro: `CHECK_OK`
+
+### Acoes operacionais de 1 clique
+
+- `site` agora abre fluxo mais direto para operacao:
+  - `Novo DGO`
+  - `Nova caixa`
+- `DGO` ganhou acao direta de:
+  - `Auditoria`
+- `caixa` local e oficial ganharam acao direta de:
+  - `Auditoria`
+- `ruptura` local e oficial ganharam acoes diretas de:
+  - `Ir para cabo`
+  - `Auditoria`
+- `jumpToRef` agora respeita caixa oficial:
+  - se o ponto resolvido vier de `officialCaixas`, o painel aberto eh o oficial
+- objetivo dessa rodada:
+  - reduzir ida e volta entre mapa, cadastro e auditoria
+  - aproximar a operacao do fluxo detalhado pela Manus
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`
