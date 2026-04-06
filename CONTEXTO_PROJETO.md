@@ -544,3 +544,22 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - aproximar continuidade real do banco com o mapa operacional
 - validacao:
   - JavaScript inline continua integro: `CHECK_OK`
+
+### Controle individual de sites na aba `Sites`
+
+- a aba `Sites` agora ganhou marcacao individual por item, no mesmo espirito de ligar/desligar camadas
+- cada site listado passa a exibir um checkbox proprio:
+  - marcado = site visivel no mapa
+  - desmarcado = site oculto no mapa
+- o topo da aba `Sites` agora mostra:
+  - contador `Sites no mapa`
+  - botoes `Todos` e `Nenhum`
+- a preferencia fica salva no navegador em `localStorage`
+- o cluster de sites agora respeita ao mesmo tempo:
+  - camadas ativas
+  - marcacao individual dos sites
+- objetivo dessa rodada:
+  - dar controle operacional fino sobre quais sites ficam visiveis
+  - reduzir poluicao visual sem precisar desligar uma camada inteira
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`
