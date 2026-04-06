@@ -187,6 +187,22 @@
         "cwd": "C:\\FIBRA CADASTRO"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: centro local das IAs",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\CENTRO-IAS-LOCAL.ps1",
+        "-AbrirPastas"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
     }
   ]
 }

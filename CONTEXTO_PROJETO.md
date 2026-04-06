@@ -633,3 +633,18 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - IDs de tarefa e sessao do hub foram endurecidos:
   - agora usam timestamp com milissegundos + sufixo aleatorio curto
   - evita colisao quando varias frentes sao abertas no mesmo segundo
+
+### Centro local das IAs no PC
+
+- foi criado um launcher central:
+  - `CENTRO-IAS-LOCAL.ps1`
+- atalho:
+  - `CENTRO-IAS-LOCAL.bat`
+- funcao:
+  - gerar um painel local com os caminhos exatos para Claude, Gemini, DeepSeek, Manus, Kiro e Codex
+  - abrir o hub local sem precisar procurar sessao, prompt ou pasta manualmente
+  - servir como ponto unico para trabalhar com todas as IAs direto no PC
+- o pacote de sessao multi-IA agora tambem gera:
+  - `06_KIRO_COORDENACAO.md`
+- objetivo:
+  - usar Kiro como coordenador de backlog e sprint dentro do mesmo fluxo local

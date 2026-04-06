@@ -156,12 +156,14 @@ $GeminiPath = Join-Path $SESSION_DIR "02_GEMINI_VALIDACAO.md"
 $CodexPath = Join-Path $SESSION_DIR "03_CODEX_IMPLEMENTACAO.md"
 $DeepSeekPath = Join-Path $SESSION_DIR "04_DEEPSEEK_REVISAO.md"
 $ManusPath = Join-Path $SESSION_DIR "05_MANUS_PRODUTO_UX.md"
-$ChecklistPath = Join-Path $SESSION_DIR "06_CHECKLIST_COORDENACAO.md"
+$KiroPath = Join-Path $SESSION_DIR "06_KIRO_COORDENACAO.md"
+$ChecklistPath = Join-Path $SESSION_DIR "07_CHECKLIST_COORDENACAO.md"
 $StatePath = Join-Path $SESSION_DIR "estado_sessao.json"
 $RespostaClaude = Join-Path $RESP_DIR "claude_resposta.md"
 $RespostaGemini = Join-Path $RESP_DIR "gemini_resposta.md"
 $RespostaDeepSeek = Join-Path $RESP_DIR "deepseek_resposta.md"
 $RespostaManus = Join-Path $RESP_DIR "manus_resposta.md"
+$RespostaKiro = Join-Path $RESP_DIR "kiro_resposta.md"
 
 $resumo = @"
 # Sessao Multi-IA
@@ -180,6 +182,7 @@ Cole os retornos das IAs em:
 - $RespostaGemini
 - $RespostaDeepSeek
 - $RespostaManus
+- $RespostaKiro
 
 Depois rode:
 - C:\FIBRA CADASTRO\CONSOLIDAR-RETORNOS-IAS.ps1 -Sessao "$SESSION_DIR"
@@ -190,6 +193,7 @@ Depois rode:
 - Gemini: validacao, testes, endurecimento, consistencia
 - DeepSeek: revisao logica, bugs ocultos, alternativas tecnicas, critique de baixo custo
 - Manus: produto, UX operacional, benchmark, fluxo de campo, documentacao de operacao
+- Kiro: coordenacao de backlog, sprint, priorizacao e encadeamento entre frentes
 
 ## Arquivos-chave
 $keyFiles
@@ -387,6 +391,45 @@ $Foco
 $geosite
 "@
 
+$kiro = @"
+# Sessao Kiro
+
+Leia primeiro:
+- C:\FIBRA CADASTRO\CONTEXTO_PROJETO.md
+- C:\FIBRA CADASTRO\CHECKLIST_QUALIDADE_E_PUBLICACAO.md
+- C:\FIBRA CADASTRO\CHECKLIST_GEOSITE_GAP.md
+- C:\FIBRA CADASTRO\PILOTOS_E2E_OPERACIONAIS.md
+- C:\FIBRA CADASTRO\EXECUCAO_TESTES_E2E.md
+- $ResumoPath
+
+## Papel
+Voce e o coordenador operacional do projeto.
+Nao reescreva arquitetura.
+Nao implementar codigo.
+Nao repetir benchmark amplo.
+
+## Foco desta rodada
+$Foco
+
+## O que entregar
+1. Backlog priorizado por impacto
+2. Separacao por sprint
+3. O que e critico
+4. O que esta meia-boca
+5. O que depende de banco
+6. O que depende de front
+7. O que ja esta bom
+8. Riscos de seguir sem corrigir
+9. Proxima acao objetiva para Codex
+10. Proxima acao objetiva para Claude
+11. Proxima acao objetiva para Gemini
+
+## Regras
+- Se algo existir no front, mas nao persistir oficialmente, classifique como incompleto.
+- Se algo funcionar no desktop mas falhar no campo, classifique como problema real.
+- Priorize velocidade de entrega com seguranca.
+"@
+
 $checklistCoord = @"
 # Checklist de Coordenacao
 
@@ -420,6 +463,11 @@ Foco: $Foco
 - [ ] Comparou com GeoSite/Google Earth
 - [ ] Sugeriu sprint de produto
 
+## Kiro
+- [ ] Transformou o estado atual em backlog priorizado
+- [ ] Separou banco, front e validacao
+- [ ] Indicou proxima sprint e riscos
+
 ## Codex
 - [ ] Implementou sem reescrever tudo
 - [ ] Rodou validacao basica
@@ -444,6 +492,7 @@ $state = @{
         codex = $CodexPath
         deepseek = $DeepSeekPath
         manus = $ManusPath
+        kiro = $KiroPath
         checklist = $ChecklistPath
         respostas = @{
             pasta = $RESP_DIR
@@ -451,6 +500,7 @@ $state = @{
             gemini = $RespostaGemini
             deepseek = $RespostaDeepSeek
             manus = $RespostaManus
+            kiro = $RespostaKiro
         }
     }
 } | ConvertTo-Json -Depth 5
@@ -461,6 +511,7 @@ Save-Text -Path $GeminiPath -Text $gemini
 Save-Text -Path $CodexPath -Text $codex
 Save-Text -Path $DeepSeekPath -Text $deepseek
 Save-Text -Path $ManusPath -Text $manus
+Save-Text -Path $KiroPath -Text $kiro
 Save-Text -Path $ChecklistPath -Text $checklistCoord
 Save-Text -Path $StatePath -Text $state
 
@@ -471,6 +522,7 @@ Write-Log "Gemini: $GeminiPath"
 Write-Log "Codex: $CodexPath"
 Write-Log "DeepSeek: $DeepSeekPath"
 Write-Log "Manus: $ManusPath"
+Write-Log "Kiro: $KiroPath"
 Write-Log "Checklist: $ChecklistPath"
 Write-Log "Pasta de respostas: $RESP_DIR"
 
@@ -486,6 +538,7 @@ Write-Host "Gemini:" $GeminiPath
 Write-Host "Codex:" $CodexPath
 Write-Host "DeepSeek:" $DeepSeekPath
 Write-Host "Manus:" $ManusPath
+Write-Host "Kiro:" $KiroPath
 Write-Host "Checklist:" $ChecklistPath
 Write-Host "Respostas:" $RESP_DIR
 Write-Host ""
