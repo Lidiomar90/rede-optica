@@ -93,10 +93,12 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 .sbrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .sbk{font-size:9px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:2px}
 .sbh{font-size:15px;font-weight:800;line-height:1.05;margin:0}
-.sbmini{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.sbmini .sbst{padding:6px 7px;border-radius:11px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
-.sbst b{display:block;font-size:11px;color:var(--t)}
-.sbst span{display:block;font-size:8px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:800}
+.sbstatus{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.sbpill{padding:5px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:9px;font-weight:800;letter-spacing:.04em}
+.sbpill.ok{border-color:rgba(69,208,140,.24);background:rgba(69,208,140,.1);color:var(--gr)}
+.sbpill.warn{border-color:rgba(255,182,72,.26);background:rgba(255,182,72,.1);color:var(--am)}
+.sbpill.off{border-color:rgba(255,90,104,.26);background:rgba(255,90,104,.1);color:var(--rd)}
+.sbpill.info{border-color:rgba(72,168,255,.24);background:rgba(72,168,255,.1);color:var(--cy)}
 .sbghost{padding:6px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;white-space:nowrap}
 .sbghost:hover{background:rgba(255,255,255,.07);color:var(--t)}
 #srch{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
@@ -328,11 +330,6 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 .audit-priority-rank{min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
 .audit-priority-item .name{font-size:11px;font-weight:800;color:var(--t)}
 .audit-priority-item .meta{font-size:10px;color:var(--t2);margin-top:2px}
-.audit-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
-.audit-kpi{border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 11px;background:rgba(255,255,255,.03)}
-.audit-kpi-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin-bottom:6px}
-.audit-kpi-value{font-size:18px;font-weight:900;color:var(--t)}
-.audit-kpi-sub{font-size:10px;color:var(--t2);margin-top:4px;line-height:1.45}
 
 @media(max-width:680px){
   #top{padding:0 10px;gap:8px;min-height:54px}
@@ -351,8 +348,6 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
   .pg{height:calc(100vh - 86px)}
   #sbhero{padding:8px 10px 7px}
   .sbh{font-size:14px}
-  .sbmini{gap:5px}
-  .sbmini .sbst{padding:6px}
   #stabs{gap:6px;padding:8px 10px 6px}
   .stt{padding:8px 2px;font-size:8px}
   #maphead{top:58px;left:10px;right:64px;max-width:none;padding:8px 10px;border-radius:14px}
@@ -487,10 +482,10 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 </div>
 <div id="nav">
   <div class="nt on" onclick="goTab('mapa',this)">🗺 Mapa</div>
-  <div class="nt" onclick="goTab('rotas',this)">🔗 Rotas</div>
+<div class="nt" onclick="goTab('rotas',this)">🔗 Tracer</div>
   <div class="nt" onclick="goTab('incidentes',this)">🚨 Incidentes<span class="nbadge" id="ibadge" style="display:none">0</span></div>
-  <div class="nt" onclick="goTab('cadastro',this)">✏ Cadastrar</div>
-  <div class="nt" onclick="goTab('auditoria',this)">🤖 Auditoria IA</div>
+<div class="nt" onclick="goTab('cadastro',this)">✏ Novo</div>
+<div class="nt" onclick="goTab('auditoria',this)">🤖 Auditoria</div>
   <div class="nt adm" style="display:none" onclick="goTab('usuarios',this)">👥 Usuários</div>
 </div>
 
@@ -505,11 +500,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
         </div>
         <button class="sbghost" onclick="toggleMapFocus()">▣ Mapa</button>
       </div>
-      <div class="sbmini">
-        <div class="sbst"><b id="ce2">—</b><span>Sites</span></div>
-        <div class="sbst"><b id="cc2">—</b><span>Cabos</span></div>
-        <div class="sbst"><b id="cs2">—</b><span>Spans</span></div>
-      </div>
+      <div class="sbstatus" id="sbstatus"></div>
     </div>
     <div id="srch"><input id="si" placeholder="Buscar ativo..." oninput="filterSB(this.value)"></div>
     <div id="stabs">
@@ -827,12 +818,14 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 <div class="pg" id="pg-auditoria" style="flex-direction:column">
   <div class="pgc">
     <div class="audit-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
-      <b style="font-size:13px">Auditoria operacional</b>
+      <b style="font-size:13px">Auditoria inteligente operacional</b>
       <div class="audit-toolbar-actions" style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Auditoria</button>
         <button class="tb g" onclick="syncLocalDrafts()">☁ Sincronizar Tudo</button>
         <button class="tb a" onclick="syncGraphRPC()">🔗 Sincronizar Grafo</button>
         <button class="tb" onclick="abrirEsteiraSigitm()">🎫 Validar SIGITM</button>
+        <button class="tb" onclick="abrirEsteiraTelegram()">💬 Validar Telegram</button>
+        <button class="tb g" onclick="publicarTelegramAprovadosStaging()">📤 Publicar Telegram</button>
         <button class="tb" onclick="abrirFilaAuditoria()">📋 Esteira</button>
       </div>
     </div>
@@ -843,6 +836,13 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
        </div>
        <div id="sigitm-lista" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px"></div>
     </div>
+    <div id="sec-telegram" style="display:none;margin-bottom:20px;background:rgba(47,212,207,0.05);border:1px solid rgba(47,212,207,0.2);border-radius:12px;padding:16px">
+       <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+         <b style="font-size:12px;color:var(--cy)">Fila de Aprovação Telegram (Supervisor)</b>
+         <button class="lc-btn" onclick="$('sec-telegram').style.display='none'">Fechar</button>
+       </div>
+       <div id="telegram-lista" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px"></div>
+    </div>
     <div class="audit-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
       <div class="fc">
         <div class="fct">Score operacional</div>
@@ -850,15 +850,15 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
         <div id="aud-score-txt" style="font-size:11px;color:var(--t2);line-height:1.7">Aguardando execução da auditoria.</div>
       </div>
       <div class="fc">
-        <div class="fct">Situação agora</div>
+        <div class="fct">Resumo</div>
         <div id="aud-resumo" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
       <div class="fc">
-        <div class="fct">Próxima ação</div>
+        <div class="fct">Ações seguras</div>
         <div id="aud-acoes" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
       <div class="fc">
-        <div class="fct">Backlog curto</div>
+        <div class="fct">Fila de implementação</div>
         <div id="aud-fila" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
     </div>
@@ -1054,10 +1054,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-const FIBER_COLORS_BR=['Azul','Laranja','Verde','Marrom','Cinza','Branco','Vermelho','Preto','Amarelo','Violeta','Rosa','Aqua'];
-const FIBER_COLOR_HEX={Azul:'#2563eb',Laranja:'#f97316',Verde:'#16a34a',Marrom:'#7c4a1d',Cinza:'#6b7280',Branco:'#e5e7eb',Vermelho:'#dc2626',Preto:'#111827',Amarelo:'#facc15',Violeta:'#9333ea',Rosa:'#ec4899',Aqua:'#06b6d4'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
-let latestIncidentes=[],incidentFocusLayer=null;
 let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
@@ -1233,16 +1230,36 @@ function updateSyncQueueBadge(){
     el.classList.remove('show');
   }
 }
+function refreshSidebarOperationalStatus(){
+  const el=$('sbstatus');
+  if(!el)return;
+  const cache=loadMapCache?.();
+  const cacheLabel=cache?.salvo_em?`Cache ${formatRelativeTime(cache.salvo_em)}`:'Cache ausente';
+  const store=getInvStore();
+  const queueTotal=(store.caixas||[]).filter(x=>!x._synced).length
+    +(store.dgos||[]).filter(x=>!x._synced).length
+    +(store.segmentos||[]).filter(x=>!x._synced).length
+    +(store.rupturas||[]).filter(x=>!x._synced).length;
+  const pills=[
+    `<span class="sbpill ${mapOffline?'off':'ok'}">${mapOffline?'Offline':'Online'}</span>`,
+    `<span class="sbpill ${cache?.salvo_em?'info':'warn'}">${cacheLabel}</span>`,
+    `<span class="sbpill ${queueTotal?'warn':'ok'}">Sync ${queueTotal}</span>`
+  ];
+  if(fieldMode)pills.push('<span class="sbpill info">Campo ativo</span>');
+  el.innerHTML=pills.join('');
+}
 function setNetworkIndicator(state='',msg=''){
   const el=$('net-indicator');
   if(!el)return;
   el.className='';
   if(!state){
     el.textContent='';
+    refreshSidebarOperationalStatus();
     return;
   }
   el.classList.add(state);
   el.textContent=msg;
+  refreshSidebarOperationalStatus();
 }
 function flashNetworkOnline(msg='Online'){
   clearTimeout(netFlashTimer);
@@ -1257,6 +1274,7 @@ function refreshMobileUiBadges(){
   if(isMobileUI())updateCacheTimestamp(loadMapCache()?.salvo_em,{offline:mapOffline});
   else updateCacheTimestamp(null);
   updateSyncQueueBadge();
+  refreshSidebarOperationalStatus();
 }
 function pointFromAnyGeom(row){
   const cand=[row?.localizacao,row?.geom_falha,row?.geom,row?.geometria,row?.ponto];
@@ -1576,11 +1594,9 @@ function mkCaboMenu(c,p2,lenCalc){
     subtitle:`${esc(c.tipo||'—')} | ${km(c.comprimento||lenCalc)}<br>${esc(c.status||'—')}`,
     actions:[
       {label:'📋 Ver detalhes',action:()=>showPanCabo(c,p2,lenCalc)},
-      {label:'🔗 Vincular estações',action:()=>sincronizarCaboEstacoes(c.id)},
-      {label:'🧬 Diagrama de fibras',primary:true,action:()=>openCableFiberDiagram(c.id)},
       {label:flagged?'🚩 Editar flag':'🚩 Marcar cabo',action:()=>openFlagEditor('cabo',c.id)},
       {label:'✏️ Editar cabo',action:()=>editarCabo(c.id)},
-      {label:'🧭 Redesenhar no mapa',action:()=>redesenharCaboOficial(c.id)},
+      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharCaboOficial(c.id)},
       {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(c,latlng.lat,latlng.lng)},
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
     ]
@@ -1897,77 +1913,6 @@ function highlightCable(id){
   fx.line.setStyle({weight:fx.baseWeight+2.2,opacity:1,color:fx.baseColor});
   fx.halo.setStyle({weight:fx.baseWeight+7,opacity:.42,color:fx.baseColor});
 }
-function clearIncidentFocusVisual(){
-  if(incidentFocusLayer&&map&&map.hasLayer(incidentFocusLayer))map.removeLayer(incidentFocusLayer);
-  incidentFocusLayer=null;
-}
-function drawIncidentFocusVisual(lat,lng,label='Atendimento'){
-  if(!map||!isFinite(lat)||!isFinite(lng))return;
-  clearIncidentFocusVisual();
-  incidentFocusLayer=L.layerGroup().addTo(map);
-  L.circleMarker([lat,lng],{
-    radius:11,
-    weight:3,
-    color:'#f8fafc',
-    fillColor:'#e84455',
-    fillOpacity:.92
-  }).bindTooltip(label,{direction:'top',offset:[0,-10],opacity:.94}).addTo(incidentFocusLayer);
-  L.circle([lat,lng],{
-    radius:90,
-    color:'#e84455',
-    weight:2,
-    opacity:.95,
-    fillColor:'#e84455',
-    fillOpacity:.08
-  }).addTo(incidentFocusLayer);
-}
-function findIncidentCableRef(inc){
-  if(!inc)return null;
-  const direct=String(inc.cabo_segmento||inc.cabo||'').trim();
-  if(direct)return direct;
-  const haystack=[inc.site_afetado,inc.titulo,inc.descricao].filter(Boolean).join(' | ').toUpperCase();
-  if(!haystack)return null;
-  const exact=allC.find(c=>{
-    const nm=String(c.nome||c.codigo||'').toUpperCase().trim();
-    return nm&&haystack.includes(nm);
-  });
-  return exact?.nome||exact?.codigo||null;
-}
-function abrirCaboDoIncidente(id){
-  const inc=latestIncidentes.find(x=>String(x.id||'')===String(id||''));
-  if(!inc){toast('Incidente não localizado','wn');return;}
-  const ref=findIncidentCableRef(inc);
-  if(!ref){toast('Incidente sem cabo relacionado identificado','wn');return;}
-  abrirCaboPorReferencia(ref);
-}
-function abrirIncidenteNoMapa(id){
-  const inc=latestIncidentes.find(x=>String(x.id||'')===String(id||''));
-  if(!inc){toast('Incidente não localizado','wn');return;}
-  goTab('mapa',document.querySelector('.nt'));
-  closeSB();
-  const caboRef=findIncidentCableRef(inc);
-  if(caboRef){
-    const key=String(caboRef).toUpperCase().trim();
-    const c=allC.find(x=>{
-      const nm=String(x.nome||x.codigo||'').toUpperCase().trim();
-      return nm===key||key.includes(nm)||nm.includes(key);
-    });
-    if(c)highlightCable(c.id);
-  }else resetCableSelection();
-  const lat=Number(inc.lat_falha),lng=Number(inc.lng_falha);
-  if(isFinite(lat)&&isFinite(lng)){
-    drawIncidentFocusVisual(lat,lng,inc.titulo||inc.site_afetado||'Incidente');
-    map.setView([lat,lng],Math.max(map.getZoom()||7,16));
-    toast(caboRef?`Incidente em foco • ${caboRef}`:'Incidente em foco no mapa','er');
-    return;
-  }
-  if(caboRef){
-    abrirCaboPorReferencia(caboRef);
-    toast(`Incidente ligado ao cabo ${caboRef}`,'wn');
-    return;
-  }
-  toast('Incidente sem coordenada e sem cabo relacionado','wn');
-}
 function armarSelecaoPonto(inputId){
   mapPointTarget=inputId;
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
@@ -2068,7 +2013,11 @@ async function loadMap(){
         caboUrl += `&trajeto=ov.${bbox}`;
       }
 
-      [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa]=await Promise.all([
+      const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
+      const caboCountUrl = caboUrl.replace(/limit=\d+/,'limit=1');
+      let siteCountHeader = 0;
+      let caboCountHeader = 0;
+      [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader]=await Promise.all([
         fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
@@ -2076,6 +2025,8 @@ async function loadMap(){
         fetch(`${SU}/rest/v1/dgo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetch(siteCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetch(caboCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
       saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});
@@ -2102,16 +2053,13 @@ async function loadMap(){
     officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
     officialSegmentos=(Array.isArray(segmentosMapa)?segmentosMapa:[]).map(normalizeSegmentoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
-    const totalSites=allS.length.toLocaleString('pt-BR');
-    const totalCabos=allC.length.toLocaleString('pt-BR');
+    const totalSites=(siteCountHeader||allS.length).toLocaleString('pt-BR');
+    const totalCabos=(caboCountHeader||allC.length).toLocaleString('pt-BR');
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
-    if($('ce2'))$('ce2').textContent=totalSites;
-    if($('cc2'))$('cc2').textContent=totalCabos;
     const sr=await fetch(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}});
     const totalSpans=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
     $('cs').textContent=totalSpans;
-    if($('cs2'))$('cs2').textContent=totalSpans;
     $('ltt').textContent=`Renderizando ${allS.length.toLocaleString()} sites...`;setProg(50);
     const pts=[];
     allS.forEach(s=>{
@@ -2161,19 +2109,16 @@ async function loadMap(){
 async function loadRompimentosNoMapa(){
   if(!rompLayer)return;rompLayer.clearLayers();
   const incs=await fetch(`${SU}/rest/v1/incidentes?status=eq.aberto&lat_falha=not.is.null&select=*`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
-  latestIncidentes=incs;
   incs.forEach(i=>{
     if(!i.lat_falha||!i.lng_falha)return;
     const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp('aberta',true),zIndexOffset:5000})
-      .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`)
-      .on('click',()=>abrirIncidenteNoMapa(i.id));
+      .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`);
     attachMarkerFieldActions(mk,()=>({
       title:`Rompimento ${normText(i.titulo)||'ativo'}`,
       subtitle:`${esc(i.site_afetado||'—')}<br>${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}`,
       actions:[
         {label:'📋 Abrir popup',action:()=>mk.openPopup()},
-        {label:'📍 Tratar no mapa',action:()=>abrirIncidenteNoMapa(i.id)},
-        {label:'🧵 Ver cabo',action:()=>abrirCaboDoIncidente(i.id)},
+        {label:'📍 Centralizar no mapa',action:()=>map.setView([i.lat_falha,i.lng_falha],17)},
         {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(i.lat_falha),Number(i.lng_falha))},
       ]
     }));
@@ -3109,11 +3054,6 @@ function showPanCabo(c,pts,lenCalc){
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
   const cableState=getCableOperationalState(c,lenCalc);
   const rel=cableState.rel;
-  const link=ensureCableStationLink(c,pts,true)||getCableLinkRecord(c.id)||{};
-  const bindings=getCableFiberBindings(c.id);
-  const plan=buildCableFiberPlan(c);
-  const safeId=String(c.id).replace(/'/g,"\\'");
-  const safeNome=String(c.nome||'').replace(/'/g,"\\'");
   showPan(codeFirstLabel(c),[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
     ['Comprimento cad.',km(c.comprimento)],
@@ -3122,12 +3062,10 @@ function showPanCabo(c,pts,lenCalc){
     c.status&&['Status',c.status,TC(c.status)],
     c.observacao&&['Obs',c.observacao.substring(0,200)],
   ],[
-    {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${safeId}')`},
-    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${safeId}')`},
-    {l:'🔗 Estações',c:'b',fn:`sincronizarCaboEstacoes('${safeId}');showPanCabo(allC.find(x=>String(x.id)==='${safeId}'),PL(allC.find(x=>String(x.id)==='${safeId}')?.trajeto)||[],${lenCalc||0})`},
-    {l:'🧬 Fibras',c:'b',fn:`openCableFiberDiagram('${safeId}')`},
-    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${safeId}','${safeNome}',${c.comprimento||0})`},
-    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${safeId}')`},
+    {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${String(c.id).replace(/'/g,"\\'")}')`},
+    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${c.id}')`},
+    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
+    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
   ].filter(Boolean));
   if(caboFlag){
     $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
@@ -3140,17 +3078,6 @@ function showPanCabo(c,pts,lenCalc){
     [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
     [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
   ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${cableState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(cableState.status)}</b><br>${esc(cableState.detail)}</div></div>`;
-  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estações sugeridas</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
-    [link.ponta_a_ref?`A ${link.ponta_a_ref}`:'A sem vínculo',link.ponta_a_ref?'var(--gr)':'var(--am)'],
-    [link.ponta_b_ref?`B ${link.ponta_b_ref}`:'B sem vínculo',link.ponta_b_ref?'var(--gr)':'var(--am)'],
-    ['auto proximidade','var(--bl)'],
-    [link.status||'pendente_confirmacao','var(--am)']
-  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55">Ponta A ${link.ponta_a_ref?`${esc(link.ponta_a_ref)}${link.ponta_a_dist_m?` • ${link.ponta_a_dist_m}m`:''}`:'não resolvida'}<br>Ponta B ${link.ponta_b_ref?`${esc(link.ponta_b_ref)}${link.ponta_b_dist_m?` • ${link.ponta_b_dist_m}m`:''}`:'não resolvida'}<br><span style="color:var(--t3)">Sugestão geométrica para correção/validação pela equipe de campo.</span></div></div>`;
-  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Diagrama óptico</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
-    [`${plan.total} fibra(s)`,'var(--bl)'],
-    [`${plan.tubos} tubo(s) loose`,'var(--bl)'],
-    [bindings.length?`${bindings.length} fibra(s) amarrada(s)`:'sem amarração','var(--gr)']
-  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55">Clique em <b>🧬 Fibras</b> para abrir o diagrama por tubo loose, selecionar a fibra e amarrar a uma facilidade óptica/equipamento.</div></div>`;
   if(rel.segs.length){
     $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
   }
@@ -3577,7 +3504,6 @@ function goTab(tab,el){
 async function loadIncidentes(){
   const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,criado_em.desc&limit=50`,{headers:RH});
   const incs=r.ok?await r.json():[];
-  latestIncidentes=incs;
   const ab=incs.filter(i=>i.status!=='resolvido').length;
   const badge=$('ibadge');badge.style.display=ab>0?'inline':'none';if(ab>0)badge.textContent=ab;
   $('inc-list').innerHTML=incs.length?incs.map(i=>{
@@ -3585,7 +3511,6 @@ async function loadIncidentes(){
     const h=(Date.now()-new Date(dt))/3600000;
     const sla=i.sla_horas||5;const pct=Math.min(h/sla*100,100);
     const cor=i.status==='resolvido'?'#3ecf8e':pct>=100?'#e84455':pct>=70?'#f0a500':'#4da6ff';
-    const hasCable=!!findIncidentCableRef(i);
     return`<div class="lcard"><div class="lct">
       <span style="font-size:15px">${i.severidade==='critica'?'🔴':i.severidade==='alta'?'🟠':'🟡'}</span>
       <div class="lctt">${esc(i.titulo)}</div>
@@ -3594,11 +3519,9 @@ async function loadIncidentes(){
     <div class="lcsb">${i.site_afetado?`<span>📍 ${esc(i.site_afetado)}</span>`:''}
     <span>⏱ ${h.toFixed(1)}h/${sla}h SLA</span>${i.responsavel?`<span>👤 ${esc(i.responsavel)}</span>`:''}</div>
     <div class="sla-bar"><div class="sla-p" style="width:${pct}%;background:${cor}"></div></div>
-    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-      <button onclick="abrirIncidenteNoMapa('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--bl);background:transparent;color:var(--bl);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">📍 Ver no mapa</button>
-      ${hasCable?`<button onclick="abrirCaboDoIncidente('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--cy);background:transparent;color:var(--cy);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">🧵 Ver cabo</button>`:''}
-      ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<button onclick="resolverInc('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✓ Resolver</button>`:''}
-    </div>
+    ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<div style="margin-top:8px;display:flex;gap:6px">
+      <button onclick="resolverInc('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✓ Resolver</button>
+    </div>`:''}
     </div>`;
   }).join(''):`<div style="padding:40px;text-align:center;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">✅</div>Nenhum incidente ativo</div>`;
 }
@@ -3865,24 +3788,21 @@ function renderAuditUI(issues){
   if(score<0)score=0;
   const scoreTone=score>=85?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
   const topIssues=issues.slice(0,3);
-  const totalUnsynced=store.caixas.filter(x=>!x._synced).length+store.dgos.filter(x=>!x._synced).length+store.segmentos.filter(x=>!x._synced).length+store.rupturas.filter(x=>!x._synced).length;
-  const nextIssue=issues[0];
   $('aud-score').textContent=score;
   $('aud-score').style.color=scoreTone;
   $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
-  $('aud-resumo').innerHTML=`
-    <div class="audit-kpi-row">
-      <div class="audit-kpi"><div class="audit-kpi-label">Mapa</div><div class="audit-kpi-value">${allS.length.toLocaleString('pt-BR')}</div><div class="audit-kpi-sub">sites carregados • ${allC.length.toLocaleString('pt-BR')} cabos</div></div>
-      <div class="audit-kpi"><div class="audit-kpi-label">Campo</div><div class="audit-kpi-value">${pointBroken+pointPending}</div><div class="audit-kpi-sub">${pointBroken} quebrado(s) • ${pointPending} pendente(s)</div></div>
-      <div class="audit-kpi"><div class="audit-kpi-label">Sync</div><div class="audit-kpi-value">${totalUnsynced}</div><div class="audit-kpi-sub">${cacheReady?'cache pronto':'sem cache'} • ${activeVis} camadas visíveis</div></div>
-      <div class="audit-kpi"><div class="audit-kpi-label">Inventário</div><div class="audit-kpi-value">${segReady}</div><div class="audit-kpi-sub">${segPendingGeo} sem geometria • ${cabNoInventory} sem inventário</div></div>
-    </div>
-    ${sciOnly?auditCard('Science pendente',`${sciOnly.toLocaleString('pt-BR')} site(s) ainda existem só na Science.`,scienceSites.length?'wn':'in'):''}
-  `;
+  $('aud-resumo').innerHTML=[
+    auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
+    auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
+    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
+    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
+    auditCard('Estados operacionais',`Confirmados ${pointReady} | Pendentes ${pointPending} | Quebrados ${pointBroken}`,pointBroken?'wn':'ok'),
+    auditCard('Pronto para campo',`Segmentos prontos ${segReady} | sem geometria ${segPendingGeo} | cabos sem inventário ${cabNoInventory}`,segPendingGeo?'wn':'ok')
+  ].join('');
   $('aud-acoes').innerHTML=[
-    auditCard('Ação agora',nextIssue?`${nextIssue.title}. ${nextIssue.action}`:'Sem ação urgente pendente.',nextIssue&&(nextIssue.severity==='critico'||nextIssue.severity==='alto')?'wn':'ok'),
-    auditCard('Publicação',crit||alto?'Segure a publicação e trate os pontos altos primeiro.':'Pode publicar incrementalmente com auditoria local ativa.',crit||alto?'wn':'ok'),
-    auditCard('DGO',`${dgoResolved}/${store.dgos.length||0} DGO(s) auditáveis via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'in')
+    auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),
+    auditCard('Pode publicar incrementalmente',crit||alto?'Ainda não. Corrija os itens altos primeiro.':'Sim, como versão incremental com auditoria local ativa.',crit||alto?'wn':'ok'),
+    auditCard('DGOs já auditáveis',`${dgoResolved}/${store.dgos.length||0} DGO(s) resolvidos via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'ok')
   ].join('');
   const fila=[
     {title:'Persistir DGO no banco',detail:'Criar tabela/view REST para DGO e plugar o painel local.',priority:'Alta'},
@@ -3890,7 +3810,7 @@ function renderAuditUI(issues){
     {title:'Auditoria automática agendada',detail:'Rodar checklist local antes de cada publish e gerar snapshot.',priority:'Média'},
     {title:'Correções sugeridas por IA',detail:'Transformar achados auditados em sugestões executáveis para o usuário.',priority:'Média'}
   ];
-  $('aud-fila').innerHTML=fila.slice(0,3).map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
+  $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
   $('aud-achados').innerHTML=`
     <div class="audit-priority">
       <div class="audit-priority-head">Prioridade operacional agora</div>
@@ -3927,15 +3847,7 @@ function limpar(pre){
 }
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
-const INV_DEFAULT={caixas:[],dgos:[],segmentos:[],rupturas:[],conexoes:[],pendencias:[],cabo_links:[],fibra_bindings:[]};
-function getInvStore(){
-  try{
-    const raw=JSON.parse(localStorage.getItem(INV_KEY)||'{}');
-    const norm={...INV_DEFAULT,...raw};
-    Object.keys(INV_DEFAULT).forEach(k=>{if(!Array.isArray(norm[k]))norm[k]=[];});
-    return norm;
-  }catch{return JSON.parse(JSON.stringify(INV_DEFAULT));}
-}
+function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
 function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();updateSyncQueueBadge();}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
@@ -3975,187 +3887,6 @@ function limparInventarioRascunho(){
 }
 function getConexoesCaixa(codigo){return getInvStore().conexoes.filter(x=>(x.caixa_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
 function getConexoesDgo(codigo){return getInvStore().conexoes.filter(x=>(x.dgo_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
-function getCableLinkRecord(caboId){return getInvStore().cabo_links.find(x=>String(x.cabo_id||'')===String(caboId||''))||null;}
-function getCableFiberBindings(caboId){return getInvStore().fibra_bindings.filter(x=>String(x.cabo_id||'')===String(caboId||''));}
-function upsertCableLinkRecord(rec){
-  const store=getInvStore();
-  const idx=store.cabo_links.findIndex(x=>String(x.cabo_id||'')===String(rec.cabo_id||''));
-  const base=idx>=0?store.cabo_links[idx]:{id:`cabo_link_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,criado_em:new Date().toISOString()};
-  const next={...base,...rec,atualizado_em:new Date().toISOString()};
-  if(idx>=0)store.cabo_links[idx]=next; else store.cabo_links.push(next);
-  saveInvStore(store);
-  return next;
-}
-function upsertFiberBinding(rec){
-  const store=getInvStore();
-  const idx=store.fibra_bindings.findIndex(x=>String(x.cabo_id||'')===String(rec.cabo_id||'')&&Number(x.tubo)===Number(rec.tubo)&&Number(x.fibra)===Number(rec.fibra));
-  const base=idx>=0?store.fibra_bindings[idx]:{id:`fibra_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,criado_em:new Date().toISOString()};
-  const next={...base,...rec,atualizado_em:new Date().toISOString()};
-  if(idx>=0)store.fibra_bindings[idx]=next; else store.fibra_bindings.push(next);
-  saveInvStore(store);
-  return next;
-}
-function inferCableFiberCount(c){
-  const txt=[c?.nome,c?.codigo,c?.observacao].filter(Boolean).join(' ').toUpperCase();
-  const m=txt.match(/(\d{1,3})\s*(?:FO|FIBRAS?|F)\b/);
-  const qtd=Number(m?.[1]||0);
-  if(qtd>=2&&qtd<=288)return qtd;
-  return 12;
-}
-function buildCableFiberPlan(c){
-  const total=inferCableFiberCount(c);
-  const tubos=Math.max(1,Math.ceil(total/12));
-  const plan=[];
-  let current=1;
-  for(let t=1;t<=tubos;t++){
-    const corTubo=FIBER_COLORS_BR[(t-1)%FIBER_COLORS_BR.length];
-    const fibras=[];
-    for(let i=1;i<=12&&current<=total;i++,current++){
-      const corFibra=FIBER_COLORS_BR[(i-1)%FIBER_COLORS_BR.length];
-      fibras.push({numero:current,ordemTubo:i,cor:corFibra,hex:FIBER_COLOR_HEX[corFibra]});
-    }
-    plan.push({tubo:t,cor:corTubo,hex:FIBER_COLOR_HEX[corTubo],fibras});
-  }
-  return {total,tubos,plan};
-}
-function getStationLabel(site){
-  return site?codeFirstLabel(site):'—';
-}
-function buildCableStationSuggestion(c,pts,maxDist=320){
-  const path=Array.isArray(pts)&&pts.length>=2?pts:(PL(c?.trajeto)||[]);
-  if(path.length<2)return null;
-  const a=nearestSiteTo(path[0][0],path[0][1],maxDist);
-  const b=nearestSiteTo(path[path.length-1][0],path[path.length-1][1],maxDist);
-  return {
-    cabo_id:c.id,
-    cabo_nome:c.nome||c.codigo||String(c.id||''),
-    ponta_a_ref:a?.site?.codigo||a?.site?.nome||null,
-    ponta_b_ref:b?.site?.codigo||b?.site?.nome||null,
-    ponta_a_dist_m:a?Math.round(a.dist):null,
-    ponta_b_dist_m:b?Math.round(b.dist):null,
-    origem:'auto_proximidade',
-    status:'pendente_confirmacao',
-    observacao:'Sugestão criada automaticamente por proximidade geométrica. Confirmar/corrigir em campo.'
-  };
-}
-function ensureCableStationLink(c,pts,persist=true){
-  const current=getCableLinkRecord(c?.id);
-  if(current&&current.ponta_a_ref&&current.ponta_b_ref)return current;
-  const suggestion=buildCableStationSuggestion(c,pts);
-  if(!suggestion)return current||null;
-  return persist?upsertCableLinkRecord(suggestion):suggestion;
-}
-function sincronizarCaboEstacoes(caboId,quiet=false){
-  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
-  if(!c){if(!quiet)toast('Cabo não localizado','wn');return null;}
-  const pts=PL(c.trajeto)||[];
-  const rec=buildCableStationSuggestion(c,pts);
-  if(!rec){if(!quiet)toast('Cabo sem geometria suficiente para vincular estações','wn');return null;}
-  const saved=upsertCableLinkRecord(rec);
-  if(!quiet){
-    const okA=rec.ponta_a_ref?`A ${rec.ponta_a_ref}`:'A sem estação';
-    const okB=rec.ponta_b_ref?`B ${rec.ponta_b_ref}`:'B sem estação';
-    toast(`Vínculo sugerido: ${okA} • ${okB}`,(rec.ponta_a_ref&&rec.ponta_b_ref)?'ok':'wn');
-  }
-  return saved;
-}
-function openFiberBindingEditor(caboId,tubo,fibra){
-  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
-  if(!c){toast('Cabo não localizado','wn');return;}
-  const plan=buildCableFiberPlan(c);
-  const tube=plan.plan.find(x=>x.tubo===Number(tubo));
-  const fiber=tube?.fibras.find(x=>x.numero===Number(fibra));
-  if(!tube||!fiber){toast('Fibra não localizada no diagrama','wn');return;}
-  const link=getCableLinkRecord(caboId)||ensureCableStationLink(c,PL(c.trajeto)||[],false)||{};
-  const bind=getCableFiberBindings(caboId).find(x=>Number(x.tubo)===Number(tubo)&&Number(x.fibra)===Number(fibra))||{};
-  $('mtt').textContent=`Amarração óptica — ${c.nome||c.codigo||'cabo'}`;
-  $('mbd').innerHTML=`
-    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
-      <b>Tubo ${tube.tubo}</b> • ${tube.cor} • <b>Fibra ${fiber.numero}</b> (${fiber.cor}).<br>
-      Use este vínculo para amarrar a fibra a uma facilidade óptica/equipamento. Confirmar em campo antes de consolidar.
-    </div>
-    <div class="mfgr">
-      <div class="mfg"><label>Ponta / estação</label><select id="fb-side"><option value="A"${bind.side==='A'?' selected':''}>A — ${esc(link.ponta_a_ref||'não resolvida')}</option><option value="B"${bind.side==='B'?' selected':''}>B — ${esc(link.ponta_b_ref||'não resolvida')}</option></select></div>
-      <div class="mfg"><label>Facilidade óptica</label><input id="fb-fac" value="${esc(bind.facilidade||'')}" placeholder="Bandeja 01 / Splitter 1:8 / DGO 02"></div>
-    </div>
-    <div class="mfgr">
-      <div class="mfg"><label>Equipamento</label><input id="fb-eq" value="${esc(bind.equipamento||'')}" placeholder="OLT / DWDM / Switch / DIO"></div>
-      <div class="mfg"><label>Porta / posição</label><input id="fb-porta" value="${esc(bind.porta||'')}" placeholder="PON 1-1 / FO 03 / Porta 12"></div>
-    </div>
-    <div class="mfg"><label>Observação</label><textarea id="fb-obs" placeholder="Descreva a terminação, jumpers, reserva técnica ou necessidade de correção de campo.">${esc(bind.observacao||'')}</textarea></div>
-    <div id="fb-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn2 s" onclick="closeM()">Cancelar</button>
-      <button class="btn2 p" onclick="salvarAmarracaoFibra('${String(caboId).replace(/'/g,"\\'")}',${tube.tubo},${fiber.numero},'${fiber.cor}','${tube.cor}')">💾 Amarrar fibra</button>
-    </div>`;
-  $('mbg').classList.add('show');
-}
-function salvarAmarracaoFibra(caboId,tubo,fibra,corFibra,corTubo){
-  const rec=upsertFiberBinding({
-    cabo_id:caboId,
-    tubo:Number(tubo),
-    fibra:Number(fibra),
-    cor_fibra:corFibra,
-    cor_tubo:corTubo,
-    side:$('fb-side')?.value||'A',
-    facilidade:gv('fb-fac'),
-    equipamento:gv('fb-eq'),
-    porta:gv('fb-porta'),
-    observacao:gv('fb-obs'),
-    status:'pendente_confirmacao'
-  });
-  msgField('fb-msg','Amarração óptica salva como pendente de confirmação.','ok');
-  setTimeout(()=>{
-    closeM();
-    const c=allC.find(x=>String(x.id||'')===String(caboId||''));
-    if(c)openCableFiberDiagram(caboId);
-  },350);
-  return rec;
-}
-function openCableFiberDiagram(caboId){
-  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
-  if(!c){toast('Cabo não localizado','wn');return;}
-  const plan=buildCableFiberPlan(c);
-  const link=getCableLinkRecord(caboId)||ensureCableStationLink(c,PL(c.trajeto)||[],false)||{};
-  const bindings=getCableFiberBindings(caboId);
-  const linkedCount=bindings.filter(x=>x.facilidade||x.equipamento||x.porta).length;
-  $('mtt').textContent=`Diagrama óptico — ${c.nome||c.codigo||'cabo'}`;
-  $('mbd').innerHTML=`
-    <div style="background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
-      Pré-diagrama operacional com padrão brasileiro de cores. As estações nas pontas foram sugeridas automaticamente por proximidade e precisam de confirmação/correção da equipe de campo.
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:12px">
-      <div class="audit-card in"><div class="title">Ponta A</div><div class="detail">${esc(link.ponta_a_ref||'não resolvida')}${link.ponta_a_dist_m?` • ${link.ponta_a_dist_m}m`:''}</div></div>
-      <div class="audit-card in"><div class="title">Ponta B</div><div class="detail">${esc(link.ponta_b_ref||'não resolvida')}${link.ponta_b_dist_m?` • ${link.ponta_b_dist_m}m`:''}</div></div>
-      <div class="audit-card ok"><div class="title">Capacidade</div><div class="detail">${plan.total} fibra(s) • ${plan.tubos} tubo(s) loose</div></div>
-      <div class="audit-card ${linkedCount?'ok':'wn'}"><div class="title">Amarrações</div><div class="detail">${linkedCount} fibra(s) já vinculada(s) a facilidade/equipamento</div></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:12px">
-      <button class="btn2 s" onclick="closeM()">Fechar</button>
-      <button class="btn2 p" onclick="sincronizarCaboEstacoes('${String(caboId).replace(/'/g,"\\'")}');openCableFiberDiagram('${String(caboId).replace(/'/g,"\\'")}')">🔗 Recalcular estações</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      ${plan.plan.map(t=>`
-        <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px">
-            <div style="font-size:11px;font-weight:800;color:var(--t)">Tubo ${t.tubo}</div>
-            <div style="display:inline-flex;align-items:center;gap:8px;font-size:10px;color:var(--t2)"><span style="width:10px;height:10px;border-radius:999px;background:${t.hex};border:1px solid rgba(255,255,255,.25)"></span>${t.cor}</div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">
-            ${t.fibras.map(f=>{
-              const bind=bindings.find(x=>Number(x.tubo)===t.tubo&&Number(x.fibra)===f.numero);
-              return `<button class="pac ${bind?'g':'b'}" style="justify-content:flex-start;text-align:left;min-height:44px" onclick="openFiberBindingEditor('${String(caboId).replace(/'/g,"\\'")}',${t.tubo},${f.numero})">
-                <span style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
-                  <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${f.hex};border:1px solid rgba(255,255,255,.25)"></span>F${f.numero} • ${f.cor}</span>
-                  <span style="font-size:9px;color:var(--t3)">${bind?(bind.facilidade||bind.equipamento||bind.porta||'vinculada'):'livre / sem amarração'}</span>
-                </span>
-              </button>`;
-            }).join('')}
-          </div>
-        </div>`).join('')}
-    </div>`;
-  $('mbg').classList.add('show');
-}
 function findDraftPoint(ref){
   const key=(ref||'').toUpperCase().trim();
   if(!key)return null;
@@ -5637,6 +5368,204 @@ async function validarEventoSigitm(ta){
     observacao: `Evento validado do SIGITM. Aguardando auditoria de trecho.`,
     _synced: true
   });
+}
+
+const TELEGRAM_DECISIONS_KEY='telegram_supervisor_decisions_v1';
+function loadTelegramDecisions(){
+  try{return JSON.parse(localStorage.getItem(TELEGRAM_DECISIONS_KEY)||'{}')}catch(_){return {}}
+}
+function saveTelegramDecision(id,decision){
+  const data=loadTelegramDecisions();
+  data[id]={decision,decidido_em:new Date().toISOString()};
+  localStorage.setItem(TELEGRAM_DECISIONS_KEY,JSON.stringify(data));
+}
+function telegramBadgeClass(decision){
+  if(decision==='aprovado')return 'tok';
+  if(decision==='rejeitado')return 'ter';
+  if(decision==='mesclar')return 'twn';
+  return 'twn';
+}
+function telegramBadgeLabel(decision){
+  if(decision==='aprovado')return 'Aprovado local';
+  if(decision==='rejeitado')return 'Rejeitado local';
+  if(decision==='mesclar')return 'Mesclar manualmente';
+  return 'Pendente Supervisor';
+}
+function fmtTelegramLocation(item){
+  const lat=item?.location?.lat, lng=item?.location?.lng;
+  if(lat==null||lng==null)return 'Sem coordenada';
+  return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+}
+function escapeJsText(v=''){return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
+async function abrirEsteiraTelegram(){
+  $('sec-telegram').style.display='block';
+  const el=$('telegram-lista');
+  el.innerHTML='<div style="color:var(--t3)">Carregando fila...</div>';
+  try{
+    const r=await fetch('./telegram_pendentes.json',{cache:'no-store'});
+    if(!r.ok){el.innerHTML='Fila Telegram vazia ou não localizada.';return;}
+    const dados=await r.json();
+    const decisions=loadTelegramDecisions();
+    if(!dados.length){el.innerHTML='Nenhum item pendente do Telegram.';return;}
+    el.innerHTML=dados.map(item=>{
+      const decision=decisions[item.id]?.decision||'pendente';
+      const dups=Array.isArray(item.duplicate_hints)?item.duplicate_hints:[];
+      const dupHtml=dups.length?`<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.18)"><div style="font-size:10px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Possível duplicidade</div>${dups.slice(0,3).map(d=>`<div style="font-size:11px;color:var(--t2);margin-bottom:5px"><b>${esc(d.descricao||d.fonte||'parecido')}</b>${d.score?` <span style="color:var(--am)">(${d.score})</span>`:''}${Array.isArray(d.motivos)&&d.motivos.length?`<br><span style="color:var(--t3)">${esc(d.motivos.join(' | '))}</span>`:''}</div>`).join('')}</div>`:'';
+      return `
+      <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px">
+        <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;align-items:flex-start">
+          <div>
+            <b style="color:var(--cy)">${esc(item.endpoint_pair||item.site_ref||item.summary||'Evento Telegram')}</b>
+            <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(item.chat_title||'Telegram')} • ${esc(item.sender||'')}</div>
+          </div>
+          <span class="stg ${telegramBadgeClass(decision)}">${telegramBadgeLabel(decision)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Serviço:</b> ${esc(item.service_type||'indefinido')} • ${esc(item.camada||'indefinida')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>DGO/Porta:</b> ${esc(item.dgo||'—')} / ${esc(item.porta||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>FO/FL/BT:</b> ${esc(item.fo||'—')} • ${esc(item.fl||'—')} • ${esc(item.bt||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Interface:</b> ${esc(item.interface||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Distância:</b> ${esc(item.distance_raw||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Mapa:</b> ${esc(fmtTelegramLocation(item))}</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5"><b>Resumo:</b> ${esc((item.summary||'').slice(0,140))}</div>
+        ${dupHtml}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+          <button class="tb" onclick="revisarEventoTelegram('${escapeJsText(item.id)}')">👁 Revisar</button>
+          <button class="tb g" onclick="aprovarEventoTelegram('${escapeJsText(item.id)}')">✅ Aprovar</button>
+          <button class="tb" onclick="mesclarEventoTelegram('${escapeJsText(item.id)}')">🔀 Mesclar</button>
+          <button class="tb r" onclick="rejeitarEventoTelegram('${escapeJsText(item.id)}')">✕ Rejeitar</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(err){
+    el.innerHTML='Erro ao carregar fila do Telegram.';
+  }
+}
+async function localizarTelegramItem(id){
+  const r=await fetch('./telegram_pendentes.json',{cache:'no-store'});
+  if(!r.ok)return null;
+  const dados=await r.json();
+  return (dados||[]).find(x=>x.id===id)||null;
+}
+async function revisarEventoTelegram(id){
+  const item=await localizarTelegramItem(id);
+  if(!item){toast('Item Telegram não encontrado','er');return;}
+  goTab('mapa', document.querySelector('.nt[onclick*="mapa"]'));
+  const lat=item?.location?.lat, lng=item?.location?.lng;
+  if(lat!=null&&lng!=null){
+    map.setView([Number(lat),Number(lng)],16);
+    L.marker([Number(lat),Number(lng)], {zIndexOffset:5000})
+      .bindPopup(`<b>Telegram</b><br>${esc(item.endpoint_pair||item.site_ref||'Sem referência')}<br>${esc(item.summary||'')}`)
+      .addTo(map)
+      .openPopup();
+    toast('Evento Telegram aberto no mapa','ok');
+    return;
+  }
+  const ref=item.site_ref||item.ponta_a||item.ponta_b;
+  const site=allS.find(s=>[s.codigo,s.nome].filter(Boolean).some(v=>String(v).toUpperCase().includes(String(ref||'').toUpperCase())));
+  if(site&&site.localizacao){
+    const pt=PP(site.localizacao);
+    map.setView(pt,16);
+    toast(`Evento Telegram revisado próximo a ${ref}`,'ok');
+  }else{
+    toast('Item sem localização suficiente para revisão automática','wn');
+  }
+}
+function aprovarEventoTelegram(id){
+  saveTelegramDecision(id,'aprovado');
+  toast('Item Telegram aprovado localmente pelo supervisor','ok');
+  abrirEsteiraTelegram();
+}
+function rejeitarEventoTelegram(id){
+  saveTelegramDecision(id,'rejeitado');
+  toast('Item Telegram rejeitado localmente pelo supervisor','wn');
+  abrirEsteiraTelegram();
+}
+function mesclarEventoTelegram(id){
+  saveTelegramDecision(id,'mesclar');
+  toast('Item marcado para mesclagem manual pelo supervisor','ok');
+  abrirEsteiraTelegram();
+}
+async function publicarTelegramAprovadosStaging(){
+  toast('Publicando aprovados do Telegram para staging...','in');
+  try{
+    const [filaResp,publishedResp] = await Promise.all([
+      fetch('./telegram_pendentes.json',{cache:'no-store'}),
+      fetch(`${SU}/rest/v1/stg_telegram_facilidades?select=chat_id,message_id`,{headers:RH}).catch(()=>null)
+    ]);
+    if(!filaResp.ok){
+      toast('Arquivo telegram_pendentes.json não encontrado','er');
+      return;
+    }
+    const fila = await filaResp.json();
+    const decisions = loadTelegramDecisions();
+    const already = new Set();
+    if(publishedResp && publishedResp.ok){
+      const rows = await publishedResp.json();
+      (rows||[]).forEach(r=>already.add(`${r.chat_id}::${r.message_id}`));
+    }
+    const aprovados = (fila||[]).filter(item=>decisions[item.id]?.decision==='aprovado');
+    if(!aprovados.length){
+      toast('Não há itens Telegram aprovados para publicar','wn');
+      return;
+    }
+    const payload = aprovados
+      .filter(item=>!already.has(`${item.chat_id}::${item.message_id}`))
+      .map(item=>({
+        origem: item.source||'telegram_bot',
+        chat_id: String(item.chat_id||''),
+        chat_titulo: item.chat_title||'',
+        message_id: Number(item.message_id||0),
+        remetente: item.sender||'',
+        capturado_em: item.captured_at||new Date().toISOString(),
+        resumo: item.summary||'',
+        texto_bruto: item.raw_text||'',
+        endpoint_pair: item.endpoint_pair||'',
+        ponta_a: item.ponta_a||'',
+        ponta_b: item.ponta_b||'',
+        service_type: item.service_type||'',
+        camada: item.camada||'',
+        site_ref: item.site_ref||'',
+        dgo: item.dgo||'',
+        porta: item.porta||'',
+        fo: item.fo||'',
+        fl: item.fl||'',
+        bt: item.bt||'',
+        interface: item.interface||'',
+        distancia_raw: item.distance_raw||'',
+        distancia_m: item.distance_m||null,
+        latitude: item?.location?.lat ?? null,
+        longitude: item?.location?.lng ?? null,
+        maps_link: item?.location?.maps_link || '',
+        endereco_ref: item?.location?.address || '',
+        confianca: Number(item.confidence||0),
+        duplicate_hints: item.duplicate_hints||[],
+        supervisor_decisao: 'aprovado',
+        supervisor_nome: sessao?.nome || sessao?.email || 'supervisor_local',
+        supervisor_observacao: 'Aprovado no painel local do supervisor.',
+        status_fluxo: 'aprovado_supervisor',
+        payload: item,
+        publicado_do_painel: true,
+        publicado_em: new Date().toISOString()
+      }));
+    if(!payload.length){
+      toast('Todos os aprovados já parecem publicados no staging','ok');
+      return;
+    }
+    const res = await fetch(`${SU}/rest/v1/stg_telegram_facilidades`,{
+      method:'POST',
+      headers:{...WH,'Prefer':'return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(res.ok){
+      const rows = await res.json().catch(()=>[]);
+      toast(`Telegram staging atualizado com ${rows.length||payload.length} item(ns)`,'ok');
+      return;
+    }
+    const err = await res.json().catch(()=>({}));
+    toast(`Falha ao publicar Telegram: ${err.message||err.details||res.status}`,'er');
+  }catch(err){
+    toast(`Erro ao publicar Telegram: ${err.message||err}`,'er');
+  }
 }
 
 function estimarTempoReparo(causa, numCaixas){
