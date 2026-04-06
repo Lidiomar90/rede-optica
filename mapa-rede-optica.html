@@ -546,7 +546,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <button class="dbtn danger" onclick="cancelDraw()">✕ Cancelar</button>
     </div>
     <div id="fieldbar">
-      <button class="fbtn" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
+      <button class="fbtn" data-role="field-mode" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
       <button class="fbtn" onclick="toggleSB()"><span class="fi">☰</span><span class="ft">Camadas</span></button>
       <button class="fbtn" onclick="goLoc()"><span class="fi">📍</span><span class="ft">GPS</span></button>
       <button class="fbtn" onclick="novaCaixaNoCentro()"><span class="fi">🧰</span><span class="ft">Caixa</span></button>
@@ -1019,15 +1019,18 @@ let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
 let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null,flagLayer=null;
 let mapOffline=false,ctxLatLng=null;
-const MAP_CACHE_KEY='redeoptica_cache_mapa_v4';
+const MAP_CACHE_KEY='redeoptica_cache_mapa_v5';
 const FLAG_KEY='redeoptica_flags_v1';
 let touchHoldTimer=null;
 let assetTouchHoldTimer=null;
+let netSlowTimer=null;
+let netFlashTimer=null;
 let ctxActions=[];
 let drawTarget='segmento';
 let fieldMode=localStorage.getItem('_field_mode')==='1';
 let mobileToolsExpanded=false;
 const LEGEND_PREF_KEY='redeoptica_legenda_mobile_v1';
+const LONG_PRESS_MS=320;
 let legendCollapsed=localStorage.getItem(LEGEND_PREF_KEY)==='1';
 const OVERLAY_CFG=[
   {id:'ov_romp',label:'Incidentes',warn:true,vis:true},
@@ -1084,15 +1087,33 @@ const nearestSiteTo=(lat,lng,maxDist=120)=>{
   });
   return best?{site:best,dist:bestDist}:null;
 };
-function saveMapCache(sites,cabos,science){
+function saveMapCache(sites,cabos,science,official={}){
   try{
-    const data = {sites,cabos,science,salvo_em:new Date().toISOString()};
+    const data = {
+      sites,
+      cabos,
+      science,
+      caixasMapa:Array.isArray(official.caixasMapa)?official.caixasMapa:[],
+      dgosMapa:Array.isArray(official.dgosMapa)?official.dgosMapa:[],
+      segmentosMapa:Array.isArray(official.segmentosMapa)?official.segmentosMapa:[],
+      rupturasMapa:Array.isArray(official.rupturasMapa)?official.rupturasMapa:[],
+      salvo_em:new Date().toISOString()
+    };
     localStorage.setItem(MAP_CACHE_KEY, JSON.stringify(data));
   } catch(err){
     console.warn('cache mapa falhou (provavelmente limite de storage)', err);
-    // Fallback: salva apenas o essencial (sites e cabos sem science)
+    // Fallback: preserva o essencial para campo em um snapshot menor.
     try {
-      localStorage.setItem(MAP_CACHE_KEY, JSON.stringify({sites: sites.slice(0, 2000), cabos: cabos.slice(0, 1000), salvo_em: new Date().toISOString()}));
+      localStorage.setItem(MAP_CACHE_KEY, JSON.stringify({
+        sites: sites.slice(0, 2000),
+        cabos: cabos.slice(0, 1000),
+        science: Array.isArray(science)?science.slice(0,400):[],
+        caixasMapa:Array.isArray(official.caixasMapa)?official.caixasMapa.slice(0,400):[],
+        dgosMapa:Array.isArray(official.dgosMapa)?official.dgosMapa.slice(0,400):[],
+        segmentosMapa:Array.isArray(official.segmentosMapa)?official.segmentosMapa.slice(0,400):[],
+        rupturasMapa:Array.isArray(official.rupturasMapa)?official.rupturasMapa.slice(0,200):[],
+        salvo_em: new Date().toISOString()
+      }));
     } catch(e2) {}
   }
 }
@@ -1106,6 +1127,67 @@ function loadMapCache(){
     if(new Date() - new Date(data.salvo_em) > exp) return null;
     return data;
   } catch(e){ return null; }
+}
+function formatRelativeTime(iso){
+  if(!iso)return '';
+  const diff=Math.max(0,Date.now()-new Date(iso).getTime());
+  const min=Math.round(diff/60000);
+  if(min<1)return 'agora';
+  if(min<60)return `${min} min`;
+  const hrs=Math.round(min/60);
+  if(hrs<24)return `${hrs} h`;
+  return `${Math.round(hrs/24)} d`;
+}
+function updateCacheTimestamp(iso,{offline=false}={}){
+  const el=$('cache-ts');
+  if(!el)return;
+  if(!iso||!isMobileUI()){
+    el.style.display='none';
+    el.textContent='';
+    return;
+  }
+  el.textContent=`Cache ${offline?'offline ':''}atualizado há ${formatRelativeTime(iso)}`;
+  el.style.display='block';
+}
+function updateSyncQueueBadge(){
+  const el=$('sync-queue-badge');
+  if(!el)return;
+  const store=getInvStore();
+  const total=(store.caixas||[]).filter(x=>!x._synced).length
+    +(store.dgos||[]).filter(x=>!x._synced).length
+    +(store.segmentos||[]).filter(x=>!x._synced).length
+    +(store.rupturas||[]).filter(x=>!x._synced).length;
+  if(total>0){
+    el.textContent=`Fila sync: ${total}`;
+    el.classList.add('show');
+  }else{
+    el.textContent='';
+    el.classList.remove('show');
+  }
+}
+function setNetworkIndicator(state='',msg=''){
+  const el=$('net-indicator');
+  if(!el)return;
+  el.className='';
+  if(!state){
+    el.textContent='';
+    return;
+  }
+  el.classList.add(state);
+  el.textContent=msg;
+}
+function flashNetworkOnline(msg='Online'){
+  clearTimeout(netFlashTimer);
+  setNetworkIndicator('online-flash',msg);
+  netFlashTimer=setTimeout(()=>{
+    if(!mapOffline)setNetworkIndicator();
+  },2200);
+}
+function refreshMobileUiBadges(){
+  document.querySelectorAll('#fieldbar .fbtn[data-role=\"field-mode\"]').forEach(btn=>btn.classList.toggle('campo-on',fieldMode));
+  if(isMobileUI())updateCacheTimestamp(loadMapCache()?.salvo_em,{offline:mapOffline});
+  else updateCacheTimestamp(null);
+  updateSyncQueueBadge();
 }
 function pointFromAnyGeom(row){
   const cand=[row?.localizacao,row?.geom_falha,row?.geom,row?.geometria,row?.ponto];
@@ -1227,6 +1309,7 @@ function applyResponsiveLayout(){
     setMobileToolsExpanded(false);
     applyLegendState(false,false);
   }
+  refreshMobileUiBadges();
 }
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
@@ -1238,6 +1321,9 @@ function setOfflineState(on,msg=''){
   const badge=badges?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badges}</div>`:'';
   if($('mapsub'))$('mapsub').innerHTML=base+badge;
   if($('field-mode-chip'))$('field-mode-chip').classList.toggle('on',fieldMode);
+  if(mapOffline)setNetworkIndicator('offline','Sem rede');
+  else if(!netSlowTimer)flashNetworkOnline('Online');
+  refreshMobileUiBadges();
   if(msg)toast(msg,mapOffline?'wn':'ok');
 }
 function getLayerPresetMap(name){
@@ -1267,6 +1353,7 @@ function applyFieldMode(on,msg=''){
     closeSB();
   }
   setOfflineState(mapOffline,msg||'');
+  refreshMobileUiBadges();
 }
 function toggleFieldMode(){
   applyFieldMode(!fieldMode,fieldMode?'Modo campo desativado.':'Modo campo ativado.');
@@ -1316,8 +1403,9 @@ function attachMarkerFieldActions(marker,menuFactory){
       assetTouchHoldTimer=setTimeout(()=>{
         const latlng=marker.getLatLng();
         openActionMenu({...menuFactory(latlng),latlng,clientX:touch.clientX,clientY:touch.clientY});
+        if(navigator.vibrate)navigator.vibrate(16);
         toast('Ações rápidas do ativo abertas','in');
-      },650);
+      },LONG_PRESS_MS);
     },{passive:true});
     el.addEventListener('touchend',clear,{passive:true});
     el.addEventListener('touchmove',clear,{passive:true});
@@ -1758,9 +1846,10 @@ function initMapObj(){
       try{
         const latlng=map.mouseEventToLatLng(touch);
         openContextMenu({latlng,originalEvent:{clientX:touch.clientX,clientY:touch.clientY}});
+        if(navigator.vibrate)navigator.vibrate(16);
         toast('Menu de campo aberto por toque longo','in');
       }catch{}
-    },650);
+    },LONG_PRESS_MS);
   },{passive:true});
   mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
   mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
@@ -1783,6 +1872,8 @@ async function loadMap(){
     $('ltt').textContent='Carregando sites...';setProg(15);
     let sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa;
     try{
+      clearTimeout(netSlowTimer);
+      netSlowTimer=setTimeout(()=>setNetworkIndicator('slow','Rede lenta...'),1800);
       const zoom = map.getZoom();
       let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
       let caboUrl = `${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`;
@@ -1804,18 +1895,22 @@ async function loadMap(){
         fetch(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
       ]);
-      saveMapCache(sites,cabos,science);
+      clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
+      saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});
+      updateCacheTimestamp(new Date().toISOString());
       setOfflineState(false);
     }catch(netErr){
+      clearTimeout(netSlowTimer);netSlowTimer=null;
       const cache=loadMapCache();
       if(!cache)throw netErr;
       sites=cache.sites||[];
       cabos=cache.cabos||[];
       science=cache.science||[];
-      caixasMapa=[];
-      dgosMapa=[];
-      segmentosMapa=[];
-      rupturasMapa=[];
+      caixasMapa=cache.caixasMapa||[];
+      dgosMapa=cache.dgosMapa||[];
+      segmentosMapa=cache.segmentosMapa||[];
+      rupturasMapa=cache.rupturasMapa||[];
+      updateCacheTimestamp(cache.salvo_em,{offline:true});
       setOfflineState(true,'Sem rede estável. Carregando último cache local.');
     }
     scienceSites=Array.isArray(science)?science:[];
@@ -2503,8 +2598,8 @@ function renderSBv2(q=''){
 }
 renderSB=renderSBv2;
 function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
-function toggleSB(){const s=$('sb');s.classList.toggle('open');$('mob-ov').style.display=s.classList.contains('open')?'block':'none';}
-function closeSB(){$('sb').classList.remove('open');$('mob-ov').style.display='none';}
+function toggleSB(){const s=$('sb'),ov=$('mob-ov');const open=!s.classList.contains('open');s.classList.toggle('open',open);if(ov)ov.classList.toggle('show',open);}
+function closeSB(){const s=$('sb'),ov=$('mob-ov');if(s)s.classList.remove('open');if(ov)ov.classList.remove('show');}
 function getPointSummary(ref){
   const p=findDraftPoint(ref||'');
   if(!p)return null;
@@ -3445,7 +3540,7 @@ function limpar(pre){
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
-function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();}
+function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();updateSyncQueueBadge();}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
   const store=getInvStore();
