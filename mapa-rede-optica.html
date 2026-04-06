@@ -110,14 +110,20 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 
 /* CAMADAS */
 #lc{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
+.lc-sec{border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(255,255,255,.025);overflow:hidden}
+.lc-sec + .lc-sec{margin-top:6px}
+.lc-sum{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;cursor:pointer;list-style:none}
+.lc-sum::-webkit-details-marker{display:none}
+.lc-sum:hover{background:rgba(255,255,255,.04)}
+.lc-body{padding:0 10px 10px}
 .lc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .lc-t{font-size:9px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.18em}
 .lc-btns{display:flex;gap:4px}
 .lc-btn{padding:4px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t3);font-size:9px;cursor:pointer;font-family:inherit;font-weight:800;transition:.12s}
 .lc-btn:hover{background:rgba(255,255,255,.07);color:var(--t2)}
-.lc-stack{display:flex;flex-direction:column;gap:8px}
+.lc-stack{display:flex;flex-direction:column;gap:6px}
 .preset-row,.overlay-row{display:flex;gap:6px;flex-wrap:wrap}
-.preset-chip,.overlay-chip{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t3);font-size:9px;cursor:pointer;font-family:inherit;font-weight:800;transition:.12s;text-transform:uppercase;letter-spacing:.08em}
+.preset-chip,.overlay-chip{padding:5px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t3);font-size:9px;cursor:pointer;font-family:inherit;font-weight:800;transition:.12s;text-transform:uppercase;letter-spacing:.08em}
 .preset-chip:hover,.overlay-chip:hover{background:rgba(255,255,255,.07);color:var(--t2)}
 .preset-chip.on,.overlay-chip.on{background:rgba(72,168,255,.12);border-color:rgba(72,168,255,.26);color:var(--t)}
 .overlay-chip.warn.on{background:rgba(255,90,104,.14);border-color:rgba(255,90,104,.26);color:var(--rd)}
@@ -170,8 +176,8 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 #mw.focus-map #maphead{opacity:0;transform:translateY(-10px);pointer-events:none}
 #mw.focus-map #leg{opacity:0;transform:translateY(10px);pointer-events:none}
 @media(max-width:680px){#maphead{top:62px;left:10px;right:68px;max-width:none;padding:10px 12px}.mht{font-size:13px}.mhs{font-size:10px}}
-#mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:5px}
-.mb{width:42px;height:42px;border-radius:14px;background:rgba(11,21,35,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 12px 24px rgba(0,0,0,.22)}
+#mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:4px}
+.mb{width:40px;height:40px;border-radius:13px;background:rgba(11,21,35,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);color:var(--t2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 12px 24px rgba(0,0,0,.22)}
 .mb:hover{background:rgba(18,34,57,.92);color:var(--t);transform:translateY(-1px)}
 .mb.on{background:var(--rd);border-color:var(--rd);color:#fff}
 .mb.on-g{background:var(--gr);border-color:var(--gr);color:#000}
@@ -205,7 +211,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 }
 
 /* LEGENDA */
-#leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:auto;transition:background .25s;backdrop-filter:blur(16px)}
+#leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:10px 12px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:auto;transition:background .25s;backdrop-filter:blur(16px)}
 .leg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
 .leg-toggle{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:12px;font-family:inherit;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
 .leg-toggle:hover{background:rgba(255,255,255,.08);color:var(--t)}
@@ -511,23 +517,29 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
     <div id="sbflt" class="sbflt"></div>
     <div id="lc">
       <div class="lc-stack">
-        <div class="lc-hdr">
-          <span class="lc-t">Visibilidade</span>
-          <div class="lc-btns">
-            <button class="lc-btn" onclick="setAll(true)">Todos</button>
-            <button class="lc-btn" onclick="setAll(false)">Nenhum</button>
+        <details class="lc-sec" open>
+          <summary class="lc-sum">
+            <span class="lc-t">Visibilidade</span>
+            <div class="lc-btns">
+              <button class="lc-btn" onclick="event.preventDefault();event.stopPropagation();setAll(true)">Todos</button>
+              <button class="lc-btn" onclick="event.preventDefault();event.stopPropagation();setAll(false)">Nenhum</button>
+            </div>
+          </summary>
+          <div class="lc-body" id="lg-wrap"></div>
+        </details>
+        <details class="lc-sec" open>
+          <summary class="lc-sum"><span class="lc-t">Perfis rápidos</span></summary>
+          <div class="lc-body">
+            <div class="preset-row" id="preset-row"></div>
           </div>
-        </div>
-        <div>
-          <div class="lc-t" style="margin-bottom:6px">Perfis rápidos</div>
-          <div class="preset-row" id="preset-row"></div>
-        </div>
-        <div>
-          <div class="lc-t" style="margin-bottom:6px">Operação no mapa</div>
-          <div class="overlay-row" id="overlay-row"></div>
-        </div>
+        </details>
+        <details class="lc-sec">
+          <summary class="lc-sum"><span class="lc-t">Operação no mapa</span></summary>
+          <div class="lc-body">
+            <div class="overlay-row" id="overlay-row"></div>
+          </div>
+        </details>
       </div>
-      <div id="lg-wrap"></div>
     </div>
     <div id="sbl"></div>
   </div>
@@ -1343,12 +1355,11 @@ function toggleLegend(){
   if(map)setTimeout(()=>map.invalidateSize(false),80);
 }
 function applyResponsiveLayout(){
-  if(isMobileUI()){
-    if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
-    else applyLegendState(legendCollapsed,false);
-  }else{
+  if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
+  else if(isMobileUI())applyLegendState(legendCollapsed,false);
+  else applyLegendState(legendCollapsed,false);
+  if(!isMobileUI()){
     setMobileToolsExpanded(false);
-    applyLegendState(false,false);
   }
   applyMapFocus(mapFocus,false);
   refreshMobileUiBadges();
