@@ -1,0 +1,22 @@
+﻿{
+    "workspace":  "C:\\FIBRA CADASTRO",
+    "gerado_em":  "05/04/2026 23:35:20",
+    "foco":  "aprimoramento continuo do site, mobile, mapa, inventario operacional",
+    "branch":  "main",
+    "arquivos":  {
+                     "codex":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\03_CODEX_IMPLEMENTACAO.md",
+                     "manus":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\05_MANUS_PRODUTO_UX.md",
+                     "deepseek":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\04_DEEPSEEK_REVISAO.md",
+                     "resumo":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\00_RESUMO_SESSAO.md",
+                     "respostas":  {
+                                       "gemini":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\respostas\\gemini_resposta.md",
+                                       "claude":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\respostas\\claude_resposta.md",
+                                       "pasta":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\respostas",
+                                       "deepseek":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\respostas\\deepseek_resposta.md",
+                                       "manus":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\respostas\\manus_resposta.md"
+                                   },
+                     "gemini":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\02_GEMINI_VALIDACAO.md",
+                     "checklist":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\06_CHECKLIST_COORDENACAO.md",
+                     "claude":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233519\\01_CLAUDE_ARQUITETURA.md"
+                 }
+}

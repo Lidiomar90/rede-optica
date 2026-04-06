@@ -1,0 +1,51 @@
+﻿{
+    "task_id":  "tarefa_20260405_233134",
+    "criado_em":  "2026-04-05T23:31:35.5214953-03:00",
+    "foco":  "mobile, campo, UX operacional, publicacao segura",
+    "workspace":  "C:\\FIBRA CADASTRO",
+    "sessao":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134",
+    "status":  "aguardando_execucao_externa",
+    "arquivos":  {
+                     "resumo":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\00_RESUMO_SESSAO.md",
+                     "claude":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\01_CLAUDE_ARQUITETURA.md",
+                     "gemini":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\02_GEMINI_VALIDACAO.md",
+                     "codex":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\03_CODEX_IMPLEMENTACAO.md",
+                     "deepseek":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\04_DEEPSEEK_REVISAO.md",
+                     "manus":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\05_MANUS_PRODUTO_UX.md",
+                     "checklist":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\06_CHECKLIST_COORDENACAO.md",
+                     "respostas":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\respostas",
+                     "consolidar":  "C:\\FIBRA CADASTRO\\CONSOLIDAR-RETORNOS-IAS.ps1"
+                 },
+    "agentes":  [
+                    {
+                        "entrada":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\01_CLAUDE_ARQUITETURA.md",
+                        "nome":  "Claude",
+                        "papel":  "arquitetura, banco e SQL",
+                        "saida":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\respostas\\claude_resposta.md"
+                    },
+                    {
+                        "entrada":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\02_GEMINI_VALIDACAO.md",
+                        "nome":  "Gemini",
+                        "papel":  "validacao, testes e hardening",
+                        "saida":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\respostas\\gemini_resposta.md"
+                    },
+                    {
+                        "entrada":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\03_CODEX_IMPLEMENTACAO.md",
+                        "nome":  "Codex",
+                        "papel":  "implementacao e integracao",
+                        "saida":  "n/a"
+                    },
+                    {
+                        "entrada":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\04_DEEPSEEK_REVISAO.md",
+                        "nome":  "DeepSeek",
+                        "papel":  "revisao logica e fragilidades",
+                        "saida":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\respostas\\deepseek_resposta.md"
+                    },
+                    {
+                        "entrada":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\05_MANUS_PRODUTO_UX.md",
+                        "nome":  "Manus",
+                        "papel":  "produto, UX e benchmark",
+                        "saida":  "C:\\FIBRA CADASTRO\\ia_hub\\sessoes\\sessao_multi_ia_20260405_233134\\respostas\\manus_resposta.md"
+                    }
+                ]
+}

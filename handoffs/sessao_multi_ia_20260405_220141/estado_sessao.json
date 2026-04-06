@@ -1,0 +1,15 @@
+﻿{
+    "workspace":  "C:\\FIBRA CADASTRO",
+    "gerado_em":  "05/04/2026 22:01:42",
+    "foco":  "benchmark geosite, UX operacional, fluxo de campo, mobile",
+    "branch":  "main",
+    "arquivos":  {
+                     "deepseek":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\04_DEEPSEEK_REVISAO.md",
+                     "checklist":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\06_CHECKLIST_COORDENACAO.md",
+                     "claude":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\01_CLAUDE_ARQUITETURA.md",
+                     "gemini":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\02_GEMINI_VALIDACAO.md",
+                     "resumo":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\00_RESUMO_SESSAO.md",
+                     "manus":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\05_MANUS_PRODUTO_UX.md",
+                     "codex":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141\\03_CODEX_IMPLEMENTACAO.md"
+                 }
+}

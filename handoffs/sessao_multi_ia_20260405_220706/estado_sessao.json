@@ -1,0 +1,15 @@
+﻿{
+    "workspace":  "C:\\FIBRA CADASTRO",
+    "gerado_em":  "05/04/2026 22:07:06",
+    "foco":  "mobile, mapa, inventario operacional",
+    "branch":  "main",
+    "arquivos":  {
+                     "deepseek":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\04_DEEPSEEK_REVISAO.md",
+                     "checklist":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\06_CHECKLIST_COORDENACAO.md",
+                     "claude":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\01_CLAUDE_ARQUITETURA.md",
+                     "gemini":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\02_GEMINI_VALIDACAO.md",
+                     "resumo":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\00_RESUMO_SESSAO.md",
+                     "manus":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\05_MANUS_PRODUTO_UX.md",
+                     "codex":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220706\\03_CODEX_IMPLEMENTACAO.md"
+                 }
+}

@@ -1,0 +1,130 @@
+{
+  "executado_em": "2026-04-05 13:48:17",
+  "ambiente": {
+    "hostname": "LIDIOMAR",
+    "platform": "Windows-11-10.0.29558-SP0",
+    "python": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+    "root": "C:\\FIBRA CADASTRO",
+    "cwd": "C:\\FIBRA CADASTRO"
+  },
+  "checks": [
+    {
+      "nome": "Pasta principal",
+      "ok": true,
+      "categoria": "pc",
+      "detalhe": "C:\\FIBRA CADASTRO",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Arquivos públicos",
+      "ok": true,
+      "categoria": "pc",
+      "detalhe": "Todos os arquivos encontrados",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Arquivos sensíveis no projeto",
+      "ok": true,
+      "categoria": "seguranca",
+      "detalhe": "Nenhum arquivo sensível encontrado",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Repositório Git",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": ".git encontrado",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Git status",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": "?? .gitignore.bkp_20260405_133452\n?? Consulta_Science_-_Site_01_10_25_V1.xlsx\n?? PUBLICAR-GIT.ps1.bkp_20260405_133452\n?? agente_config.json\n?? agente_rede_optica_guardiao.py\n?? importar_science.py\n?? logs_agente/",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Git remote",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": "origin\thttps://github.com/Lidiomar90/rede-optica.git (fetch)\norigin\thttps://github.com/Lidiomar90/rede-optica.git (push)",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": ".gitignore",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": "Já contém proteções principais",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Script de publicação",
+      "ok": false,
+      "categoria": "pc",
+      "detalhe": "Usa redirecionamento 2>&1 que pode gerar falso erro",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Conectividade GitHub",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "github.com:443 acessível",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Site online: portal",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Site online: mapa",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/mapa-rede-optica.html",
+      "timestamp": "2026-04-05 13:48:18"
+    },
+    {
+      "nome": "Site online: dashboard",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/dashboard.html",
+      "timestamp": "2026-04-05 13:48:18"
+    },
+    {
+      "nome": "Site online: ia",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/ia-assistente.html",
+      "timestamp": "2026-04-05 13:48:18"
+    },
+    {
+      "nome": "Site online: auditoria",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/auditoria-revisao.html",
+      "timestamp": "2026-04-05 13:48:19"
+    }
+  ],
+  "correcoes": [
+    {
+      "nome": "Corrigir PUBLICAR-GIT.ps1",
+      "ok": true,
+      "detalhe": "Tratamento de push ajustado",
+      "timestamp": "2026-04-05 13:48:17"
+    },
+    {
+      "nome": "Commit automático seguro",
+      "ok": true,
+      "detalhe": "[main 2eb18f9] auto-fix guardiao 05/04/2026 13:48\n 1 file changed, 3 insertions(+), 1 deletion(-)",
+      "timestamp": "2026-04-05 13:48:20"
+    }
+  ],
+  "resumo": {
+    "total_checks": 14,
+    "ok": 13,
+    "falhas": 1,
+    "correcoes": 2
+  }
+}

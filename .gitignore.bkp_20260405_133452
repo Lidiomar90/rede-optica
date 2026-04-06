@@ -1,0 +1,7 @@
+﻿telegram/
+*.dwg
+*.apk
+*.zip
+*.rar
+*.7z
+logs/

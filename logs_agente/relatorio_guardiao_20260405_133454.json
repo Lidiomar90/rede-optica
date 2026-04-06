@@ -1,0 +1,135 @@
+{
+  "executado_em": "2026-04-05 13:34:51",
+  "ambiente": {
+    "hostname": "LIDIOMAR",
+    "platform": "Windows-11-10.0.29558-SP0",
+    "python": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+    "root": "C:\\FIBRA CADASTRO",
+    "cwd": "C:\\FIBRA CADASTRO"
+  },
+  "checks": [
+    {
+      "nome": "Pasta principal",
+      "ok": true,
+      "categoria": "pc",
+      "detalhe": "C:\\FIBRA CADASTRO",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Arquivos públicos",
+      "ok": true,
+      "categoria": "pc",
+      "detalhe": "Todos os arquivos encontrados",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Arquivos sensíveis no projeto",
+      "ok": false,
+      "categoria": "seguranca",
+      "detalhe": "Sensíveis presentes: ['.github_token']",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Repositório Git",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": ".git encontrado",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Git status",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": "?? agente_config.json\n?? agente_rede_optica_guardiao.py\n?? importar_science.py\n?? privado/",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Git remote",
+      "ok": true,
+      "categoria": "git",
+      "detalhe": "origin\thttps://github.com/Lidiomar90/rede-optica.git (fetch)\norigin\thttps://github.com/Lidiomar90/rede-optica.git (push)",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Script de publicação",
+      "ok": false,
+      "categoria": "pc",
+      "detalhe": "Usa redirecionamento 2>&1 que pode gerar falso erro",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Conectividade GitHub",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "github.com:443 acessível",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Site online: portal",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Site online: mapa",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/mapa-rede-optica.html",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Site online: dashboard",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/dashboard.html",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Site online: ia",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/ia-assistente.html",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Site online: auditoria",
+      "ok": true,
+      "categoria": "online",
+      "detalhe": "HTTP 200 - https://lidiomar90.github.io/rede-optica/auditoria-revisao.html",
+      "timestamp": "2026-04-05 13:34:53"
+    }
+  ],
+  "correcoes": [
+    {
+      "nome": "Mover arquivos sensíveis",
+      "ok": true,
+      "detalhe": "Movidos para C:\\FIBRA CADASTRO\\privado: ['.github_token']",
+      "timestamp": "2026-04-05 13:34:51"
+    },
+    {
+      "nome": "Atualizar .gitignore",
+      "ok": true,
+      "detalhe": "Entradas de segurança adicionadas",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Corrigir PUBLICAR-GIT.ps1",
+      "ok": true,
+      "detalhe": "Tratamento de push ajustado",
+      "timestamp": "2026-04-05 13:34:52"
+    },
+    {
+      "nome": "Commit automático seguro",
+      "ok": true,
+      "detalhe": "[main 3c395b0] auto-fix guardiao 05/04/2026 13:34\n 2 files changed, 12 insertions(+), 1 deletion(-)",
+      "timestamp": "2026-04-05 13:34:54"
+    }
+  ],
+  "resumo": {
+    "total_checks": 13,
+    "ok": 11,
+    "falhas": 2,
+    "correcoes": 4
+  }
+}

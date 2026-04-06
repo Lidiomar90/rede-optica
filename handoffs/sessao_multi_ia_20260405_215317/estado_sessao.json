@@ -1,0 +1,13 @@
+﻿{
+    "workspace":  "C:\\FIBRA CADASTRO",
+    "gerado_em":  "05/04/2026 21:53:17",
+    "foco":  "mobile, campo, orquestracao multi-IA",
+    "branch":  "main",
+    "arquivos":  {
+                     "gemini":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_215317\\02_GEMINI_VALIDACAO.md",
+                     "codex":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_215317\\03_CODEX_IMPLEMENTACAO.md",
+                     "claude":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_215317\\01_CLAUDE_ARQUITETURA.md",
+                     "checklist":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_215317\\04_CHECKLIST_COORDENACAO.md",
+                     "resumo":  "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_215317\\00_RESUMO_SESSAO.md"
+                 }
+}

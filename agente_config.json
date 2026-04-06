@@ -1,0 +1,8 @@
+{
+  "auto_fix_safe": true,
+  "abrir_site_apos_publicar": false,
+  "timeout_http": 15,
+  "backup_before_fix": true,
+  "modo_online": true,
+  "modo_pc": true
+}
