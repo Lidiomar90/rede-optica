@@ -381,19 +381,24 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
   .audit-card .detail,.audit-detail,.audit-priority-item .meta{font-size:9px;line-height:1.45}
   .audit-chip-row{justify-content:flex-start}
   .audit-note{font-size:8px}
+  .fgr,.mfgr{grid-template-columns:1fr}
+  #mdl{width:100%;max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+  .mh{padding:12px 14px 10px}
+  .mtt{font-size:13px;line-height:1.3;padding-right:10px}
+  .mbd{padding:12px 14px max(18px,calc(12px + env(safe-area-inset-bottom)))}
 }
 
 /* MODAL */
-#mbg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+#mbg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
 @media(min-width:600px){#mbg{align-items:center}}
 #mbg.show{display:flex}
-#mdl{background:var(--bg2);border:1px solid var(--bd);border-radius:12px 12px 0 0;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 -8px 40px rgba(0,0,0,.7)}
+#mdl{background:var(--bg2);border:1px solid var(--bd);border-radius:12px 12px 0 0;width:min(100%,500px);max-width:500px;max-height:min(90vh,calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-shadow:0 -8px 40px rgba(0,0,0,.7)}
 @media(min-width:600px){#mdl{border-radius:12px}}
 #mdl::-webkit-scrollbar{width:2px}
 .mh{padding:14px 16px 10px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1}
 .mtt{font-size:14px;font-weight:700}
 .mc{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:2px;line-height:1}
-.mc:hover{color:var(--t)}.mbd{padding:14px 16px}
+.mc:hover{color:var(--t)}.mbd{padding:14px 16px max(18px,calc(14px + env(safe-area-inset-bottom)))}
 .mfg{margin-bottom:10px}
 .mfg label{display:block;font-size:9px;color:var(--t2);margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
 .mfg input,.mfg select,.mfg textarea{width:100%;background:var(--bg3);border:1px solid var(--bd2);border-radius:7px;padding:9px 11px;font-size:12px;color:var(--t);outline:none;font-family:inherit;-webkit-appearance:none;transition:.12s}
@@ -841,6 +846,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
          <b style="font-size:12px;color:var(--cy)">Fila de Aprovação Telegram (Supervisor)</b>
          <button class="lc-btn" onclick="$('sec-telegram').style.display='none'">Fechar</button>
        </div>
+       <div id="telegram-meta" style="display:none;margin-bottom:12px"></div>
        <div id="telegram-lista" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:10px"></div>
     </div>
     <div class="audit-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
@@ -1055,6 +1061,7 @@ function aplicarTema(){
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let globalSearchActions={};
 let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
@@ -2339,11 +2346,11 @@ async function abrirAuditoriaRef(ref){
   if(!p){toast('Referência não localizada','wn');return;}
   
   const issues=[];
-  const store=getInvStore();
+  const relatedSegs=getRelatedSegmentsByRef(ref);
   
   if(p.tipo==='caixa'){
     const cx=p.item;
-    const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===String(cx.codigo||'').toUpperCase()||String(s.ponto_b||'').toUpperCase()===String(cx.codigo||'').toUpperCase());
+    const segs=relatedSegs;
     if(!cx.vistoriada)issues.push('⚠ Caixa não vistoriada');
     if(segs.length===0)issues.push('🔴 Caixa sem segmentos ligados');
     if(segs.length===1)issues.push('🟠 Caixa com apenas 1 lado conectado');
@@ -2352,7 +2359,7 @@ async function abrirAuditoriaRef(ref){
   
   if(p.tipo==='dgo'){
     const dg=p.item;
-    const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===String(dg.codigo||'').toUpperCase()||String(s.ponto_b||'').toUpperCase()===String(dg.codigo||'').toUpperCase());
+    const segs=relatedSegs;
     if(segs.length===0)issues.push('🔴 DGO sem segmentos ligados');
     if(segs.length===1)issues.push('🟠 DGO com apenas 1 lado conectado');
     if(!dg.status||dg.status!=='ativo')issues.push('⚠ DGO com status pendente');
@@ -2360,7 +2367,7 @@ async function abrirAuditoriaRef(ref){
   
   if(p.tipo==='site'){
     const st=p.item;
-    const dgos=store.dgos.filter(d=>String(d.site||'').toUpperCase()===String(st.codigo||'').toUpperCase());
+    const dgos=getDgosBySiteRef(st.codigo||st.nome||'');
     if(dgos.length===0)issues.push('🟡 Site sem DGOs cadastrados');
   }
   
@@ -2380,9 +2387,9 @@ async function abrirAuditoriaRef(ref){
 
 async function abrirAuditoriaRuptura(caboRef){
   toast('Auditando ruptura...','in');
-  const store=getInvStore();
-  const rupts=store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(String(caboRef||'').toUpperCase()));
-  const segs=store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===String(caboRef||'').toUpperCase());
+  const rel=getCableRelations(caboRef);
+  const rupts=rel.rupts;
+  const segs=rel.segs;
   
   const issues=[];
   if(rupts.length===0)issues.push('ℹ Nenhuma ruptura registrada para este cabo');
@@ -2570,27 +2577,166 @@ function execBuscaGlobal(q){
   el.style.display='block';
   q = q.toLowerCase();
   const res = [];
+  globalSearchActions={};
+  const safeText=v=>String(v||'').toLowerCase();
+  const addRes=(item)=>{
+    if(!item || !item.id || !item.label || typeof item.action!=='function')return;
+    const key=`${item.tipo}-${item.id}`;
+    globalSearchActions[key]=item.action;
+    res.push({...item,key});
+  };
+  const numOrNull=v=>Number.isFinite(Number(v))?Number(v):null;
+  const pointFromLatLng=(lat,lng)=>{
+    const nLat=numOrNull(lat),nLng=numOrNull(lng);
+    return nLat!==null && nLng!==null ? [nLat,nLng] : null;
+  };
+  const getSitePoint=site=>PP(site?.localizacao)||pointFromLatLng(site?.lat,site?.lng);
+  const buildHaystack=(...parts)=>parts.map(safeText).join(' ');
   
   // Sites
   allS.forEach(s => {
-    if((s.codigo||'').toLowerCase().includes(q) || (s.nome||'').toLowerCase().includes(q)){
-      res.push({tipo:'site', label:s.codigo||s.nome, sub:s.municipio||'site', id:s.id, pt:PP(s.localizacao)});
-    }
+    const pt=getSitePoint(s);
+    if(!buildHaystack(s.codigo,s.nome,s.municipio,s.localidade,s.cn,s.supervisor).includes(q))return;
+    addRes({
+      tipo:'site',
+      label:s.codigo||s.nome,
+      sub:s.municipio||'site',
+      id:s.id,
+      cor:'var(--gr)',
+      pt,
+      action:()=>focI(`s-${s.id}`)
+    });
   });
   
   // Cabos
   allC.forEach(c => {
-    if((c.nome||'').toLowerCase().includes(q)){
-      res.push({tipo:'cabo', label:c.nome, sub:c.tipo||'cabo', id:c.id});
-    }
+    if(!buildHaystack(c.nome,c.codigo,c.tipo,c.status).includes(q))return;
+    addRes({
+      tipo:'cabo',
+      label:c.nome||c.codigo||'Cabo',
+      sub:c.tipo||'cabo',
+      id:c.id,
+      cor:'var(--bl)',
+      action:()=>focI(`c-${c.id}`)
+    });
   });
   
-  // Rascunhos (Caixas/DGOs)
+  // Caixas em rascunho
   const store = getInvStore();
   store.caixas.forEach(cx => {
-    if((cx.codigo||'').toLowerCase().includes(q)){
-      res.push({tipo:'caixa', label:cx.codigo, sub:'rascunho caixa', id:cx.id, pt:[cx.lat, cx.lng]});
-    }
+    const pt=pointFromLatLng(cx.lat,cx.lng);
+    if(!buildHaystack(cx.codigo,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.observacao).includes(q))return;
+    addRes({
+      tipo:'caixa',
+      label:cx.codigo||cx.nome||'Caixa',
+      sub:'rascunho caixa',
+      id:cx.id,
+      cor:'var(--cy)',
+      pt,
+      action:()=>showPanCaixaDraft(cx)
+    });
+  });
+
+  officialCaixas.forEach(cx => {
+    const pt=pointFromLatLng(cx.lat,cx.lng);
+    if(!buildHaystack(cx.codigo,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.site_codigo).includes(q))return;
+    addRes({
+      tipo:'caixa',
+      label:cx.codigo||cx.nome||'Caixa oficial',
+      sub:'caixa oficial',
+      id:`of-${cx.id}`,
+      cor:'var(--cy)',
+      pt,
+      action:()=>showPanCaixaOficial(cx)
+    });
+  });
+
+  store.dgos.forEach(dg => {
+    const site=findDraftPoint(dg.site||'');
+    const pt=pointFromLatLng(site?.lat,site?.lng);
+    if(!buildHaystack(dg.codigo,dg.nome,dg.site,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status,dg.observacao).includes(q))return;
+    addRes({
+      tipo:'dgo',
+      label:dg.codigo||dg.nome||'DGO',
+      sub:`DGO rascunho${dg.site?` • ${dg.site}`:''}`,
+      id:dg.id,
+      cor:'#f59e0b',
+      pt,
+      action:()=>showPanDgoDraft(dg)
+    });
+  });
+
+  officialDgos.forEach(dg => {
+    const site=resolveOfficialDgoSite(dg);
+    const pt=pointFromLatLng(site?.lat,site?.lng);
+    if(!buildHaystack(dg.codigo,dg.nome,dg.site,dg.site_codigo,dg.site_nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status).includes(q))return;
+    addRes({
+      tipo:'dgo',
+      label:dg.codigo||dg.nome||'DGO oficial',
+      sub:`DGO oficial${dg.site_codigo?` • ${dg.site_codigo}`:''}`,
+      id:`of-${dg.id}`,
+      cor:'#f59e0b',
+      pt,
+      action:()=>showPanDgoOficial(dg)
+    });
+  });
+
+  store.segmentos.forEach(seg => {
+    const pts=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?seg.geometria_pts:null;
+    const pt=pts ? midPointOfLine(pts) : null;
+    if(!buildHaystack(seg.cabo,seg.ponto_a,seg.ponto_b,seg.tipo_lancamento,seg.fabricante,seg.lote,seg.status,seg.observacao).includes(q))return;
+    addRes({
+      tipo:'segmento',
+      label:seg.cabo||'Segmento',
+      sub:`rascunho • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`,
+      id:seg.id,
+      cor:'#22c55e',
+      pt,
+      action:()=>showPanSegmentoDraft(seg)
+    });
+  });
+
+  officialSegmentos.forEach(seg => {
+    const pts=parseGeom(seg.geom)||parseGeom(seg.geometria);
+    const pt=pts ? midPointOfLine(pts) : pointFromLatLng(seg.lat,seg.lng);
+    if(!buildHaystack(seg.cabo,seg.codigo,seg.nome,seg.ponto_a,seg.ponto_b,seg.tipo_lancamento,seg.fabricante,seg.status,seg.observacao).includes(q))return;
+    addRes({
+      tipo:'segmento',
+      label:seg.cabo||seg.codigo||'Segmento oficial',
+      sub:`oficial • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`,
+      id:`of-${seg.id}`,
+      cor:'#22c55e',
+      pt,
+      action:()=>showPanSegmentoOficial(seg)
+    });
+  });
+
+  store.rupturas.forEach(rp => {
+    const pt=pointFromLatLng(rp.lat,rp.lng);
+    if(!buildHaystack(rp.cabo_segmento,rp.codigo,rp.tipo_reparo,rp.status,rp.nova_caixa,rp.observacao).includes(q))return;
+    addRes({
+      tipo:'ruptura',
+      label:rp.cabo_segmento||rp.codigo||'Ruptura',
+      sub:`rascunho • ${rp.status||rp.tipo_reparo||'ruptura'}`,
+      id:rp.id,
+      cor:'#ff5a68',
+      pt,
+      action:()=>showPanRupturaDraft(rp)
+    });
+  });
+
+  officialRupturas.forEach(rp => {
+    const pt=pointFromLatLng(rp.lat,rp.lng);
+    if(!buildHaystack(rp.cabo_segmento,rp.codigo,rp.tipo_reparo,rp.status,rp.nova_caixa,rp.causa).includes(q))return;
+    addRes({
+      tipo:'ruptura',
+      label:rp.cabo_segmento||rp.codigo||'Ruptura oficial',
+      sub:`oficial • ${rp.status||rp.tipo_reparo||'ruptura'}`,
+      id:`of-${rp.id}`,
+      cor:'#ff5a68',
+      pt,
+      action:()=>showPanRupturaOficial(rp)
+    });
   });
 
   if(!res.length){
@@ -2600,12 +2746,20 @@ function execBuscaGlobal(q){
 
   el.innerHTML=`<div class="gh"><span>RESULTADOS DA BUSCA</span><span>${res.length}</span></div>` + 
     res.slice(0,50).map(r => `
-      <div class="si" onclick="fmap['${r.tipo.charAt(0)}-${r.id}'] ? fmap['${r.tipo.charAt(0)}-${r.id}']() : (['caixa','site'].includes('${r.tipo}') && map.setView([${r.pt}],17))">
-        <div class="sii" style="background:${r.tipo==='site'?'var(--gr)':r.tipo==='cabo'?'var(--bl)':'var(--cy)'}"></div>
+      <div class="si" onclick="globalSearchOpen('${r.key}')">
+        <div class="sii" style="background:${r.cor||'var(--cy)'}"></div>
         <div class="sin">${esc(r.label)}</div>
         <div class="sis">${esc(r.sub)}</div>
       </div>
     `).join('');
+}
+function globalSearchOpen(key){
+  const hit=globalSearchActions[key];
+  if(typeof hit==='function'){
+    hit();
+    return;
+  }
+  toast('Resultado não está disponível no momento.','wn');
 }
 function renderSB(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
@@ -2828,7 +2982,7 @@ function getPointSummary(ref){
   if(!p)return null;
   const store=getInvStore();
   const code=(p.codigo||p.nome||ref||'').toUpperCase();
-  const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===code||String(s.ponto_b||'').toUpperCase()===code).length;
+  const segs=getRelatedSegmentsByRef(ref).length;
   const conns=store.conexoes.filter(c=>String(c.caixa_codigo||c.dgo_codigo||'').toUpperCase()===code).length;
   const pend=store.pendencias.filter(x=>String(x.referencia||'').toUpperCase()===code).length;
   return {p,segs,conns,pend};
@@ -2860,15 +3014,15 @@ function getCableOperationalState(c,lenCalc){
   const rel=getCableDraftRelations(c.nome||'');
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):0;
   if(rel.rupts.length){
-    return {status:'com ruptura',tone:'var(--rd)',detail:`${rel.rupts.length} ruptura(s) local(is) associada(s).`,rel,diff};
+    return {status:'com ruptura',tone:'var(--rd)',detail:`${rel.rupts.length} ruptura(s) associada(s) entre rascunho e banco oficial.`,rel,diff};
   }
   if(!rel.segs.length){
-    return {status:'sem inventário local',tone:'var(--am)',detail:'Ainda não há segmentos locais conectados a este cabo.',rel,diff};
+    return {status:'sem inventário ligado',tone:'var(--am)',detail:'Ainda não há segmentos ligados a este cabo no rascunho local ou no banco oficial carregado.',rel,diff};
   }
   if(diff>1000){
     return {status:'revisar metragem',tone:'var(--am)',detail:'Diferença alta entre o comprimento cadastrado e o calculado.',rel,diff};
   }
-  return {status:'operacional',tone:'var(--gr)',detail:'Cabo com segmentos locais e sem ruptura local registrada.',rel,diff};
+  return {status:'operacional',tone:'var(--gr)',detail:'Cabo com segmentos ligados e sem ruptura registrada no conjunto carregado.',rel,diff};
 }
 function getSegmentOperationalState(seg){
   const hasA=!!String(seg.ponto_a||'').trim();
@@ -2894,12 +3048,39 @@ function operationalSummaryHtml(ref){
   ]);
   return `<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Resumo operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${badges}</div>${state?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${state.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(state.status)}</b><br>${esc(state.detail)}</div>`:''}</div>`;
 }
-function getCableDraftRelations(name){
+function getRelatedSegmentsByRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  if(!key)return [];
+  const store=getInvStore();
+  return [
+    ...store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key),
+    ...officialSegmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key)
+  ];
+}
+function getDgosBySiteRef(ref){
+  const key=String(ref||'').toUpperCase().trim();
+  if(!key)return [];
+  const store=getInvStore();
+  return [
+    ...store.dgos.filter(d=>String(d.site||'').toUpperCase()===key),
+    ...officialDgos.filter(d=>String(d.site_codigo||d.site_nome||'').toUpperCase()===key)
+  ];
+}
+function getCableRelations(name){
   const store=getInvStore();
   const key=String(name||'').toUpperCase();
-  const segs=store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===key);
-  const rupts=store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key));
+  const segs=[
+    ...store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===key),
+    ...officialSegmentos.filter(s=>String(s.cabo||'').toUpperCase()===key)
+  ];
+  const rupts=[
+    ...store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key)),
+    ...officialRupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key))
+  ];
   return {segs,rupts};
+}
+function getCableDraftRelations(name){
+  return getCableRelations(name);
 }
 function findRupturaDraft(id){
   return getInvStore().rupturas.find(r=>r.id===id)||null;
@@ -2912,29 +3093,32 @@ function jumpToRef(ref){
   else if(p.tipo==='dgo')p.item?._kind==='dgo_oficial'?showPanDgoOficial(p.item):showPanDgoDraft(p.item);
   else if(p.tipo==='site')showPanSite(p.item,[p.lat,p.lng]);
 }
-function jumpToSegmentDraft(id){
-  const seg=getInvStore().segmentos.find(x=>x.id===id);
+function jumpToSegment(id,kind='draft'){
+  const seg=(kind==='oficial'?officialSegmentos:getInvStore().segmentos).find(x=>String(x.id)===String(id));
   if(!seg){toast('Segmento não encontrado','wn');return;}
   const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
     ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(Boolean)
     : (()=>{const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b); return a&&b?[[a.lat,a.lng],[b.lat,b.lng]]:[];})();
   if(path.length>=2)map.fitBounds(L.latLngBounds(path),{padding:[40,40],maxZoom:18});
-  showPanSegmentoDraft(seg);
+  kind==='oficial'?showPanSegmentoOficial(seg):showPanSegmentoDraft(seg);
 }
-function jumpToRupturaDraft(id){
-  const rp=findRupturaDraft(id);
+function jumpToSegmentDraft(id){
+  jumpToSegment(id,'draft');
+}
+function jumpToRuptura(id,kind='draft'){
+  const rp=(kind==='oficial'?officialRupturas:[...getInvStore().rupturas]).find(r=>String(r.id)===String(id));
   if(!rp){toast('Ruptura não encontrada','wn');return;}
   if(rp.lat&&rp.lng)map.setView([rp.lat,rp.lng],18);
-  showPanRupturaDraft(rp);
+  kind==='oficial'?showPanRupturaOficial(rp):showPanRupturaDraft(rp);
 }
-function relatedSegmentsByRef(ref){
-  const key=String(ref||'').toUpperCase().trim();
-  return getInvStore().segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key);
+function jumpToRupturaDraft(id){
+  jumpToRuptura(id,'draft');
 }
+function relatedSegmentsByRef(ref){return getRelatedSegmentsByRef(ref);}
 function buildRefLinksHtml(ref){
   const segs=relatedSegmentsByRef(ref).slice(0,8);
   if(!segs.length)return '';
-  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Ativos relacionados</div><div style="display:flex;flex-direction:column;gap:6px">${segs.map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Ativos relacionados</div><div style="display:flex;flex-direction:column;gap:6px">${segs.map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegment('${String(s.id).replace(/'/g,"\\'")}','${s._kind==='segmento_oficial'?'oficial':'draft'}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}${s._kind==='segmento_oficial'?' • oficial':''}</button>`).join('')}</div></div>`;
 }
 function buildSegmentLinksHtml(seg){
   const refs=[seg.ponto_a,seg.ponto_b].filter(Boolean);
@@ -2943,7 +3127,7 @@ function buildSegmentLinksHtml(seg){
 }
 function buildRupturaLinksHtml(rupts){
   if(!rupts?.length)return '';
-  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Rupturas ligadas</div><div style="display:flex;flex-direction:column;gap:6px">${rupts.slice(0,6).map(r=>`<button class="pac" style="width:100%" onclick="jumpToRupturaDraft('${r.id}')">${esc(r.cabo_segmento||'Ruptura')} • OTDR ${km(r.distancia_otdr_m||0)}</button>`).join('')}</div></div>`;
+  return `<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Rupturas ligadas</div><div style="display:flex;flex-direction:column;gap:6px">${rupts.slice(0,6).map(r=>`<button class="pac" style="width:100%" onclick="jumpToRuptura('${String(r.id).replace(/'/g,"\\'")}','${r._kind==='ruptura_oficial'?'oficial':'draft'}')">${esc(r.cabo_segmento||'Ruptura')} • OTDR ${km(r.distancia_otdr_m||0)}${r._kind==='ruptura_oficial'?' • oficial':''}</button>`).join('')}</div></div>`;
 }
 function abrirDgoNoSite(siteRef){
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
@@ -2989,8 +3173,8 @@ function abrirAuditoriaRuptura(caboSeg){
   rodarAuditoriaIA(true);
   const rel=getCableDraftRelations(caboSeg||'');
   if(rel.rupts.length){
-    showPanRupturaDraft(rel.rupts[0]);
-    toast(`${rel.rupts.length} ruptura(s) local(is) ligada(s) a ${caboSeg}`,'wn');
+    jumpToRuptura(rel.rupts[0].id,rel.rupts[0]._kind==='ruptura_oficial'?'oficial':'draft');
+    toast(`${rel.rupts.length} ruptura(s) ligada(s) a ${caboSeg}`,'wn');
   }else{
     toast(`Auditoria aberta para ${caboSeg||'ruptura'}`,'ok');
   }
@@ -3075,11 +3259,11 @@ function showPanCabo(c,pts,lenCalc){
   }
   $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
     [cableState.status,cableState.tone],
-    [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
-    [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
+    [`${rel.segs.length} segmento(s) ligado(s)`,rel.segs.length?'var(--gr)':'var(--am)'],
+    [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura associada','var(--rd)'],
   ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${cableState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(cableState.status)}</b><br>${esc(cableState.detail)}</div></div>`;
   if(rel.segs.length){
-    $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
+    $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegment('${String(s.id).replace(/'/g,"\\'")}','${s._kind==='segmento_oficial'?'oficial':'draft'}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}${s._kind==='segmento_oficial'?' • oficial':''}</button>`).join('')}</div></div>`;
   }
   $('pb').innerHTML+=buildRupturaLinksHtml(rel.rupts);
   focI('c-'+c.id);
@@ -3339,11 +3523,49 @@ function abrirRastreamento(siteNome){
 async function findNodeId(ref){
   const key=String(ref||'').trim().toUpperCase();
   if(!key)return null;
-  // Busca em network_nodes por sigla ou nome
-  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(sigla.ilike.*${key}*,nome.ilike.*${key}*)&limit=1`,{headers:RH});
+  const localSite=allS.find(s=>[s.codigo,s.nome].some(v=>String(v||'').trim().toUpperCase()===key));
+  if(localSite?.id){
+    const exactSigla=encodeURIComponent(`sigla.eq.${String(localSite.codigo||key).trim()}`);
+    const exactNome=encodeURIComponent(`nome.eq.${String(localSite.nome||'').trim()}`);
+    const exactRes=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(${exactSigla},${exactNome})&limit=1`,{headers:RH}).catch(()=>null);
+    if(exactRes?.ok){
+      const exactData=await exactRes.json();
+      if(exactData?.[0]?.id)return exactData[0].id;
+    }
+  }
+  const safeKey=key.replace(/[%*,()]/g,'').trim();
+  if(!safeKey)return null;
+  const orExpr=encodeURIComponent(`sigla.ilike.*${safeKey}*,nome.ilike.*${safeKey}*`);
+  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(${orExpr})&limit=1`,{headers:RH});
   if(!r.ok)return null;
   const d=await r.json();
   return d?.[0]?.id || null;
+}
+function normalizeTraceGeometry(raw){
+  if(!raw)return null;
+  let geom=raw;
+  if(typeof geom==='string'){
+    try{geom=JSON.parse(geom);}catch{return null;}
+  }
+  if(geom?.type==='Feature')geom=geom.geometry||null;
+  if(!geom?.type)return null;
+  if(geom.type==='LineString' && Array.isArray(geom.coordinates)){
+    return geom.coordinates
+      .filter(p=>Array.isArray(p)&&p.length>=2)
+      .map(p=>[Number(p[1]),Number(p[0])])
+      .filter(([lat,lng])=>Number.isFinite(lat)&&Number.isFinite(lng));
+  }
+  if(geom.type==='MultiLineString' && Array.isArray(geom.coordinates)){
+    return geom.coordinates.flatMap(line=>
+      Array.isArray(line)
+        ? line
+            .filter(p=>Array.isArray(p)&&p.length>=2)
+            .map(p=>[Number(p[1]),Number(p[0])])
+            .filter(([lat,lng])=>Number.isFinite(lat)&&Number.isFinite(lng))
+        : []
+    );
+  }
+  return null;
 }
 
 async function execRast(){
@@ -3383,24 +3605,24 @@ async function execRast(){
     }
 
     const bounds=[]; let dist=0, nc=0;
-    // O retorno do BFS costuma ser uma lista de 'passos' (nodes/edges)
-    // Vamos iterar e desenhar as geometrias das edges
     path.forEach(step => {
-      if(step.edge_geom){
-        // Converter PostGIS hex/EWKB ou GeoJSON para Leaflet (assumindo que o RPC retorne algo tratável)
-        // Se o RPC retornar GeoJSON direto na edge_geom:
-        const pts = step.edge_geom.type === 'LineString' ? step.edge_geom.coordinates.map(p=>[p[1],p[0]]) : null;
-        if(pts){
-          const cor = step.camada==='backbone'?'#f0a500':step.camada==='metro_alta'?'#f97316':step.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
-          addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${step.ativo_nome||'Cabo'}</b><br>${step.ativo_tabela||'—'} | ${km(step.peso_distancia_m)}`});
-          pts.forEach(p=>bounds.push(p));
-          dist += Number(step.peso_distancia_m)||0; nc++;
-        }
-      }
+      if(cam && step.camada && step.camada!==cam)return;
+      const pts=normalizeTraceGeometry(step.edge_geom);
+      if(!pts?.length)return;
+      const cor = step.camada==='backbone'?'#f0a500':step.camada==='metro_alta'?'#f97316':step.camada==='metro_dist'?'#4da6ff':'#3ecf8e';
+      addCableVisual(rastLayer,pts,{color:cor,weight:6.5,opacity:.98,className:'trace-line',popup:`<b>${step.ativo_nome||'Cabo'}</b><br>${step.ativo_tabela||'—'} | ${km(step.peso_distancia_m)}`});
+      pts.forEach(p=>bounds.push(p));
+      dist += Number(step.peso_distancia_m)||0; nc++;
     });
 
     if(bounds.length>1)map.fitBounds(L.latLngBounds(bounds),{padding:[60,60],maxZoom:14});
-    el.innerHTML=`<div style="color:var(--gr);padding:8px;font-size:11px">✓ <b>Caminho encontrado!</b><br>${nc} saltos | ${km(dist)}</div>`;
+    if(!nc){
+      el.innerHTML=cam
+        ? `<div style="color:var(--am);padding:8px">Rota encontrada no grafo, mas sem trechos desenháveis para a camada ${esc(cam)}.</div>`
+        : '<div style="color:var(--am);padding:8px">Rota encontrada no grafo, mas sem geometria desenhável nos trechos retornados.</div>';
+      return;
+    }
+    el.innerHTML=`<div style="color:var(--gr);padding:8px;font-size:11px">✓ <b>Caminho encontrado!</b><br>${nc} salto(s) visível(is) | ${km(dist)}${cam?` | camada ${esc(cam)}`:''}</div>`;
     closeM(); toast(`🔍 Rota: ${nc} saltos | ${km(dist)}`,'ok');
 
   } catch (err) {
@@ -4971,11 +5193,11 @@ function renderInventarioDraftsV2(){
       const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(rp.status||'aberta',true),zIndexOffset:3950})
         .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${km(rp.distancia_otdr_m||0)}<br>Cabo lançado: ${km(rp.metragem_lancada_m||0)}<br>${esc(rp.status||'aberta')} • banco oficial`)
         .on('click',()=>showPanRupturaOficial(rp))
-        .addTo(draftInvLayer);
+        .addTo(rompLayer);
       attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
       fmap['rp-db-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaOficial(rp);};
       if(rp.metragem_lancada_m){
-        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3920}).addTo(draftInvLayer);
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3920}).addTo(rompLayer);
       }
     }
   });
@@ -5371,13 +5593,175 @@ async function validarEventoSigitm(ta){
 }
 
 const TELEGRAM_DECISIONS_KEY='telegram_supervisor_decisions_v1';
+let telegramQueueCache=null;
+let telegramQueueCacheAt=0;
 function loadTelegramDecisions(){
-  try{return JSON.parse(localStorage.getItem(TELEGRAM_DECISIONS_KEY)||'{}')}catch(_){return {}}
+  try{
+    const raw=JSON.parse(localStorage.getItem(TELEGRAM_DECISIONS_KEY)||'{}');
+    const normalized={};
+    Object.entries(raw||{}).forEach(([id,val])=>{
+      normalized[id]={
+        decision: val?.decision||'pendente',
+        decidido_em: val?.decidido_em||'',
+        supervisor_data: val?.supervisor_data||{}
+      };
+    });
+    return normalized;
+  }catch(_){return {}}
 }
-function saveTelegramDecision(id,decision){
+function saveTelegramDecision(id,decision,supervisorData){
   const data=loadTelegramDecisions();
-  data[id]={decision,decidido_em:new Date().toISOString()};
+  data[id]={
+    ...(data[id]||{}),
+    decision,
+    decidido_em:new Date().toISOString(),
+    supervisor_data: supervisorData ?? data[id]?.supervisor_data ?? {}
+  };
   localStorage.setItem(TELEGRAM_DECISIONS_KEY,JSON.stringify(data));
+}
+function getTelegramSupervisorData(id){
+  return loadTelegramDecisions()[id]?.supervisor_data||{};
+}
+function isTelegramSupervisorDataComplete(item, meta={}){
+  if(item?.kind!=='alerta_anel_comutado')return true;
+  return Boolean(
+    normalizeTelegramField(meta.posicao_fisica_a) &&
+    normalizeTelegramField(meta.posicao_fisica_b) &&
+    (normalizeTelegramField(meta.dgo_distribuidor) || normalizeTelegramField(meta.dio_distribuidor))
+  );
+}
+function scoreTelegramSupervisorSuggestion(item, candidateItem, meta){
+  if(!meta || !Object.values(meta).some(Boolean))return 0;
+  let score=0;
+  if(item?.endpoint_pair && item.endpoint_pair===candidateItem?.endpoint_pair)score+=60;
+  else if(item?.site_ref && item.site_ref===candidateItem?.site_ref)score+=25;
+  if(item?.service_type && item.service_type===candidateItem?.service_type)score+=10;
+  if(item?.camada && item.camada===candidateItem?.camada)score+=10;
+  if(item?.ponta_a && item.ponta_a===candidateItem?.ponta_a)score+=10;
+  if(item?.ponta_b && item.ponta_b===candidateItem?.ponta_b)score+=10;
+  return score;
+}
+function findTelegramSupervisorSuggestion(item, decisions, fila=[]){
+  let best=null;
+  (fila||[]).forEach(candidate=>{
+    if(!candidate || candidate.id===item?.id)return;
+    const meta=decisions[candidate.id]?.supervisor_data||{};
+    const score=scoreTelegramSupervisorSuggestion(item, candidate, meta);
+    if(score<35)return;
+    if(!best || score>best.score){
+      best={score, meta, candidate};
+    }
+  });
+  return best;
+}
+function normalizeTelegramField(v=''){
+  return String(v||'').trim();
+}
+async function loadTelegramQueue(force=false){
+  const freshMs=15000;
+  if(!force && Array.isArray(telegramQueueCache) && (Date.now()-telegramQueueCacheAt)<freshMs){
+    return telegramQueueCache;
+  }
+  const r=await fetch('./telegram_pendentes.json',{cache:'no-store'});
+  if(!r.ok)throw new Error('Fila Telegram vazia ou não localizada.');
+  const dados=await r.json();
+  telegramQueueCache=Array.isArray(dados)?dados:[];
+  telegramQueueCacheAt=Date.now();
+  return telegramQueueCache;
+}
+function getTelegramDecisionPriority(item, decisions){
+  const state=decisions[item?.id]||{};
+  const decision=state.decision||'pendente';
+  const complete=isTelegramSupervisorDataComplete(item, state.supervisor_data||{});
+  if(decision==='pendente' && !complete)return 0;
+  if(decision==='pendente')return 1;
+  if(decision==='mesclar')return 2;
+  if(decision==='rejeitado')return 3;
+  return 4;
+}
+function buildTelegramQueueSummary(fila, decisions){
+  const summary={total:0,pendente:0,aprovado:0,rejeitado:0,mesclar:0,incompleto:0,alertas:0,snapshots:0};
+  (fila||[]).forEach(item=>{
+    summary.total++;
+    const state=decisions[item.id]||{};
+    const decision=state.decision||'pendente';
+    if(summary[decision]!=null)summary[decision]++;
+    if(item.kind==='alerta_anel_comutado')summary.alertas++;
+    if(item.kind==='snapshot_dgo')summary.snapshots++;
+    if(decision==='pendente' && !isTelegramSupervisorDataComplete(item, state.supervisor_data||{})){
+      summary.incompleto++;
+    }
+  });
+  return summary;
+}
+function renderTelegramQueueSummary(summary){
+  const chips=[
+    `<span class="stg tok">total ${summary.total}</span>`,
+    `<span class="stg ${summary.pendente?'twn':'tok'}">pendentes ${summary.pendente}</span>`,
+    `<span class="stg ${summary.incompleto?'ter':'tok'}">complemento pendente ${summary.incompleto}</span>`,
+    `<span class="stg tok">aprovados ${summary.aprovado}</span>`,
+    `<span class="stg ${summary.mesclar?'twn':'tok'}">mesclar ${summary.mesclar}</span>`,
+    `<span class="stg tok">snapshots ${summary.snapshots}</span>`,
+    `<span class="stg tok">alertas ${summary.alertas}</span>`
+  ];
+  return `<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08)">
+    <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Resumo operacional da fila</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${chips.join(' ')}</div>
+    <div style="font-size:10px;color:var(--t3);line-height:1.5">Itens com <b>complemento pendente</b> sobem primeiro na grade e precisam de posição física A/B e DGO ou DIO antes da aprovação.</div>
+  </div>`;
+}
+function collectTelegramSupervisorData(item, existing={}, suggestionMeta={}){
+  const current={...suggestionMeta, ...existing};
+  const ask=(label,key,placeholder='')=>{
+    const response=window.prompt(label, current[key]||placeholder||'');
+    if(response===null)return null;
+    current[key]=normalizeTelegramField(response);
+    return current[key];
+  };
+  if(item?.kind==='alerta_anel_comutado'){
+    if(ask(`Posição física ponta A para ${item.endpoint_pair||item.site_ref||'alerta'}:`, 'posicao_fisica_a')===null)return null;
+    if(ask(`Posição física ponta B para ${item.endpoint_pair||item.site_ref||'alerta'}:`, 'posicao_fisica_b')===null)return null;
+    if(ask('DGO distribuidor:', 'dgo_distribuidor', item.dgo||'')===null)return null;
+    if(ask('DIO distribuidor:', 'dio_distribuidor')===null)return null;
+    if(ask('Observação do supervisor:', 'observacao_supervisor', current.observacao_supervisor||'')===null)return null;
+    return current;
+  }
+  if(item?.kind==='snapshot_dgo'){
+    if(ask('Observação do supervisor para o snapshot DGO:', 'observacao_supervisor', current.observacao_supervisor||'')===null)return null;
+    if(ask('Rack validado pelo supervisor:', 'rack_validado', item.rack||'')===null)return null;
+    if(ask('DGO validado pelo supervisor:', 'dgo_distribuidor', item.dgo||'')===null)return null;
+    return current;
+  }
+  if(ask('Observação do supervisor para este item Telegram:', 'observacao_supervisor', current.observacao_supervisor||'')===null)return null;
+  return current;
+}
+function summarizeTelegramSupervisorData(meta={}){
+  const rows=[
+    meta.posicao_fisica_a?`A: ${meta.posicao_fisica_a}`:'',
+    meta.posicao_fisica_b?`B: ${meta.posicao_fisica_b}`:'',
+    meta.dgo_distribuidor?`DGO: ${meta.dgo_distribuidor}`:'',
+    meta.dio_distribuidor?`DIO: ${meta.dio_distribuidor}`:'',
+    meta.rack_validado?`Rack: ${meta.rack_validado}`:'',
+    meta.observacao_supervisor?`Obs: ${meta.observacao_supervisor}`:''
+  ].filter(Boolean);
+  if(!rows.length)return '';
+  return `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(47,212,207,.06);border:1px solid rgba(47,212,207,.18)">
+    <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Complemento do supervisor</div>
+    ${rows.map(r=>`<div style="font-size:11px;color:var(--t2);margin-bottom:4px">${esc(r)}</div>`).join('')}
+  </div>`;
+}
+async function complementarEventoTelegram(id){
+  const item=await localizarTelegramItem(id);
+  if(!item){toast('Item Telegram não encontrado','er');return;}
+  const decisions=loadTelegramDecisions();
+  const fila=await loadTelegramQueue().catch(()=>[]);
+  const current=decisions[id]?.supervisor_data||{};
+  const suggestion=findTelegramSupervisorSuggestion(item, decisions, fila);
+  const updated=collectTelegramSupervisorData(item,current,suggestion?.meta||{});
+  if(updated===null)return;
+  saveTelegramDecision(id, decisions[id]?.decision||'pendente', updated);
+  toast(suggestion ? 'Complemento salvo com base sugerida de item parecido' : 'Complemento do supervisor salvo localmente','ok');
+  abrirEsteiraTelegram();
 }
 function telegramBadgeClass(decision){
   if(decision==='aprovado')return 'tok';
@@ -5501,18 +5885,31 @@ function renderTelegramAlertPreview(item){
 async function abrirEsteiraTelegram(){
   $('sec-telegram').style.display='block';
   const el=$('telegram-lista');
+  const metaEl=$('telegram-meta');
   el.innerHTML='<div style="color:var(--t3)">Carregando fila...</div>';
+  if(metaEl){metaEl.style.display='none';metaEl.innerHTML='';}
   try{
-    const r=await fetch('./telegram_pendentes.json',{cache:'no-store'});
-    if(!r.ok){el.innerHTML='Fila Telegram vazia ou não localizada.';return;}
-    const dados=await r.json();
+    const dados=await loadTelegramQueue(true);
     const decisions=loadTelegramDecisions();
     if(!dados.length){el.innerHTML='Nenhum item pendente do Telegram.';return;}
+    if(metaEl){
+      metaEl.innerHTML=renderTelegramQueueSummary(buildTelegramQueueSummary(dados, decisions));
+      metaEl.style.display='block';
+    }
     const snapshots=(dados||[])
       .filter(x=>x.kind==='snapshot_dgo')
       .sort((a,b)=>String(b.captured_at||'').localeCompare(String(a.captured_at||'')));
-    el.innerHTML=dados.map(item=>{
-      const decision=decisions[item.id]?.decision||'pendente';
+    const ordered=[...dados].sort((a,b)=>{
+      const prio=getTelegramDecisionPriority(a, decisions)-getTelegramDecisionPriority(b, decisions);
+      if(prio!==0)return prio;
+      return String(b.captured_at||'').localeCompare(String(a.captured_at||''));
+    });
+    el.innerHTML=ordered.map(item=>{
+      const decisionState=decisions[item.id]||{};
+      const decision=decisionState.decision||'pendente';
+      const supervisorMeta=decisionState.supervisor_data||{};
+      const suggestion=findTelegramSupervisorSuggestion(item, decisions, dados);
+      const complete=isTelegramSupervisorDataComplete(item, supervisorMeta);
       const dups=Array.isArray(item.duplicate_hints)?item.duplicate_hints:[];
       const previousSnapshot=item.kind==='snapshot_dgo'
         ? snapshots.find(x=>x.id!==item.id && getTelegramSnapshotKey(x)===getTelegramSnapshotKey(item) && String(x.captured_at||'')<String(item.captured_at||''))
@@ -5537,12 +5934,18 @@ async function abrirEsteiraTelegram(){
             <b style="color:var(--cy)">${esc(item.endpoint_pair||item.site_ref||item.summary||'Evento Telegram')}</b>
             <div style="font-size:10px;color:var(--t3);margin-top:4px">${esc(item.chat_title||'Telegram')} • ${esc(item.sender||'')}</div>
           </div>
-          <span class="stg ${telegramBadgeClass(decision)}">${telegramBadgeLabel(decision)}</span>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <span class="stg ${telegramBadgeClass(decision)}">${telegramBadgeLabel(decision)}</span>
+            ${decision==='pendente' && !complete ? '<span class="stg ter">Complemento pendente</span>' : ''}
+          </div>
         </div>
         ${detailHtml}
+        ${summarizeTelegramSupervisorData(supervisorMeta)}
+        ${suggestion && !complete ? `<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(72,168,255,.08);border:1px solid rgba(72,168,255,.18)"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Sugestão reaproveitável</div><div style="font-size:11px;color:var(--t2)">Base encontrada em <b>${esc(suggestion.candidate.endpoint_pair||suggestion.candidate.site_ref||'item similar')}</b> (${suggestion.score}). Use <b>📝 Complementar</b> para puxar e ajustar.</div></div>`:''}
         ${dupHtml}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
           <button class="tb" onclick="revisarEventoTelegram('${escapeJsText(item.id)}')">👁 Revisar</button>
+          <button class="tb" onclick="complementarEventoTelegram('${escapeJsText(item.id)}')">📝 Complementar</button>
           <button class="tb g" onclick="aprovarEventoTelegram('${escapeJsText(item.id)}')">✅ Aprovar</button>
           <button class="tb" onclick="mesclarEventoTelegram('${escapeJsText(item.id)}')">🔀 Mesclar</button>
           <button class="tb r" onclick="rejeitarEventoTelegram('${escapeJsText(item.id)}')">✕ Rejeitar</button>
@@ -5551,13 +5954,16 @@ async function abrirEsteiraTelegram(){
     }).join('');
   }catch(err){
     el.innerHTML='Erro ao carregar fila do Telegram.';
+    if(metaEl){metaEl.style.display='none';metaEl.innerHTML='';}
   }
 }
 async function localizarTelegramItem(id){
-  const r=await fetch('./telegram_pendentes.json',{cache:'no-store'});
-  if(!r.ok)return null;
-  const dados=await r.json();
-  return (dados||[]).find(x=>x.id===id)||null;
+  try{
+    const dados=await loadTelegramQueue();
+    return (dados||[]).find(x=>x.id===id)||null;
+  }catch(_){
+    return null;
+  }
 }
 async function revisarEventoTelegram(id){
   const item=await localizarTelegramItem(id);
@@ -5583,18 +5989,37 @@ async function revisarEventoTelegram(id){
     toast('Item sem localização suficiente para revisão automática','wn');
   }
 }
-function aprovarEventoTelegram(id){
-  saveTelegramDecision(id,'aprovado');
+async function aprovarEventoTelegram(id){
+  const item=await localizarTelegramItem(id);
+  if(!item){toast('Item Telegram não encontrado','er');return;}
+  const decisions=loadTelegramDecisions();
+  let supervisorData=decisions[id]?.supervisor_data||{};
+  if(item.kind==='alerta_anel_comutado' && !isTelegramSupervisorDataComplete(item, supervisorData)){
+    const fila=await loadTelegramQueue().catch(()=>[]);
+    const suggestion=findTelegramSupervisorSuggestion(item, decisions, fila);
+    const updated=collectTelegramSupervisorData(item,supervisorData,suggestion?.meta||{});
+    if(updated===null)return;
+    supervisorData=updated;
+    if(!isTelegramSupervisorDataComplete(item, supervisorData)){
+      toast('Complete pelo menos posição A, posição B e DGO ou DIO antes de aprovar','wn');
+      saveTelegramDecision(id, decisions[id]?.decision||'pendente', supervisorData);
+      abrirEsteiraTelegram();
+      return;
+    }
+  }
+  saveTelegramDecision(id,'aprovado',supervisorData);
   toast('Item Telegram aprovado localmente pelo supervisor','ok');
   abrirEsteiraTelegram();
 }
 function rejeitarEventoTelegram(id){
-  saveTelegramDecision(id,'rejeitado');
+  const supervisorData=getTelegramSupervisorData(id);
+  saveTelegramDecision(id,'rejeitado',supervisorData);
   toast('Item Telegram rejeitado localmente pelo supervisor','wn');
   abrirEsteiraTelegram();
 }
 function mesclarEventoTelegram(id){
-  saveTelegramDecision(id,'mesclar');
+  const supervisorData=getTelegramSupervisorData(id);
+  saveTelegramDecision(id,'mesclar',supervisorData);
   toast('Item marcado para mesclagem manual pelo supervisor','ok');
   abrirEsteiraTelegram();
 }
@@ -5623,7 +6048,10 @@ async function publicarTelegramAprovadosStaging(){
     }
     const payload = aprovados
       .filter(item=>!already.has(`${item.chat_id}::${item.message_id}`))
-      .map(item=>({
+      .map(item=>{
+        const decisionMeta=decisions[item.id]||{};
+        const supervisorData=decisionMeta.supervisor_data||{};
+        return ({
         origem: item.source||'telegram_bot',
         chat_id: String(item.chat_id||''),
         chat_titulo: item.chat_title||'',
@@ -5644,6 +6072,7 @@ async function publicarTelegramAprovadosStaging(){
         fl: item.fl||'',
         bt: item.bt||'',
         interface: item.interface||'',
+        interface_pair: item.interface_pair||'',
         distancia_raw: item.distance_raw||'',
         distancia_m: item.distance_m||null,
         latitude: item?.location?.lat ?? null,
@@ -5654,12 +6083,18 @@ async function publicarTelegramAprovadosStaging(){
         duplicate_hints: item.duplicate_hints||[],
         supervisor_decisao: 'aprovado',
         supervisor_nome: sessao?.nome || sessao?.email || 'supervisor_local',
-        supervisor_observacao: 'Aprovado no painel local do supervisor.',
+        supervisor_observacao: supervisorData.observacao_supervisor || 'Aprovado no painel local do supervisor.',
+        supervisor_complemento: supervisorData,
         status_fluxo: 'aprovado_supervisor',
-        payload: item,
+        payload: {
+          ...item,
+          interface_pair: item.interface_pair||'',
+          supervisor_complemento: supervisorData,
+          supervisor_decision_meta: decisionMeta
+        },
         publicado_do_painel: true,
         publicado_em: new Date().toISOString()
-      }));
+      })});
     if(!payload.length){
       toast('Todos os aprovados já parecem publicados no staging','ok');
       return;

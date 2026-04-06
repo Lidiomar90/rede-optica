@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-06 (sessao 8 — tracer BFS completo + vinculacao cabos)
+**Atualizado em:** 2026-04-06 (sessao 10.4 — busca operacional unificada)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,8 +10,39 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-06 — sessoes 7 e 8 (banco/tracer)
+**Data:** 2026-04-06 — sessoes 9, 10, 10.1, 10.2, 10.3 e 10.4 (front/mobile/tracer/auditoria/telegram/busca) + sessoes 7 e 8 (banco/tracer)
 **O que foi feito:**
+
+### Sessao 10.4 — Busca operacional mais direta
+0. `execBuscaGlobal()` deixou de ficar restrita a `site`, `cabo` e `caixa` em rascunho: agora a busca principal tambem encontra `caixa`, `DGO`, `segmento` e `ruptura`, cobrindo tanto rascunho local quanto dados oficiais ja carregados no mapa.
+1. Cada resultado da busca agora abre o painel tecnico correto, em vez de depender so de `fmap` por prefixo ou apenas centralizar o mapa, reduzindo friccao operacional principalmente no mobile e no fluxo de auditoria.
+2. Validacao executada por parse JS via `node`; ainda falta validacao manual no browser para confirmar relevancia/ordem dos resultados com massa real.
+
+### Sessao 10.3 — Esteira Telegram mais operacional
+0. A fila Telegram no front agora usa cache local curto de `telegram_pendentes.json`, reduzindo recargas redundantes ao revisar, complementar e aprovar itens na mesma sessao.
+1. A esteira passou a mostrar um resumo operacional da fila (`pendentes`, `complemento pendente`, `aprovados`, `mesclar`, `snapshots`, `alertas`) para o supervisor priorizar o que destrava a operacao.
+2. Itens `alerta_anel_comutado` ainda pendentes e sem complemento minimo agora sobem primeiro na grade e recebem badge explicita de `Complemento pendente`.
+3. Validacao executada apenas por parse JS via `node`; ainda falta validacao manual em browser da esteira Telegram e do fluxo de aprovacao/publicacao.
+
+### Sessao 10.2 — Auditoria e navegação contextual com base oficial
+0. `abrirAuditoriaRef()` passou a considerar `segmento_cabo` e `dgo` oficiais já carregados no mapa, evitando falso negativo de continuidade quando a auditoria era aberta a partir de `Caixa` ou `DGO` do banco.
+1. `abrirAuditoriaRuptura()` agora soma rupturas e segmentos do rascunho local com `vw_rupturas_abertas` e `segmento_cabo`, preservando a leitura operacional do cabo mesmo quando o dado oficial já existe.
+2. Resumo operacional, atalhos de `Ativos relacionados` e `Rupturas ligadas` passaram a navegar também para segmentos/rupturas oficiais, com rótulo explícito quando a origem vem do banco.
+
+### Sessao 10.1 — Tracer mais resiliente no front
+0. `findNodeId()` passou a tentar primeiro um casamento exato usando os sites ja carregados no mapa, reduzindo falso positivo quando a busca parcial em `network_nodes` encontra siglas parecidas.
+1. `execRast()` agora aceita `edge_geom` como GeoJSON objeto, `Feature`, `LineString`, `MultiLineString` ou string JSON serializada, evitando rota vazia quando o RPC retorna geometria serializada.
+2. O filtro de camada do tracer passou a afetar a renderizacao dos saltos visiveis, preservando a leitura operacional quando o usuario quer inspecionar apenas backbone, metro ou acesso.
+3. O retorno do tracer agora diferencia claramente `sem caminho`, `caminho sem geometria desenhavel` e `caminho filtrado sem trechos visiveis`.
+
+### Sessao 10 — Modal e formularios mobile
+0. Modal generico ganhou `safe area` para iOS/Android, `max-height` com `100dvh`, `overscroll-behavior: contain` e `-webkit-overflow-scrolling: touch`, reduzindo corte na base da tela e conflito com scroll interno.
+1. Grades de formulario (`.fgr` e `.mfgr`) agora colapsam para 1 coluna no mobile, melhorando leitura e toque em telas estreitas.
+2. Header/corpo do modal ficaram mais compactos no mobile, preservando o comportamento do desktop.
+
+### Sessao 9 — Overlay operacional de rupturas
+0. Corrigido desenho de `rupturas oficiais` no front: itens vindos de `vw_rupturas_abertas` estavam sendo enviados para `draftInvLayer` (rascunhos), o que quebrava o preset `Incidentes` e misturava banco oficial com rascunho local.
+1. `rupturas oficiais` e o marcador auxiliar de `nova caixa / cabo lancado` agora entram em `rompLayer`, preservando semantica correta de overlays (`Incidentes` vs `Rascunhos`) no mapa mobile/desktop.
 
 ### Sessao 7 — Autenticacao e senha mestre
 0. Corrigido RLS de `usuarios`: INSERT bloqueado por ausencia de policy → criado `fn_criar_usuario` SECURITY DEFINER
@@ -57,7 +88,7 @@
 20. Drawer mobile agora tambem abre por gesto de borda (edge swipe da esquerda para a direita), com arraste visual e reaproveitando o overlay existente
 
 **Proximo agente deve fazer:**
-- Testar tracer no browser: buscar dois sites por sigla e verificar se a rota e desenhada no mapa
+- Testar tracer no browser: buscar dois sites por sigla e verificar se a rota e desenhada no mapa, inclusive quando o retorno do RPC vier serializado e quando houver filtro de camada ativo
 - Backbone edges sem geom (4.908): popular `network_edges.geom` a partir de cabos backbone para que rotas backbone sejam visiveis no mapa
 - Migrar login do front para usar `fn_login` RPC em vez de PATCH direto (elimina GRANT UPDATE na tabela `usuarios`)
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
@@ -65,6 +96,11 @@
 - Codex: painel de rupturas via `vw_rupturas_abertas`
 - Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
 - Codex: validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari, incluindo fade do overlay e conflito com scroll vertical da lista lateral
+- Codex: validar modal generico e formularios em Android real/iOS Safari, especialmente auditoria, conexao DGO e edicao de ativos
+- Codex: validar busca global no browser com massa real para `DGO`, `caixa`, `segmento` e `ruptura`, ajustando ranking se o operador ainda precisar "caçar" item na lista
+- Codex: unificar futuro da aba `Incidentes` com `evento_ruptura`/`vw_rupturas_abertas` para evitar dupla origem (`incidentes` legado + rupturas oficiais)
+- Codex: validar esteira Telegram em browser real, incluindo ordenacao de `complemento pendente`, resumo da fila e reaproveitamento de sugestoes no fluxo aprovar/complementar
+- Gemini/Claude: revisar se a auditoria agora mistura corretamente rascunho + banco sem inflar contagens quando houver cabo/segmento duplicado nas duas origens
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
@@ -206,7 +242,7 @@
 
 | Arquivo | Estado | Observacao |
 |---------|--------|------------|
-| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa `fn_tracer_bfs`; drawer mobile abre/fecha por gesto. |
+| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa `fn_tracer_bfs`; drawer mobile abre/fecha por gesto; modal e formularios mobile ajustados para safe area e 1 coluna; esteira Telegram prioriza itens com complemento pendente. |
 | `dashboard.html` | Ativo | Dashboard de metricas. |
 | `ia-assistente.html` | Ativo | Interface IA. |
 | `auditoria-revisao.html` | Ativo | Auditoria de cadastro. |

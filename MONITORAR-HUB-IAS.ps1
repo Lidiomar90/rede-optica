@@ -60,6 +60,52 @@ function Has-RealResponse {
     return ($Text.Trim().Length -gt 40)
 }
 
+function Get-ResponseState {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) {
+        return [pscustomobject]@{
+            estado = "sem_arquivo"
+            real = $false
+            placeholder = $false
+            tamanho = 0
+            atualizado_em = $null
+        }
+    }
+    $item = Get-Item $Path
+    $text = Read-All $Path
+    $placeholder = ($text -match 'Cole aqui a resposta')
+    $real = Has-RealResponse $text
+    $estado = if ($real) { "resposta_real" } elseif ($placeholder) { "placeholder" } else { "arquivo_sem_resposta" }
+    return [pscustomobject]@{
+        estado = $estado
+        real = $real
+        placeholder = $placeholder
+        tamanho = $item.Length
+        atualizado_em = $item.LastWriteTime
+    }
+}
+
+function Get-SessionAgeMinutes {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return 0 }
+    $session = Get-Item $Path
+    return [int]([DateTime]::Now - $session.LastWriteTime).TotalMinutes
+}
+
+function Get-SessionExecutionState {
+    param(
+        [array]$ResponseStates,
+        [int]$SessionAgeMinutes
+    )
+    $realCount = @($ResponseStates | Where-Object { $_.real }).Count
+    $placeholderCount = @($ResponseStates | Where-Object { $_.estado -eq 'placeholder' }).Count
+    if ($realCount -gt 0 -and $realCount -lt $ResponseStates.Count) { return "respostas_parciais" }
+    if ($realCount -eq $ResponseStates.Count) { return "respostas_recebidas" }
+    if ($placeholderCount -gt 0 -and $SessionAgeMinutes -ge 15) { return "placeholders_sem_execucao_real" }
+    if ($placeholderCount -gt 0) { return "aguardando_execucao_externa" }
+    return "sem_resposta_detectada"
+}
+
 function Test-JsHtml {
     $script = @'
 const fs=require("fs");
@@ -92,19 +138,22 @@ $RespDir = Join-Path $SessaoPath "respostas"
 $ResumoExec = Join-Path $SessaoPath "08_RESUMO_AUTOMATICO.md"
 $ManifestTask = Get-ManifestTaskBySession -SessionPath $SessaoPath
 
-$claude = Read-All (Join-Path $RespDir "claude_resposta.md")
-$gemini = Read-All (Join-Path $RespDir "gemini_resposta.md")
-$deepseek = Read-All (Join-Path $RespDir "deepseek_resposta.md")
-$manus = Read-All (Join-Path $RespDir "manus_resposta.md")
-$kiro = Read-All (Join-Path $RespDir "kiro_resposta.md")
+$respClaude = Get-ResponseState (Join-Path $RespDir "claude_resposta.md")
+$respGemini = Get-ResponseState (Join-Path $RespDir "gemini_resposta.md")
+$respDeepSeek = Get-ResponseState (Join-Path $RespDir "deepseek_resposta.md")
+$respManus = Get-ResponseState (Join-Path $RespDir "manus_resposta.md")
+$respKiro = Get-ResponseState (Join-Path $RespDir "kiro_resposta.md")
 
+$responseStates = @($respClaude, $respGemini, $respDeepSeek, $respManus, $respKiro)
 $estado = [ordered]@{
-    Claude = Has-RealResponse $claude
-    Gemini = Has-RealResponse $gemini
-    DeepSeek = Has-RealResponse $deepseek
-    Manus = Has-RealResponse $manus
-    Kiro = Has-RealResponse $kiro
+    Claude = $respClaude.real
+    Gemini = $respGemini.real
+    DeepSeek = $respDeepSeek.real
+    Manus = $respManus.real
+    Kiro = $respKiro.real
 }
+$sessionAgeMinutes = Get-SessionAgeMinutes $SessaoPath
+$sessionExecutionState = Get-SessionExecutionState -ResponseStates $responseStates -SessionAgeMinutes $sessionAgeMinutes
 
 $prontas = @($estado.GetEnumerator() | Where-Object { $_.Value } | ForEach-Object { $_.Key })
 $faltando = @($estado.GetEnumerator() | Where-Object { -not $_.Value } | ForEach-Object { $_.Key })
@@ -143,11 +192,16 @@ Sessao: $SessaoPath
 Gerado em: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 
 ## Respostas detectadas
-- Claude: $(if($estado.Claude){'ok'}else{'pendente'})
-- Gemini: $(if($estado.Gemini){'ok'}else{'pendente'})
-- DeepSeek: $(if($estado.DeepSeek){'ok'}else{'pendente'})
-- Manus: $(if($estado.Manus){'ok'}else{'pendente'})
-- Kiro: $(if($estado.Kiro){'ok'}else{'pendente'})
+- Claude: $($respClaude.estado)
+- Gemini: $($respGemini.estado)
+- DeepSeek: $($respDeepSeek.estado)
+- Manus: $($respManus.estado)
+- Kiro: $($respKiro.estado)
+
+## Leitura de execucao
+- Idade da sessao em minutos: $sessionAgeMinutes
+- Estado geral da sessao: $sessionExecutionState
+- Placeholder sem resposta real detectado: $(if(@($responseStates | Where-Object { $_.estado -eq 'placeholder' }).Count -gt 0){'sim'}else{'nao'})
 
 ## Consolidacao
 - Consolidado gerado: $(if($consolidadoGerado){'sim'}else{'nao'})
@@ -163,6 +217,7 @@ Gerado em: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 ## Proximos passos
 - IAs prontas: $(if($prontas.Count){$prontas -join ', '}else{'nenhuma'})
 - IAs faltando: $(if($faltando.Count){$faltando -join ', '}else{'nenhuma'})
+- Acao sugerida: $(switch ($sessionExecutionState) { 'placeholders_sem_execucao_real' {'disparar IAs externas ou integrar APIs'} 'respostas_parciais' {'completar respostas faltantes e consolidar'} 'respostas_recebidas' {'consolidar e publicar se validacao passar'} default {'verificar disparo externo e monitorar novamente'} })
 "@
 
 Write-Utf8 -Path $ResumoExec -Text $texto
@@ -171,7 +226,14 @@ if ($ManifestTask) {
     $manifestPath = Join-Path $ManifestTask.FullName "manifest.json"
     if (Test-Path $manifestPath) {
         $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
-        $manifest.status = if ($faltando.Count -eq 0) { "respostas_recebidas" } else { "aguardando_respostas" }
+        $manifest.status = $sessionExecutionState
+        $manifest | Add-Member -NotePropertyName monitoramento -NotePropertyValue ([ordered]@{
+            atualizado_em = (Get-Date).ToString("o")
+            sessao_idade_min = $sessionAgeMinutes
+            respostas_reais = $prontas.Count
+            respostas_faltando = $faltando.Count
+            placeholders = @($responseStates | Where-Object { $_.estado -eq 'placeholder' }).Count
+        }) -Force
         $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8
     }
 }
@@ -183,6 +245,7 @@ Write-Host "======================================"
 Write-Host ""
 Write-Host "Sessao:" $SessaoPath
 Write-Host "Resumo:" $ResumoExec
+Write-Host "Estado geral:" $sessionExecutionState
 Write-Host "Consolidado:" $(if($consolidadoGerado){"sim"}else{"nao"})
 Write-Host "Publicado:" $(if($publicou){"sim"}else{"nao"})
 Write-Host ""
