@@ -2678,15 +2678,15 @@ function renderSBv2(q=''){
     el.innerHTML=h;
     return;
   }
-  let data=sbMode==='cabos'?allC:allS;
-  if(q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
+  let data=sbMode==='cabos'?allC:getFilteredSiteData(q);
+  if(sbMode==='cabos'&&q)data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')).toLowerCase().includes(q));
   if(!data.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado</div>';return;}
   if(sbMode==='sites'){
     try{
       const byCn={};
       data.forEach(i=>{
-        const cn=normText(i.cn)||normText(i.science?.cn)||'Sem CN';
-        const loc=normText(i.localidade)||normText(i.science?.localidade)||normText(i.municipio)||'Sem localidade';
+        const cn=getSiteQuickCn(i);
+        const loc=getSiteQuickLoc(i);
         if(!byCn[cn])byCn[cn]={};
         if(!byCn[cn][loc])byCn[cn][loc]=[];
         byCn[cn][loc].push(i);
@@ -2707,7 +2707,8 @@ function renderSBv2(q=''){
           if(!locOpen)return;
           arr.slice(0,120).forEach(i=>{
             const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
-            const sub=[i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase'),i.supervisor&&`Resp. ${i.supervisor}`].filter(Boolean).join(' • ');
+            const fonteLabel=i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Science + banco':'Banco');
+            const sub=i.supervisor?`Resp. ${i.supervisor}`:fonteLabel;
             const flag=getFlagIndicatorHtml('site',i.id);
             const vis=isSiteVisible(i.id);
             h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="lg-ck ${vis?'on':''}" onclick="event.stopPropagation();toggleSiteVisible('${String(i.id).replace(/'/g,"\\'")}')" style="width:18px;height:18px;min-width:18px;border-color:${cor};${vis?'background:'+cor:''}">${vis?'✓':''}</div><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
@@ -2721,7 +2722,7 @@ function renderSBv2(q=''){
       console.error('renderSB sites falhou',err);
       const fallback=data.slice(0,200).map(i=>{
         const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
-        const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.codigo].filter(Boolean).join(' • ');
+        const sub=[getSiteQuickCn(i)!=='Sem CN'&&`CN ${getSiteQuickCn(i)}`,getSiteQuickLoc(i),i.supervisor&&`Resp. ${i.supervisor}`].filter(Boolean).join(' • ');
         return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
       }).join('');
       el.innerHTML=`<div style="padding:8px 10px;font-size:10px;color:var(--am);font-weight:800">Agrupamento CN/localidade falhou. Exibindo lista simples.</div>${fallback}`;
