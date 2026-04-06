@@ -3046,24 +3046,55 @@ function showPanPendencia(p){
   $('pa').innerHTML=`${relatedRef?`<button class="pac b" onclick="jumpToRef('${relatedRef.replace(/'/g,"\\'")}')">🔎 Ir para referência</button>`:''}${isCaixa?`<button class="pac g" onclick="abrirCaixaPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🧰 Corrigir caixa</button>`:''}${isDgo?`<button class="pac g" onclick="abrirDgoPorPendenciaId('${String(p.id||'').replace(/'/g,"\\'")}')">🗄 Corrigir DGO</button>`:''}<button class="pac a" onclick="toast('Pendência mantida para vistoria/correção','wn')">📍 Tratar em campo</button>`;
   $('pan').style.display='block';
 }
+// Lógica de Auditoria de Trecho (GeoSite Plus)
+function auditarTrechoFalha(siteRef, latFalha, lngFalha){
+  const site = allS.find(s => s.codigo === siteRef);
+  if(!site) return [];
+  
+  const ptSite = PP(site.localizacao);
+  const ptFalha = [latFalha, lngFalha];
+  
+  // Busca todas as caixas em um raio de 5km para auditoria
+  const caixasNoTrecho = getInvStore().caixas.filter(cx => {
+     const d = map.distance(ptSite, [cx.lat, cx.lng]);
+     return d < 5000; 
+  });
+  
+  // Ordena por distância do site
+  caixasNoTrecho.sort((a,b) => map.distance(ptSite, [a.lat, a.lng]) - map.distance(ptSite, [b.lat, b.lng]));
+  
+  return caixasNoTrecho.map((cx, i) => ({
+    ordem: i+1,
+    codigo: cx.codigo,
+    distancia: map.distance(ptSite, [cx.lat, cx.lng]).toFixed(0) + 'm',
+    status: cx.vistoriada ? '✓' : '⚠'
+  }));
+}
+
 function showPanRupturaDraft(rp){
   closePan();
   const rel=getCableDraftRelations(rp.cabo_segmento||'');
   $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura'}`;
   
   let htmlCadeia = '';
-  // Se for uma TA validada do SIGITM, tenta mostrar a cadeia de emendas
-  if(String(rp.cabo_segmento).startsWith('TA-') && rp.lat && rp.lng){
-     // Tenta extrair o site da observação (ex: "Site: SAG")
+  let siteRef = null;
+  let causa = rp.tipo_reparo || 'rompimento';
+  
+  if(rp.lat && rp.lng){
      const siteMatch = rp.observacao?.match(/Site:\s*([A-Z0-9]+)/i);
-     const siteRef = siteMatch ? siteMatch[1].toUpperCase() : null;
+     siteRef = siteMatch ? siteMatch[1].toUpperCase() : null;
      
      if(siteRef){
         const cadeia = auditarTrechoFalha(siteRef, rp.lat, rp.lng);
+        const tempoEst = estimarTempoReparo(causa, cadeia.length);
+        
         if(Array.isArray(cadeia)){
            htmlCadeia = `
              <div style="margin-top:15px;border-top:1px solid var(--bd);padding-top:12px">
-               <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px">Cadeia de emendas no trecho</div>
+               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                 <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em">Cadeia de emendas no trecho</div>
+                 <div style="font-size:10px;color:${tempoEst > 5 ? 'var(--rd)' : 'var(--gr)'};font-weight:800">ETA: ${tempoEst}h</div>
+               </div>
                <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-left:15px">
                  <div style="position:absolute;left:4px;top:5px;bottom:10px;width:2px;background:linear-gradient(180deg, var(--gr), var(--rd))"></div>
                  
@@ -3071,10 +3102,9 @@ function showPanRupturaDraft(rp){
                  <div style="position:relative;margin-bottom:12px">
                    <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--gr);border:2px solid var(--bg)"></div>
                    <div style="font-size:11px;color:var(--t)"><b>Estação ${siteRef}</b></div>
-                   <div style="font-size:9px;color:var(--t3)">Ponto de origem (0m)</div>
+                   <div style="font-size:9px;color:var(--t3)">KM 0</div>
                  </div>
 
-                 <!-- Caixas intermediárias -->
                  ${cadeia.map(cx => `
                    <div style="position:relative;margin-bottom:12px">
                      <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:2px;background:var(--bl);border:2px solid var(--bg)"></div>
@@ -3082,17 +3112,16 @@ function showPanRupturaDraft(rp){
                        <div style="font-size:11px;color:var(--t2)">Caixa <b>${cx.codigo}</b></div>
                        <a href="javascript:void(0)" onclick="jumpToRef('${cx.codigo}')" style="font-size:9px;color:var(--bl);text-decoration:none">👁 mapa</a>
                      </div>
-                     <div style="font-size:9px;color:var(--t3)">Distância: ${cx.distancia} | Vistoria: ${cx.status}</div>
+                     <div style="font-size:9px;color:var(--t3)">Dist: ${cx.distancia} | Vis: ${cx.status}</div>
                    </div>
                  `).join('')}
 
-                 <!-- Ponto da Falha -->
                  <div style="position:relative">
                    <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--rd);border:2px solid var(--bg)"></div>
-                   <div style="font-size:11px;color:var(--rd);font-weight:800">PONTO DA FALHA (OTDR)</div>
-                   <div style="font-size:9px;color:var(--t3)">Local aproximado da TA</div>
+                   <div style="font-size:11px;color:var(--rd);font-weight:800">ALVO DA FALHA</div>
                  </div>
                </div>
+               <button class="tb g" style="width:100%;margin-top:12px;padding:8px" onclick="gerarRelatorioAsBuilt('${rp.cabo_segmento}','${siteRef}',${rp.lat},${rp.lng},'${causa}','${rp.observacao||''}')">📄 Gerar Relatório de Intervenção</button>
              </div>
            `;
         }
@@ -3101,16 +3130,13 @@ function showPanRupturaDraft(rp){
 
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
+    <div class="pr"><span class="pl">Causa provável</span><span class="pv">${esc(causa)}</span></div>
     <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
-    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_m||rp.metragem_lancada_m||0)}</span></div>
-    <div class="pr"><span class="pl">Nova caixa</span><span class="pv">${esc(rp.nova_caixa||'—')}</span></div>
-    <div class="pr"><span class="pl">Tipo reparo</span><span class="pv">${esc(rp.tipo_reparo||'—')}</span></div>
     ${htmlCadeia}
     ${buildRupturaLinksHtml(rel.rupts.filter(x=>x.id!==rp.id))}
-    ${rp.nova_caixa?buildRefLinksHtml(rp.nova_caixa):''}
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`${rp.nova_caixa?`<button class="pac b" onclick="jumpToRef('${String(rp.nova_caixa).replace(/'/g,"\\'")}')">🧰 Ir para nova caixa</button>`:''}<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar ruptura</button>`;
+  $('pa').innerHTML=`<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar em campo</button>`;
   $('pan').style.display='block';
 }
 function abrirAssistenteConexaoCaixa(codigo,lat,lng){
