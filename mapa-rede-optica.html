@@ -5544,8 +5544,8 @@ async function abrirEsteiraSigitm(){
         <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Site:</b> ${item.site_afetado}</div>
         <div style="font-size:10px;color:var(--t3);margin-bottom:10px"><b>Endereço:</b> ${item.endereco}</div>
         <div style="display:flex;gap:6px">
-          <button class="tb" onclick="revisarNoMapa('${item.numero_ta}', '${item.site_afetado}', '${item.coordenadas_brutas}')">👁 Revisar</button>
-          <button class="tb g" onclick="validarEventoSigitm('${item.numero_ta}')">✅ Aprovar</button>
+          <button class="tb" onclick="revisarNoMapa('${item.numero_ta}', '${item.site_afetado}', '${item.coordenadas_brutas}', '${item.causa_falha.replace(/'/g,"\\'")}', '${(item.detalhes||'').replace(/'/g,"\\")}')">👁 Revisar</button>
+          <button class="tb g" onclick="validarEventoSigitm('${item.numero_ta}', '${item.site_afetado}', '${item.coordenadas_brutas}', '${item.causa_falha.replace(/'/g,"\\'")}', '${(item.detalhes||'').replace(/'/g,"\\")}')">✅ Aprovar</button>
           <button class="tb r" onclick="rejeitarEventoSigitm('${item.numero_ta}')">✕ Rejeitar</button>
         </div>
       </div>
