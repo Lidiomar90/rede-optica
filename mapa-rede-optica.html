@@ -756,6 +756,72 @@ const TC=s=>s==='ativo'?'tok':s==='previsto'?'twn':'ter';
 let _toT;
 const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
 const setProg=p=>{$('lbar').style.width=p+'%'};
+async function readJsonSafe(res){
+  try{return await res.json();}catch{return {};}
+}
+function describeApiError(payload,status){
+  const raw=payload?.message||payload?.details||payload?.hint||status||'erro';
+  const txt=String(raw||'erro');
+  if(/row-level security|permission denied|rls/i.test(txt))return 'Bloqueado por permissão no banco (RLS).';
+  if(/jwt|auth|permission/i.test(txt))return 'Permissão insuficiente para esta operação.';
+  return txt;
+}
+async function callRpcCandidates(candidates,payload){
+  for(const fn of candidates){
+    try{
+      const r=await fetch(`${SU}/rest/v1/rpc/${fn}`,{method:'POST',headers:WH,body:JSON.stringify(payload||{})});
+      if(r.ok)return{ok:true,fn,data:await readJsonSafe(r),status:r.status};
+      const err=await readJsonSafe(r);
+      const msg=String(err?.message||err?.details||'');
+      if(r.status===404||/Could not find the function|PGRST202|schema cache/i.test(msg))continue;
+      return{ok:false,fn,status:r.status,error:err};
+    }catch(err){
+      return{ok:false,fn,status:0,error:{message:err.message}};
+    }
+  }
+  return{ok:false,missing:true,status:404,error:{message:'RPC indisponível'}};
+}
+async function authFetchUsuario(email){
+  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email,email});
+  if(rpc.ok){
+    const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
+    return{ok:true,user:data,source:`rpc:${rpc.fn}`};
+  }
+  if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
+  const r=await fetch(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
+  if(!r.ok){
+    const err=await readJsonSafe(r);
+    return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  }
+  const lista=await r.json();
+  return{ok:true,user:lista?.[0]||null,source:'rest:usuarios'};
+}
+async function authTouchUsuario(id){
+  const rpc=await callRpcCandidates(['fn_touch_usuario','touch_usuario','fn_atualizar_ultimo_acesso_usuario'],{p_id:id,id});
+  if(rpc.ok||!rpc.missing)return rpc.ok;
+  try{
+    await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})});
+    return true;
+  }catch{return false;}
+}
+async function authCreateUsuario(reg){
+  const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],reg);
+  if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
+  if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
+  const r=await fetch(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+  if(r.status===201)return{ok:true,source:'rest:usuarios'};
+  const err=await readJsonSafe(r);
+  return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+}
+async function authUpdateUsuario(id,reg){
+  const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],{p_id:id,id,...reg});
+  if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
+  if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
+  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+  if([200,204].includes(r.status))return{ok:true,source:'rest:usuarios'};
+  const err=await readJsonSafe(r);
+  return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+}
 
 // ═══════════════════════════════════════════
 // LOGIN — senha oculta por padrão, sem hint visível
@@ -771,11 +837,10 @@ async function login(){
   if(!email||!senha){$('lerr').textContent='Preencha e-mail e senha';return;}
   const btn=$('lbtn');btn.disabled=true;btn.textContent='Verificando...';
   try{
-    const r=await fetch(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
-    if(!r.ok){$('lerr').textContent='Erro de conexão. Tente novamente.';btn.disabled=false;btn.textContent='Entrar';return;}
-    const lista=await r.json();
-    if(!lista||!lista.length){$('lerr').textContent='E-mail não encontrado ou usuário inativo.';btn.disabled=false;btn.textContent='Entrar';return;}
-    const u=lista[0];
+    const auth=await authFetchUsuario(email);
+    if(!auth.ok){$('lerr').textContent=auth.error||'Erro de autenticação.';btn.disabled=false;btn.textContent='Entrar';return;}
+    const u=auth.user;
+    if(!u){$('lerr').textContent='E-mail não encontrado, usuário inativo ou leitura bloqueada no banco.';btn.disabled=false;btn.textContent='Entrar';return;}
     let ok=false;
     if(u.senha_texto&&u.senha_texto===senha)ok=true;
     if(!ok&&u.senha_hash){
@@ -784,7 +849,7 @@ async function login(){
     if(!ok){$('lerr').textContent='Senha incorreta.';btn.disabled=false;btn.textContent='Entrar';return;}
     sessao={id:u.id,nome:u.nome,email:u.email,perfil:u.perfil};
     localStorage.setItem('_ro_s',JSON.stringify(sessao));
-    fetch(`${SU}/rest/v1/usuarios?id=eq.${u.id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})});
+    authTouchUsuario(u.id);
     iniciarApp();
   }catch(e){$('lerr').textContent='Erro: '+e.message;btn.disabled=false;btn.textContent='Entrar';}
 }
@@ -2604,13 +2669,13 @@ async function salvarUsuarioEdit(id){
   if(!nome||!email){msg.textContent='Nome e e-mail são obrigatórios';msg.style.color='var(--rd)';return;}
   const reg={nome,email,perfil};
   if(senha)reg.senha_texto=senha;
-  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
-  if([200,204].includes(r.status)){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
-  else{msg.textContent='Erro ao salvar. E-mail já existe?';msg.style.color='var(--rd)';}
+  const rs=await authUpdateUsuario(id,reg);
+  if(rs.ok){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
+  else{msg.textContent='Erro ao salvar: '+(rs.error||'falha desconhecida');msg.style.color='var(--rd)';}
 }
 async function toggleUsuario(id,ativo){
-  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ativo})});
-  if([200,204].includes(r.status)){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast('Erro','er');
+  const rs=await authUpdateUsuario(id,{ativo});
+  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast(rs.error||'Erro ao atualizar usuário','er');
 }
 
 function auditCard(title,detail,tone='in'){
@@ -4069,9 +4134,9 @@ async function salvarUsuarioM(){
   if(!nome||!email){const m=$('fu-msg');m.textContent='Nome e e-mail são obrigatórios';m.style.color='var(--rd)';return;}
   if(!email.includes('@')){const m=$('fu-msg');m.textContent='E-mail inválido';m.style.color='var(--rd)';return;}
   const reg={nome,email,senha_texto:senha,perfil,ativo:true};
-  const r=await fetch(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201){toast('✓ Usuário criado!');closeM();loadUsuarios();}
-  else{const err=await r.json().catch(()=>({}));const m=$('fu-msg');m.textContent='Erro: '+(err.message||err.details||'E-mail já cadastrado?');m.style.color='var(--rd)';}
+  const rs=await authCreateUsuario(reg);
+  if(rs.ok){toast('✓ Usuário criado!');closeM();loadUsuarios();}
+  else{const m=$('fu-msg');m.textContent='Erro: '+(rs.error||'E-mail já cadastrado ou permissão insuficiente');m.style.color='var(--rd)';}
 }
 async function salvarCaboM(){
   const nome=($('nc-nm')?.value||'').trim();
