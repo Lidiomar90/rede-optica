@@ -29,6 +29,30 @@ function Get-LatestSession {
         Select-Object -First 1
 }
 
+function Get-ManifestTaskBySession {
+    param([string]$SessionPath)
+
+    $filaDir = Join-Path $HUB "fila"
+    $taskDirs = Get-ChildItem -Path $filaDir -Directory -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending
+
+    foreach ($taskDir in $taskDirs) {
+        $manifestPath = Join-Path $taskDir.FullName "manifest.json"
+        if (-not (Test-Path $manifestPath)) { continue }
+
+        try {
+            $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
+            if ($manifest.sessao -eq $SessionPath) {
+                return $taskDir
+            }
+        } catch {
+            continue
+        }
+    }
+
+    return $null
+}
+
 function Has-RealResponse {
     param([string]$Text)
     if (-not $Text) { return $false }
@@ -66,7 +90,7 @@ if (-not $Sessao) {
 $SessaoPath = (Resolve-Path $Sessao).Path
 $RespDir = Join-Path $SessaoPath "respostas"
 $ResumoExec = Join-Path $SessaoPath "08_RESUMO_AUTOMATICO.md"
-$ManifestTask = Get-ChildItem -Path (Join-Path $HUB "fila") -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$ManifestTask = Get-ManifestTaskBySession -SessionPath $SessaoPath
 
 $claude = Read-All (Join-Path $RespDir "claude_resposta.md")
 $gemini = Read-All (Join-Path $RespDir "gemini_resposta.md")

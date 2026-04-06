@@ -328,6 +328,11 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 .audit-priority-rank{min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
 .audit-priority-item .name{font-size:11px;font-weight:800;color:var(--t)}
 .audit-priority-item .meta{font-size:10px;color:var(--t2);margin-top:2px}
+.audit-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.audit-kpi{border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 11px;background:rgba(255,255,255,.03)}
+.audit-kpi-label{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin-bottom:6px}
+.audit-kpi-value{font-size:18px;font-weight:900;color:var(--t)}
+.audit-kpi-sub{font-size:10px;color:var(--t2);margin-top:4px;line-height:1.45}
 
 @media(max-width:680px){
   #top{padding:0 10px;gap:8px;min-height:54px}
@@ -822,7 +827,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 <div class="pg" id="pg-auditoria" style="flex-direction:column">
   <div class="pgc">
     <div class="audit-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
-      <b style="font-size:13px">Auditoria inteligente operacional</b>
+      <b style="font-size:13px">Auditoria operacional</b>
       <div class="audit-toolbar-actions" style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Auditoria</button>
         <button class="tb g" onclick="syncLocalDrafts()">☁ Sincronizar Tudo</button>
@@ -845,15 +850,15 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
         <div id="aud-score-txt" style="font-size:11px;color:var(--t2);line-height:1.7">Aguardando execução da auditoria.</div>
       </div>
       <div class="fc">
-        <div class="fct">Resumo</div>
+        <div class="fct">Situação agora</div>
         <div id="aud-resumo" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
       <div class="fc">
-        <div class="fct">Ações seguras</div>
+        <div class="fct">Próxima ação</div>
         <div id="aud-acoes" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
       <div class="fc">
-        <div class="fct">Fila de implementação</div>
+        <div class="fct">Backlog curto</div>
         <div id="aud-fila" style="display:flex;flex-direction:column;gap:8px;font-size:11px;color:var(--t2)"></div>
       </div>
     </div>
@@ -3838,21 +3843,24 @@ function renderAuditUI(issues){
   if(score<0)score=0;
   const scoreTone=score>=85?'var(--gr)':score>=65?'var(--am)':'var(--rd)';
   const topIssues=issues.slice(0,3);
+  const totalUnsynced=store.caixas.filter(x=>!x._synced).length+store.dgos.filter(x=>!x._synced).length+store.segmentos.filter(x=>!x._synced).length+store.rupturas.filter(x=>!x._synced).length;
+  const nextIssue=issues[0];
   $('aud-score').textContent=score;
   $('aud-score').style.color=scoreTone;
   $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
-  $('aud-resumo').innerHTML=[
-    auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
-    auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
-    auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
-    auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
-    auditCard('Estados operacionais',`Confirmados ${pointReady} | Pendentes ${pointPending} | Quebrados ${pointBroken}`,pointBroken?'wn':'ok'),
-    auditCard('Pronto para campo',`Segmentos prontos ${segReady} | sem geometria ${segPendingGeo} | cabos sem inventário ${cabNoInventory}`,segPendingGeo?'wn':'ok')
-  ].join('');
+  $('aud-resumo').innerHTML=`
+    <div class="audit-kpi-row">
+      <div class="audit-kpi"><div class="audit-kpi-label">Mapa</div><div class="audit-kpi-value">${allS.length.toLocaleString('pt-BR')}</div><div class="audit-kpi-sub">sites carregados • ${allC.length.toLocaleString('pt-BR')} cabos</div></div>
+      <div class="audit-kpi"><div class="audit-kpi-label">Campo</div><div class="audit-kpi-value">${pointBroken+pointPending}</div><div class="audit-kpi-sub">${pointBroken} quebrado(s) • ${pointPending} pendente(s)</div></div>
+      <div class="audit-kpi"><div class="audit-kpi-label">Sync</div><div class="audit-kpi-value">${totalUnsynced}</div><div class="audit-kpi-sub">${cacheReady?'cache pronto':'sem cache'} • ${activeVis} camadas visíveis</div></div>
+      <div class="audit-kpi"><div class="audit-kpi-label">Inventário</div><div class="audit-kpi-value">${segReady}</div><div class="audit-kpi-sub">${segPendingGeo} sem geometria • ${cabNoInventory} sem inventário</div></div>
+    </div>
+    ${sciOnly?auditCard('Science pendente',`${sciOnly.toLocaleString('pt-BR')} site(s) ainda existem só na Science.`,scienceSites.length?'wn':'in'):''}
+  `;
   $('aud-acoes').innerHTML=[
-    auditCard('Pode corrigir automaticamente',segBroken?`Atualizar nomes de pontos e reaproveitar seleção assistida dos segmentos quebrados.`:'Sincronizar o resumo e manter geração da Science atualizada.','ok'),
-    auditCard('Pode publicar incrementalmente',crit||alto?'Ainda não. Corrija os itens altos primeiro.':'Sim, como versão incremental com auditoria local ativa.',crit||alto?'wn':'ok'),
-    auditCard('DGOs já auditáveis',`${dgoResolved}/${store.dgos.length||0} DGO(s) resolvidos via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'ok')
+    auditCard('Ação agora',nextIssue?`${nextIssue.title}. ${nextIssue.action}`:'Sem ação urgente pendente.',nextIssue&&(nextIssue.severity==='critico'||nextIssue.severity==='alto')?'wn':'ok'),
+    auditCard('Publicação',crit||alto?'Segure a publicação e trate os pontos altos primeiro.':'Pode publicar incrementalmente com auditoria local ativa.',crit||alto?'wn':'ok'),
+    auditCard('DGO',`${dgoResolved}/${store.dgos.length||0} DGO(s) auditáveis via site de referência.`,store.dgos.length&&dgoResolved<store.dgos.length?'wn':'in')
   ].join('');
   const fila=[
     {title:'Persistir DGO no banco',detail:'Criar tabela/view REST para DGO e plugar o painel local.',priority:'Alta'},
@@ -3860,7 +3868,7 @@ function renderAuditUI(issues){
     {title:'Auditoria automática agendada',detail:'Rodar checklist local antes de cada publish e gerar snapshot.',priority:'Média'},
     {title:'Correções sugeridas por IA',detail:'Transformar achados auditados em sugestões executáveis para o usuário.',priority:'Média'}
   ];
-  $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
+  $('aud-fila').innerHTML=fila.slice(0,3).map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
   $('aud-achados').innerHTML=`
     <div class="audit-priority">
       <div class="audit-priority-head">Prioridade operacional agora</div>
