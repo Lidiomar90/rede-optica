@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-05 (sessao 3 — caixa_emenda, segmento_cabo, evento_ruptura)
+**Atualizado em:** 2026-04-05 (sessao 4 — mobile feedback, cache e fila de sync)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,7 +10,7 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-05 — sessao 3
+**Data:** 2026-04-05 — sessao 4
 **O que foi feito:**
 0. Iniciada sprint mobile-first do mapa: topo compactado, legenda recolhivel no celular, barra de campo horizontal compacta, ferramentas secundarias escondidas atras de "mais" e Auditoria IA convertida para cards mais compactos
 1. Criada `caixa_emenda` (CEO/CTO/DIO): vinculo com cabo + site/dgo + posicao_m + geo + fibras_livres calculado
@@ -27,6 +27,10 @@
 12. Fluxo de autenticação/usuários no front foi preparado para `RPC segura + fallback REST`, com mensagens mais claras quando `usuarios` estiver bloqueado por RLS
 13. Criado orquestrador local `ORQUESTRAR-IAS-PROJETO.ps1` + `.bat` + task do VS Code para gerar pacotes de sessao separados para Claude, Gemini, Codex, DeepSeek e Manus, com foco, contexto, checklist e estado consolidado
 14. Criado consolidado local `CONSOLIDAR-RETORNOS-IAS.ps1` + `.bat` para reunir respostas de Claude, Gemini, DeepSeek e Manus em um unico relatorio por sessao, com pasta `respostas` dedicada
+15. Ajustado mobile do mapa: toque longo reduzido de 650ms para 320ms em mapa e ativos, com vibracao curta quando suportada
+16. Ligados indicadores ja previstos no front: badge de fila de sincronizacao pendente, timestamp do cache offline no mobile e aviso de rede lenta/online/offline
+17. Drawer mobile passou a usar a classe `show` no overlay, evitando inconsistencias de display inline ao abrir/fechar a sidebar
+18. Botao mobile de `Modo campo` agora reflete o estado ativo com destaque visual persistente
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
@@ -34,6 +38,7 @@
 - Codex: painel de rupturas via `vw_rupturas_abertas`
 - Codex: conectar `execRast()` ao RPC `fn_tracer_bfs` (BUG 2 — ainda pendente)
 - Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
+- Codex: testar drawer mobile com swipe/gesto; ainda nao implementado
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
@@ -188,27 +193,9 @@
 - **Status:** RESOLVIDO — constraint `network_edges_ativo_unico UNIQUE(ativo_tabela, ativo_id)` existe
 - **network_edges agora:** 5.649 rows, 0 duplicatas
 
-### PENDENTE — BUG 2: execRast() nao usa fn_tracer_bfs
-**Problema:** Botao "Rastrear rota A→B" faz bbox geografico dos cabos. Nao chama o RPC `fn_tracer_bfs`.
-
-**O que Codex precisa implementar em `execRast()` no HTML:**
-```javascript
-// 1. Resolver node_id para site A e B
-const resA = await fetch(`${SU}/rest/v1/network_nodes?ativo_tabela=eq.sites&ativo_id=eq.${sA.id}&select=id`, {headers:RH}).then(r=>r.json());
-const nodeA = resA[0]?.id;
-const resB = await fetch(`${SU}/rest/v1/network_nodes?ativo_tabela=eq.sites&ativo_id=eq.${sB.id}&select=id`, {headers:RH}).then(r=>r.json());
-const nodeB = resB[0]?.id;
-if(!nodeA || !nodeB){ toast('Site nao encontrado no grafo','er'); return; }
-
-// 2. Chamar BFS
-const caminho = await fetch(`${SU}/rest/v1/rpc/fn_tracer_bfs`, {
-  method:'POST',
-  headers:{...RH,'Content-Type':'application/json'},
-  body: JSON.stringify({p_node_inicio: nodeA, p_node_fim: nodeB, p_max_hops: 30})
-}).then(r=>r.json());
-
-// 3. Para cada step com ativo_tabela='cabos', buscar em allC e desenhar trajeto
-```
+### RESOLVIDO LOCALMENTE — BUG 2: execRast() agora usa fn_tracer_bfs
+- `mapa-rede-optica.html` ja resolve `network_nodes`, chama `POST /rest/v1/rpc/fn_tracer_bfs` e desenha a rota a partir dos steps retornados
+- contexto anterior estava desatualizado; manter validacao focada em consistencia do grafo e UX da rota, nao mais no fallback bbox antigo
 
 ### PENDENTE — BUG 3: fn_tracer_bfs assimetrico no bidirecional (baixa urgencia)
 ```sql
@@ -342,9 +329,10 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - criar DGO com site proximo
   - copiar coordenadas
 - uso em campo:
-  - cache local do mapa (`sites`, `cabos`, `science`)
-  - fallback offline quando a rede falhar
-  - indicador de `modo offline`
+- cache local do mapa (`sites`, `cabos`, `science`)
+- cache offline expandido para incluir tambem `vw_caixas_emenda_mapa`, `dgo`, `segmento_cabo` e `vw_rupturas_abertas`
+- fallback offline quando a rede falhar
+- indicador de `modo offline`
   - controles mobile ficaram maiores
   - barra de desenho no mapa com `desfazer`, `finalizar` e `cancelar`
   - desenho de linha agora fica viável no mobile sem depender de duplo clique
@@ -563,3 +551,27 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - reduzir poluicao visual sem precisar desligar uma camada inteira
 - validacao:
   - JavaScript inline continua integro: `CHECK_OK`
+
+### Hub local para execucao multi-IA
+
+- foi criado um hub local em `C:\FIBRA CADASTRO\ia_hub`
+- objetivo:
+  - centralizar fila, sessoes, inbox, estado e respostas das IAs
+  - permitir rodadas continuas com Claude, Gemini, DeepSeek, Manus e Codex
+- script principal:
+  - `ORQUESTRAR-EXECUCAO-IAS.ps1`
+- atalho:
+  - `ORQUESTRAR-EXECUCAO-IAS.bat`
+- o hub cria automaticamente:
+  - pasta de tarefa em `ia_hub\fila`
+  - sessao em `ia_hub\sessoes`
+  - inbox de chamada
+  - manifesto da tarefa
+  - estado resumido do hub
+- o hub reaproveita:
+  - `ORQUESTRAR-IAS-PROJETO.ps1`
+  - `CONSOLIDAR-RETORNOS-IAS.ps1`
+- VS Code agora tem tasks para:
+  - criar tarefa
+  - foco mobile
+  - foco banco e persistencia

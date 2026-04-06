@@ -1,0 +1,144 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Multi-IA: gerar pacote",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-IAS-PROJETO.ps1"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Multi-IA: foco mobile",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-IAS-PROJETO.ps1",
+        "-Foco",
+        "mobile, campo, sobreposicao, performance",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Multi-IA: foco inventario",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-IAS-PROJETO.ps1",
+        "-Foco",
+        "inventario operacional, DGO, caixa_emenda, segmento_cabo, evento_ruptura",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Multi-IA: foco GeoSite / UX",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-IAS-PROJETO.ps1",
+        "-Foco",
+        "benchmark geosite, UX operacional, gaps de produto, fluxo de campo",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Multi-IA: consolidar retornos",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\CONSOLIDAR-RETORNOS-IAS.ps1",
+        "-Sessao",
+        "C:\\FIBRA CADASTRO\\handoffs\\sessao_multi_ia_20260405_220141",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: criar tarefa",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-EXECUCAO-IAS.ps1",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: foco mobile",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-EXECUCAO-IAS.ps1",
+        "-Foco",
+        "mobile, campo, performance, sobreposicao, experiencia de rua",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: foco banco e persistencia",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\ORQUESTRAR-EXECUCAO-IAS.ps1",
+        "-Foco",
+        "banco, persistencia oficial, login, usuarios, RLS, inventario operacional",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
