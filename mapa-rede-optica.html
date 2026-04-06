@@ -169,6 +169,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .mb.on-b{background:var(--bl);border-color:var(--bl);color:#fff}
 .tip{position:absolute;right:50px;top:50%;transform:translateY(-50%);background:rgba(9,18,31,.86);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:6px 10px;font-size:10px;color:var(--t);white-space:nowrap;pointer-events:none;opacity:0;transition:.15s;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:10;font-weight:700}
 .mb:hover .tip{opacity:1}
+#mt-toggle{display:none}
 #mobb{position:absolute;top:10px;left:10px;z-index:400;display:none}
 @media(max-width:680px){#mobb{display:flex}}
 .hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:400;border-radius:18px;padding:6px 16px;font-size:11px;white-space:nowrap;font-weight:600;box-shadow:0 2px 14px rgba(0,0,0,.6);display:none;pointer-events:none}
@@ -186,13 +187,23 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 @media(max-width:680px){#drawbar{left:10px;right:10px;bottom:12px;transform:none;justify-content:space-between}.dbtn{min-width:0;flex:1}}
 #fieldbar{display:none}
 @media(max-width:680px){
-  #fieldbar{position:absolute;left:10px;right:10px;bottom:72px;z-index:419;display:flex;gap:8px;padding:8px;background:rgba(9,18,31,.88);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 16px 36px rgba(0,0,0,.28);backdrop-filter:blur(16px)}
-  .fbtn{flex:1;min-width:0;padding:10px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;text-align:center}
+  #fieldbar{position:absolute;left:8px;right:8px;bottom:10px;z-index:419;display:flex;gap:6px;padding:6px;background:rgba(9,18,31,.9);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,.28);backdrop-filter:blur(16px);overflow-x:auto;scrollbar-width:none}
+  #fieldbar::-webkit-scrollbar{display:none}
+  .fbtn{flex:0 0 72px;min-width:72px;padding:8px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
   .fbtn:active{transform:scale(.98)}
+  .fbtn .fi{font-size:15px;line-height:1}
+  .fbtn .ft{font-size:9px;line-height:1.05}
 }
 
 /* LEGENDA */
-#leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:none;transition:background .25s;backdrop-filter:blur(16px)}
+#leg{position:absolute;bottom:24px;right:10px;z-index:400;background:rgba(9,18,31,.82);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);pointer-events:auto;transition:background .25s;backdrop-filter:blur(16px)}
+.leg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer}
+.leg-toggle{width:26px;height:26px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:12px;font-family:inherit;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+.leg-toggle:hover{background:rgba(255,255,255,.08);color:var(--t)}
+.leg-body{margin-top:8px}
+#leg.compact{padding:10px 12px}
+#leg.compact .leg-body{display:none}
+#leg.compact .leg-toggle{transform:rotate(-90deg)}
 .lt{font-size:9px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:8px}
 .lr{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:10px;color:var(--t2);font-weight:700}
 .lr:last-child{margin-bottom:0}
@@ -256,6 +267,79 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .btn2.p{background:var(--gr);color:#000}.btn2.s{background:var(--bg3);border:1px solid var(--bd2);color:var(--t2)}
 .btn2.r{background:var(--rd);color:#fff}
 .err-field{border-color:var(--rd)!important;animation:shake .2s}
+.audit-card,.audit-issue,.audit-priority{border-radius:10px}
+.audit-card{border:1px solid rgba(255,255,255,.12);padding:10px 12px}
+.audit-card.ok{background:rgba(62,207,142,.08);border-color:rgba(62,207,142,.22)}
+.audit-card.wn{background:rgba(240,165,0,.08);border-color:rgba(240,165,0,.24)}
+.audit-card.in{background:rgba(77,166,255,.08);border-color:rgba(77,166,255,.22)}
+.audit-card .title{font-size:11px;font-weight:800;color:var(--t);margin-bottom:4px}
+.audit-card .detail{font-size:10px;color:var(--t2);line-height:1.6}
+.audit-issue{border:1px solid rgba(255,255,255,.08);padding:10px 12px;background:rgba(255,255,255,.03)}
+.audit-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px}
+.audit-title{font-size:11px;font-weight:800;color:var(--t)}
+.audit-chip-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.audit-detail{font-size:10px;color:var(--t2);line-height:1.65}
+.audit-note{margin-top:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em}
+.audit-cta{margin-top:8px}
+.audit-priority{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);padding:10px 12px}
+.audit-priority-head{font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+.audit-priority-list{display:flex;flex-direction:column;gap:8px}
+.audit-priority-item{display:flex;gap:8px;align-items:flex-start}
+.audit-priority-rank{min-width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+.audit-priority-item .name{font-size:11px;font-weight:800;color:var(--t)}
+.audit-priority-item .meta{font-size:10px;color:var(--t2);margin-top:2px}
+
+@media(max-width:680px){
+  #top{padding:0 10px;gap:8px;min-height:54px}
+  .opsline{display:none}
+  .brand{gap:8px}
+  .brand-mark{width:28px;height:28px;border-radius:9px;font-size:14px}
+  #top h1{font-size:13px}
+  .sts{gap:4px;flex:0 1 auto}
+  .sc{padding:4px 8px;font-size:9px}
+  .sc b{font-size:10px}
+  .sc:nth-child(3){display:none}
+  .tb{padding:7px 9px;font-size:10px}
+  #ubadge{padding:6px 9px;font-size:9px}
+  #nav{padding:0 6px;gap:4px}
+  .nt{padding:10px 12px;font-size:10px}
+  .pg{height:calc(100vh - 86px)}
+  #sbhero{padding:12px 12px 10px}
+  .sbh{font-size:15px}
+  .sbp{font-size:10px}
+  .sbstats{gap:6px}
+  .sbst{padding:7px 8px}
+  #stabs{gap:6px;padding:8px 10px 6px}
+  .stt{padding:8px 2px;font-size:8px}
+  #maphead{top:58px;left:10px;right:64px;max-width:none;padding:8px 10px;border-radius:14px}
+  .mhk,.mhs{display:none}
+  .mht{font-size:12px;margin-bottom:0}
+  .mmeta{margin-top:6px}
+  #mobb{top:8px;left:8px}
+  #mt{top:68px;right:8px;gap:6px}
+  #mt-toggle{display:flex}
+  #mt .mb{width:44px;height:44px;border-radius:12px}
+  #mt .mb-extra{display:none}
+  #mt.expanded .mb-extra{display:flex}
+  .tip{display:none}
+  #leg{right:8px;bottom:118px;max-width:min(64vw,220px);padding:0;overflow:hidden}
+  .leg-head{padding:10px 12px}
+  .lt{margin-bottom:0}
+  .leg-body{margin-top:0;padding:0 12px 10px}
+  .lr{font-size:9px}
+  .leaflet-bottom.leaflet-right{bottom:122px}
+  #pan{max-height:68vh}
+  #pg-auditoria .pgc{padding:10px}
+  #pg-auditoria .fc{padding:12px}
+  #pg-auditoria .fct{font-size:11px}
+  #pg-auditoria .tb{padding:8px 10px;font-size:10px}
+  #aud-score{font-size:34px!important;margin-bottom:4px!important}
+  .audit-card,.audit-issue,.audit-priority{padding:8px 10px;border-radius:12px}
+  .audit-card .title,.audit-title,.audit-priority-item .name{font-size:10px}
+  .audit-card .detail,.audit-detail,.audit-priority-item .meta{font-size:9px;line-height:1.45}
+  .audit-chip-row{justify-content:flex-start}
+  .audit-note{font-size:8px}
+}
 
 /* MODAL */
 #mbg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
@@ -430,21 +514,22 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <button class="dbtn danger" onclick="cancelDraw()">✕ Cancelar</button>
     </div>
     <div id="fieldbar">
-      <button class="fbtn" onclick="toggleFieldMode()">🛠 Campo</button>
-      <button class="fbtn" onclick="toggleSB()">☰ Camadas</button>
-      <button class="fbtn" onclick="goLoc()">📍 GPS</button>
-      <button class="fbtn" onclick="novaCaixaNoCentro()">🧰 Caixa</button>
-      <button class="fbtn" onclick="novaRupturaNoCentro()">🚨 Ruptura</button>
-      <button class="fbtn" onclick="goTab('auditoria',document.querySelector('.nt[onclick*=&quot;auditoria&quot;]'))">🤖 IA</button>
+      <button class="fbtn" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
+      <button class="fbtn" onclick="toggleSB()"><span class="fi">☰</span><span class="ft">Camadas</span></button>
+      <button class="fbtn" onclick="goLoc()"><span class="fi">📍</span><span class="ft">GPS</span></button>
+      <button class="fbtn" onclick="novaCaixaNoCentro()"><span class="fi">🧰</span><span class="ft">Caixa</span></button>
+      <button class="fbtn" onclick="novaRupturaNoCentro()"><span class="fi">🚨</span><span class="ft">Ruptura</span></button>
+      <button class="fbtn" onclick="goTab('auditoria',document.querySelector('.nt[onclick*=&quot;auditoria&quot;]'))"><span class="fi">🤖</span><span class="ft">IA</span></button>
     </div>
     <div id="mt">
+      <div style="position:relative"><button class="mb" id="mt-toggle" onclick="toggleMobileTools()">⋯<div class="tip">Mais ferramentas</div></button></div>
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
-      <div style="position:relative"><button class="mb" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
-      <div style="position:relative"><button class="mb" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
-      <div style="position:relative"><button class="mb" id="bmed" onclick="toggleMed()">📏<div class="tip">Medir distância</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" id="bmed" onclick="toggleMed()">📏<div class="tip">Medir distância</div></button></div>
       <div style="position:relative"><button class="mb" id="bdc" onclick="startDraw()">🔌<div class="tip">Desenhar segmento/cabo</div></button></div>
       <div style="position:relative"><button class="mb on-b" onclick="abrirRastreamento()">🔍<div class="tip">Rastrear rota A→B</div></button></div>
-      <div style="position:relative"><button class="mb" onclick="abrirOTDR()">📡<div class="tip">Localizar rompimento OTDR</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" onclick="abrirOTDR()">📡<div class="tip">Localizar rompimento OTDR</div></button></div>
       <div style="position:relative"><button class="mb tb r" id="binc" onclick="toggleInc()">🚨<div class="tip">Registrar falha</div></button></div>
     </div>
     <!-- PAINEL — posicionado acima de tudo com z-index:500 -->
@@ -454,17 +539,22 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
       <div class="pa" id="pa"></div>
     </div>
     <div id="leg">
-      <div class="lt">Legenda</div>
-      <div class="lr"><div class="ld" style="background:#f0a500"></div>Backbone DWDM</div>
-      <div class="lr"><div class="ld" style="background:#f97316"></div>HL4 Metro alta</div>
-      <div class="lr"><div class="ld" style="background:#4da6ff"></div>HL5 Metro dist</div>
-      <div class="lr"><div class="ld" style="background:#3ecf8e"></div>Acesso / OLT / Caixa</div>
-      <div class="lr"><div class="ld" style="background:#a855f7"></div>B2B / Datacom</div>
-      <div class="lr"><div class="ld" style="background:#f43f5e"></div>ERB</div>
-      <div class="lr"><div class="ld" style="background:#e84455;border-radius:2px;width:12px;height:6px"></div>Rompimento ativo</div>
-      <div class="lr"><div class="ll2" style="background:#f0a500;height:3px"></div>Cabo backbone</div>
-      <div class="lr"><div class="ll2" style="background:#4da6ff"></div>Cabo distribuição</div>
-      <div class="lr"><div class="ll2" style="background:#3ecf8e;height:1px"></div>Cabo drop</div>
+      <div class="leg-head" onclick="toggleLegend()">
+        <div class="lt">Legenda</div>
+        <button class="leg-toggle" id="leg-toggle" type="button" aria-label="Alternar legenda">▾</button>
+      </div>
+      <div class="leg-body" id="leg-body">
+        <div class="lr"><div class="ld" style="background:#f0a500"></div>Backbone DWDM</div>
+        <div class="lr"><div class="ld" style="background:#f97316"></div>HL4 Metro alta</div>
+        <div class="lr"><div class="ld" style="background:#4da6ff"></div>HL5 Metro dist</div>
+        <div class="lr"><div class="ld" style="background:#3ecf8e"></div>Acesso / OLT / Caixa</div>
+        <div class="lr"><div class="ld" style="background:#a855f7"></div>B2B / Datacom</div>
+        <div class="lr"><div class="ld" style="background:#f43f5e"></div>ERB</div>
+        <div class="lr"><div class="ld" style="background:#e84455;border-radius:2px;width:12px;height:6px"></div>Rompimento ativo</div>
+        <div class="lr"><div class="ll2" style="background:#f0a500;height:3px"></div>Cabo backbone</div>
+        <div class="lr"><div class="ll2" style="background:#4da6ff"></div>Cabo distribuição</div>
+        <div class="lr"><div class="ll2" style="background:#3ecf8e;height:1px"></div>Cabo drop</div>
+      </div>
     </div>
     <div id="load">
       <div class="spi"></div>
@@ -673,9 +763,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 <!-- AUDITORIA -->
 <div class="pg" id="pg-auditoria" style="flex-direction:column">
   <div class="pgc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
+    <div class="audit-toolbar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
       <b style="font-size:13px">Auditoria inteligente operacional</b>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div class="audit-toolbar-actions" style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="tb b" onclick="rodarAuditoriaIA()">🔄 Auditoria</button>
         <button class="tb g" onclick="syncLocalDrafts()">☁ Sincronizar Tudo</button>
         <button class="tb a" onclick="syncGraphRPC()">🔗 Sincronizar Grafo</button>
@@ -690,7 +780,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
        </div>
        <div id="sigitm-lista" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px"></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
+    <div class="audit-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
       <div class="fc">
         <div class="fct">Score operacional</div>
         <div id="aud-score" style="font-size:42px;font-weight:900;color:var(--gr);margin-bottom:8px">—</div>
@@ -904,6 +994,9 @@ let assetTouchHoldTimer=null;
 let ctxActions=[];
 let drawTarget='segmento';
 let fieldMode=localStorage.getItem('_field_mode')==='1';
+let mobileToolsExpanded=false;
+const LEGEND_PREF_KEY='redeoptica_legenda_mobile_v1';
+let legendCollapsed=localStorage.getItem(LEGEND_PREF_KEY)==='1';
 const OVERLAY_CFG=[
   {id:'ov_romp',label:'Incidentes',warn:true,vis:true},
   {id:'ov_draft',label:'Rascunhos',vis:true},
@@ -964,6 +1057,40 @@ function saveMapCache(sites,cabos,science){
 }
 function loadMapCache(){
   try{return JSON.parse(localStorage.getItem(MAP_CACHE_KEY)||'null');}catch{return null;}
+}
+function isMobileUI(){return window.innerWidth<=680;}
+function setMobileToolsExpanded(on){
+  mobileToolsExpanded=!!on&&isMobileUI();
+  const mt=$('mt'),tog=$('mt-toggle');
+  if(mt)mt.classList.toggle('expanded',mobileToolsExpanded);
+  if(tog){
+    tog.textContent=mobileToolsExpanded?'×':'⋯';
+    tog.title=mobileToolsExpanded?'Recolher ferramentas':'Expandir ferramentas';
+  }
+}
+function toggleMobileTools(){setMobileToolsExpanded(!mobileToolsExpanded);}
+function applyLegendState(collapsed,persist=false){
+  legendCollapsed=!!collapsed;
+  const leg=$('leg'),tog=$('leg-toggle');
+  if(leg)leg.classList.toggle('compact',legendCollapsed);
+  if(tog){
+    tog.textContent=legendCollapsed?'▸':'▾';
+    tog.setAttribute('aria-expanded',String(!legendCollapsed));
+  }
+  if(persist)localStorage.setItem(LEGEND_PREF_KEY,legendCollapsed?'1':'0');
+}
+function toggleLegend(){
+  applyLegendState(!legendCollapsed,true);
+  if(map)setTimeout(()=>map.invalidateSize(false),80);
+}
+function applyResponsiveLayout(){
+  if(isMobileUI()){
+    if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
+    else applyLegendState(legendCollapsed,false);
+  }else{
+    setMobileToolsExpanded(false);
+    applyLegendState(false,false);
+  }
 }
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
@@ -1497,6 +1624,7 @@ function initMapObj(){
   },{passive:true});
   mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
   mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
+  applyResponsiveLayout();
 }
 
 function getBBoxString(){
@@ -2679,24 +2807,22 @@ async function toggleUsuario(id,ativo){
 }
 
 function auditCard(title,detail,tone='in'){
-  const bd=tone==='ok'?'rgba(62,207,142,.22)':tone==='wn'?'rgba(240,165,0,.24)':'rgba(77,166,255,.22)';
-  const bg=tone==='ok'?'rgba(62,207,142,.08)':tone==='wn'?'rgba(240,165,0,.08)':'rgba(77,166,255,.08)';
-  return `<div style="border:1px solid ${bd};background:${bg};border-radius:10px;padding:10px 12px"><div style="font-size:11px;font-weight:800;color:var(--t);margin-bottom:4px">${esc(title)}</div><div style="font-size:10px;color:var(--t2);line-height:1.6">${esc(detail)}</div></div>`;
+  return `<div class="audit-card ${tone}"><div class="title">${esc(title)}</div><div class="detail">${esc(detail)}</div></div>`;
 }
 function auditIssueCard(issue){
   const tone=issue.severity==='critico'?'#e84455':issue.severity==='alto'?'#f0a500':'#4da6ff';
-  return `<div style="border:1px solid rgba(255,255,255,.08);border-left:4px solid ${tone};border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px">
-      <div style="font-size:11px;font-weight:800;color:var(--t)">${esc(issue.title)}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+  return `<div class="audit-issue" style="border-left:4px solid ${tone}">
+    <div class="audit-row">
+      <div class="audit-title">${esc(issue.title)}</div>
+      <div class="audit-chip-row">
         ${issue.domain?`<span class="stg tok">${esc(issue.domain)}</span>`:''}
         ${issue.kind?`<span class="stg tok">${esc(issue.kind)}</span>`:''}
         <span class="stg ${issue.severity==='critico'?'ter':issue.severity==='alto'?'twn':'tok'}">${esc(issue.severity)}</span>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--t2);line-height:1.65">${esc(issue.detail)}</div>
-    <div style="margin-top:6px;font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.08em">${esc(issue.action)}</div>
-    ${issue.fn?`<div style="margin-top:8px"><button class="pac ${issue.severity==='critico'||issue.severity==='alto'?'a':'b'}" style="width:100%" onclick="${issue.fn}">${esc(issue.fnLabel||'Abrir correção')}</button></div>`:''}
+    <div class="audit-detail">${esc(issue.detail)}</div>
+    <div class="audit-note">${esc(issue.action)}</div>
+    ${issue.fn?`<div class="audit-cta"><button class="pac ${issue.severity==='critico'||issue.severity==='alto'?'a':'b'}" style="width:100%" onclick="${issue.fn}">${esc(issue.fnLabel||'Abrir correção')}</button></div>`:''}
   </div>`;
 }
 function auditPriority(issue){
@@ -2886,10 +3012,10 @@ function renderAuditUI(issues){
   ];
   $('aud-fila').innerHTML=fila.map(f=>auditCard(`${f.priority} • ${f.title}`,f.detail,f.priority==='Alta'?'wn':'in')).join('');
   $('aud-achados').innerHTML=`
-    <div style="border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:10px;padding:10px 12px">
-      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Prioridade operacional agora</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${topIssues.map((issue,idx)=>`<div style="display:flex;gap:8px;align-items:flex-start"><div style="min-width:20px;height:20px;border-radius:999px;background:${idx===0?'rgba(232,68,85,.18)':idx===1?'rgba(240,165,0,.16)':'rgba(77,166,255,.16)'};color:${idx===0?'#e84455':idx===1?'#f0a500':'#4da6ff'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800">${idx+1}</div><div style="flex:1"><div style="font-size:11px;font-weight:800;color:var(--t)">${esc(issue.title)}</div><div style="font-size:10px;color:var(--t2);margin-top:2px">${esc(issue.domain||'mapa')} • ${esc(issue.kind||'campo')} • ${esc(issue.severity)}</div></div></div>`).join('')}
+    <div class="audit-priority">
+      <div class="audit-priority-head">Prioridade operacional agora</div>
+      <div class="audit-priority-list">
+        ${topIssues.map((issue,idx)=>`<div class="audit-priority-item"><div class="audit-priority-rank" style="background:${idx===0?'rgba(232,68,85,.18)':idx===1?'rgba(240,165,0,.16)':'rgba(77,166,255,.16)'};color:${idx===0?'#e84455':idx===1?'#f0a500':'#4da6ff'}">${idx+1}</div><div style="flex:1"><div class="name">${esc(issue.title)}</div><div class="meta">${esc(issue.domain||'mapa')} • ${esc(issue.kind||'campo')} • ${esc(issue.severity)}</div></div></div>`).join('')}
       </div>
     </div>
     ${issues.map(auditIssueCard).join('')}
@@ -4292,6 +4418,13 @@ $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 loadPref();aplicarTema();
 renderInventarioResumo();
 if(checkSessao()){iniciarApp();}else{$('le').focus();}
+window.addEventListener('resize',()=>{
+  clearTimeout(window.__uiResizeTimer);
+  window.__uiResizeTimer=setTimeout(()=>{
+    applyResponsiveLayout();
+    if(map)map.invalidateSize(false);
+  },120);
+});
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
