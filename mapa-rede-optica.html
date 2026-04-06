@@ -3834,6 +3834,7 @@ async function salvarSegmento(){
   const cabo=gv('sg-cabo'),pontoA=gv('sg-a'),pontoB=gv('sg-b'); 
   if(!cabo||!pontoA||!pontoB){msgField('sg-msg','Cabo, ponto A e ponto B são obrigatórios');return;}
   const editId=$('sg-edit-id')?.value||'';
+  const officialId = $('sg-msg').dataset.editId;
   let geometriaPts=null;
   try{geometriaPts=JSON.parse($('sg-geo')?.value||'null');}catch{}
   const payload={
@@ -3842,31 +3843,45 @@ async function salvarSegmento(){
     lote:gv('sg-lote'),observacao:gv('sg-obs'),geometria_pts:Array.isArray(geometriaPts)&&geometriaPts.length>=2?geometriaPts:null
   };
   
-  if(editId){
+  let trajeto = null;
+  if(Array.isArray(payload.geometria_pts)){
+     const coords = payload.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
+     trajeto = `SRID=4326;LINESTRING(${coords})`;
+  }
+  const dbPayload = {
+    cabo: payload.cabo,
+    ponto_a: payload.ponto_a,
+    ponto_b: payload.ponto_b,
+    tipo_lancamento: payload.tipo_lancamento,
+    metragem_m: payload.metragem_m,
+    fabricante: payload.fabricante,
+    modelo: payload.modelo,
+    lote: payload.lote,
+    trajeto: trajeto,
+    observacao: payload.observacao
+  };
+  
+  if(officialId){
+    toast('Salvando alterações no Segmento oficial...','in');
+    const res = await fetch(`${SU}/rest/v1/segmento_cabo?id=eq.${officialId}`, {
+      method: 'PATCH',
+      headers: {...WH, 'Content-Type': 'application/json'},
+      body: JSON.stringify(dbPayload)
+    });
+    if(res.ok){
+      msgField('sg-msg','✓ Segmento oficial atualizado com sucesso.','ok');
+      delete $('sg-msg').dataset.editId;
+      toast('Segmento atualizado','ok');
+      loadMap();
+    } else {
+      msgField('sg-msg','Erro ao atualizar segmento oficial.');
+    }
+  } else if(editId){
     updateInvItem('segmentos',editId,payload);
     msgField('sg-msg','✓ Segmento atualizado em rascunho local.','ok');
   }else{
     addInvItem('segmentos',payload);
     msgField('sg-msg','✓ Segmento salvo em rascunho local.','ok');
-    
-    // Tenta persistir no banco (tabela segmento_cabo)
-    let trajeto = null;
-    if(Array.isArray(payload.geometria_pts)){
-       const coords = payload.geometria_pts.map(p => `${p[1]} ${p[0]}`).join(',');
-       trajeto = `SRID=4326;LINESTRING(${coords})`;
-    }
-    const dbPayload = {
-      cabo: payload.cabo,
-      ponto_a: payload.ponto_a,
-      ponto_b: payload.ponto_b,
-      tipo_lancamento: payload.tipo_lancamento,
-      metragem_m: payload.metragem_m,
-      fabricante: payload.fabricante,
-      modelo: payload.modelo,
-      lote: payload.lote,
-      trajeto: trajeto,
-      observacao: payload.observacao
-    };
     await pushToSupabase('segmento_cabo', dbPayload, 'sg-msg');
   }
   limpar('sg');
@@ -3875,15 +3890,13 @@ async function salvarSegmento(){
 async function salvarRuptura(){
   const caboSegmento=gv('rp-cabo'); if(!caboSegmento){msgField('rp-msg','Cabo ou segmento é obrigatório');return;}
   const lat=gf('rp-lat'), lng=gf('rp-lng');
+  const officialId = $('rp-msg').dataset.editId;
   const payload={
     cabo_segmento:caboSegmento,distancia_otdr_m:gf('rp-otdr'),metragem_lancada_m:gf('rp-lanc'),
     nova_caixa:gv('rp-caixa'),tipo_reparo:gv('rp-reparo'),lat,lng,
     observacao:gv('rp-obs'), data_hora: new Date().toISOString()
   };
-  addInvItem('rupturas',payload);
-  msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok');
   
-  // Tenta persistir no banco (tabela evento_ruptura)
   const dbPayload = {
     cabo_segmento: payload.cabo_segmento,
     distancia_otdr_m: payload.distancia_otdr_m,
@@ -3894,7 +3907,27 @@ async function salvarRuptura(){
     observacao: payload.observacao,
     data_hora: payload.data_hora
   };
-  await pushToSupabase('evento_ruptura', dbPayload, 'rp-msg');
+  
+  if(officialId){
+    toast('Salvando alteracoes na Ruptura oficial...','in');
+    const res = await fetch(`${SU}/rest/v1/evento_ruptura?id=eq.${officialId}`, {
+      method: 'PATCH',
+      headers: {...WH, 'Content-Type': 'application/json'},
+      body: JSON.stringify(dbPayload)
+    });
+    if(res.ok){
+      msgField('rp-msg','✓ Ruptura oficial atualizada com sucesso.','ok');
+      delete $('rp-msg').dataset.editId;
+      toast('Ruptura atualizada','ok');
+      loadMap();
+    } else {
+      msgField('rp-msg','Erro ao atualizar ruptura oficial.');
+    }
+  } else {
+    addInvItem('rupturas',payload);
+    msgField('rp-msg','✓ Ruptura salva em rascunho local.','ok');
+    await pushToSupabase('evento_ruptura', dbPayload, 'rp-msg');
+  }
   
   limpar('rp');
 }
