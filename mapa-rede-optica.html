@@ -3113,7 +3113,7 @@ function showPanCabo(c,pts,lenCalc){
   const bindings=getCableFiberBindings(c.id);
   const plan=buildCableFiberPlan(c);
   const safeId=String(c.id).replace(/'/g,"\\'");
-  const safeNome=esc(c.nome||'').replace(/'/g,"\\'");
+  const safeNome=String(c.nome||'').replace(/'/g,"\\'");
   showPan(codeFirstLabel(c),[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
     ['Comprimento cad.',km(c.comprimento)],
