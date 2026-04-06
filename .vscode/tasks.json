@@ -172,6 +172,21 @@
         "cwd": "C:\\FIBRA CADASTRO"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: disparar frentes paralelas",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\DISPARAR-FRENTES-PROJETO.ps1"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
     }
   ]
 }

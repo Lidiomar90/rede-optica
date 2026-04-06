@@ -610,3 +610,26 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - aproximar o produto de ferramentas como GeoSite/Ozmap, que tendem a ser mais objetivas na tela principal
 - validacao:
   - JavaScript inline continua integro: `CHECK_OK`
+
+### Disparo de frentes paralelas no hub
+
+- foi criado o disparador:
+  - `DISPARAR-FRENTES-PROJETO.ps1`
+- atalho:
+  - `DISPARAR-FRENTES-PROJETO.bat`
+- ele abre varias frentes em paralelo dentro do `ia_hub`, uma para cada tema critico:
+  - banco e persistencia oficial
+  - login / usuarios / RLS
+  - historico e workflow
+  - ocupacao e capacidade
+  - mobile / UX / campo
+  - relatorios e paineis
+- objetivo:
+  - acelerar a execucao
+  - evitar uma fila unica gigante
+  - separar melhor o trabalho das IAs por area
+- VS Code agora tambem tem task para:
+  - disparar frentes paralelas
+- IDs de tarefa e sessao do hub foram endurecidos:
+  - agora usam timestamp com milissegundos + sufixo aleatorio curto
+  - evita colisao quando varias frentes sao abertas no mesmo segundo

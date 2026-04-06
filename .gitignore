@@ -14,3 +14,7 @@ logs/
 *.key
 telegram/
 privado/
+ia_hub/fila/
+ia_hub/inbox/
+ia_hub/sessoes/
+ia_hub/estado/
