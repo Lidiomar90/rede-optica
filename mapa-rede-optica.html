@@ -2792,6 +2792,48 @@ function redesenharSegmentoAtual(){
 function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
 function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
 function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);openM('incidente',null,lat,lng,null,null,site);}
+
+function gerarRelatorioAsBuilt(cabo, site, lat, lng, causa, obs){
+  const ts = new Date().toLocaleString('pt-BR');
+  const txt = `════════════════════════════════════════
+RELATÓRIO DE INTERVENÇÃO - AS-BUILT
+Rede Óptica MG - Gerado em: ${ts}
+════════════════════════════════════════
+
+📍 LOCALIZAÇÃO DA FALHA
+Cabo/Segmento: ${cabo || '—'}
+Site de Referência: ${site || '—'}
+Coordenadas: ${lat.toFixed(6)}, ${lng.toFixed(6)}
+Google Maps: https://www.google.com/maps?q=${lat},${lng}
+
+🛠 DETALHES TÉCNICOS
+Causa Provável: ${causa || 'Rompimento'}
+Observação: ${obs || 'Sem observações adicionais'}
+
+📋 CADEIA DE EMENDAS (AUDITORIA)
+${auditarTrechoFalha(site, lat, lng).map(cx => `[${cx.ordem}] CX ${cx.codigo} | Dist: ${cx.distancia} | Vis: ${cx.status}`).join('\n') || 'Nenhuma caixa detectada no trecho.'}
+
+⚠️ RECOMENDAÇÃO DE CAMPO
+- Verificar integridade da caixa anterior e posterior.
+- Validar potência no site ${site} após fusão.
+- Registrar fotos do reparo e nova caixa se instalada.
+
+════════════════════════════════════════
+FIM DO RELATÓRIO OPERACIONAL
+════════════════════════════════════════`;
+
+  $('mtt').textContent = '📄 Relatório de Intervenção';
+  $('mbd').innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px;font-family:monospace;font-size:10px;white-space:pre-wrap;color:var(--t2);line-height:1.5;max-height:300px;overflow-y:auto;margin-bottom:12px">
+      ${txt}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn2 p" style="flex:1" onclick="navigator.clipboard.writeText(\`${txt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`);toast('Copiado para o clipboard!','ok')">📋 Copiar Texto</button>
+      <button class="btn2 s" style="flex:1" onclick="closeM()">Fechar</button>
+    </div>
+  `;
+  $('mbg').classList.add('show');
+}
 function moverIniciar(id,nome){closePan();moveMode=true;$('h-move').style.display='block';toast('Clique no novo local de '+nome,'wn');map.once('click',async e=>{moveMode=false;$('h-move').style.display='none';const{lat,lng}=e.latlng;const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({localizacao:`SRID=4326;POINT(${lng} ${lat})`})});if([200,204].includes(r.status)){toast('✓ Site movido!');loadMap();}else toast('Erro ao mover','er');});}
 
 // RASTREAMENTO
