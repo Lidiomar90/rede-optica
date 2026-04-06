@@ -12,6 +12,7 @@
 
 **Data:** 2026-04-05 — sessao 3
 **O que foi feito:**
+0. Iniciada sprint mobile-first do mapa: topo compactado, legenda recolhivel no celular, barra de campo horizontal compacta, ferramentas secundarias escondidas atras de "mais" e Auditoria IA convertida para cards mais compactos
 1. Criada `caixa_emenda` (CEO/CTO/DIO): vinculo com cabo + site/dgo + posicao_m + geo + fibras_livres calculado
 2. Criada `segmento_cabo`: trecho logico entre pontas (site|dgo|caixa_emenda) com constraints de exclusividade
 3. Criada `evento_ruptura`: registro de falha com codigo auto (RUP-AAAA-NNNN), geom_falha calculado, tempo_resolucao_min calculado
