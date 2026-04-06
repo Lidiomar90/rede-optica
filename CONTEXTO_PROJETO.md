@@ -22,6 +22,7 @@
 8. Sidebar do mapa ganhou aba operacional `Ativos`, com navegação direta para `Caixas / emendas` e `DGOs`, status operacional e flag visível
 9. Sidebar do mapa ganhou aba `Continu.`, com navegação direta para `Segmentos físicos` e `Rupturas / reparos`, incluindo salto para o mapa e abertura do painel técnico
 10. Abas `Ativos` e `Continu.` ganharam filtros rápidos por status (`Todos`, `Quebrados`, `Pendentes`, `Confirmados`) para inspeção operacional mais rápida
+11. Mapa ganhou `edição rápida` por duplo clique no desktop para `site`, `cabo`, `caixa`, `DGO`, `segmento` e `ruptura`, reduzindo cliques no fluxo operacional
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
