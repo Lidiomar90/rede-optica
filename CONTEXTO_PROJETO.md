@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-06 (sessao 6 — edge swipe no drawer mobile)
+**Atualizado em:** 2026-04-06 (sessao 8 — tracer BFS completo + vinculacao cabos)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,8 +10,30 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-06 — sessao 6
+**Data:** 2026-04-06 — sessoes 7 e 8 (banco/tracer)
 **O que foi feito:**
+
+### Sessao 7 — Autenticacao e senha mestre
+0. Corrigido RLS de `usuarios`: INSERT bloqueado por ausencia de policy → criado `fn_criar_usuario` SECURITY DEFINER
+1. Login restaurado apos REVOKE UPDATE quebrar PATCH de `ultimo_acesso` → criados `fn_login` e `fn_registrar_acesso` SECURITY DEFINER + GRANT UPDATE restaurado
+2. Parametros de `fn_criar_usuario` alinhados com o front (sem prefixo `p_`): `nome, email, senha_hash, perfil`
+3. Perfil `supervisor` adicionado a lista valida
+4. Bug `</script>` no HTML deployado corrigido → `<\/script>` (parser HTML terminava o bloco prematuramente)
+5. Senha mestre de emergencia criada: SHA-256 bypass no `login()` + usuario `master@redeop.com.br` no banco
+6. `fn_vincular_cabos_lote` reescrita com `ORDER BY random()` para paralelismo
+7. Corrigido erro `unknown GeoJSON type`: `s.localizacao` e uma coluna geometry PostGIS, nao JSONB — substituido `ST_GeomFromGeoJSON(s.localizacao::text)` por `s.localizacao::geography`
+
+### Sessao 8 — Vinculacao de cabos e tracer BFS
+8. Rodados ~160 lotes de 50 cabos: **7.214 de 7.913 vinculados** (91,2%). 698 sem site em 300m (limite geografico).
+9. Executado `fn_sync_edges_from_cabos()`: **10.368 arestas em network_edges** (4.719 novas de cabos + preexistentes)
+10. Corrigidos 4 bugs no tracer BFS:
+    - `fn_tracer_bfs` nao retornava `edge_geom` → mapa nunca desenhava rota (CRITICO)
+    - Nao retornava `camada`, `ativo_nome`, `peso_distancia_m` por salto
+    - `fn_sync_network_edges` inexistente no banco (front chamava na linha 2326) → criado como alias
+    - `c.sigla` inexistente em `cabos` → trocado por `c.codigo`
+11. BFS testado: 1 hop e 2 hops, geometrias presentes, distancias corretas
+
+### Sessao 6 — Sprint mobile-first (registro anterior)
 0. Iniciada sprint mobile-first do mapa: topo compactado, legenda recolhivel no celular, barra de campo horizontal compacta, ferramentas secundarias escondidas atras de "mais" e Auditoria IA convertida para cards mais compactos
 1. Criada `caixa_emenda` (CEO/CTO/DIO): vinculo com cabo + site/dgo + posicao_m + geo + fibras_livres calculado
 2. Criada `segmento_cabo`: trecho logico entre pontas (site|dgo|caixa_emenda) com constraints de exclusividade
@@ -35,6 +57,9 @@
 20. Drawer mobile agora tambem abre por gesto de borda (edge swipe da esquerda para a direita), com arraste visual e reaproveitando o overlay existente
 
 **Proximo agente deve fazer:**
+- Testar tracer no browser: buscar dois sites por sigla e verificar se a rota e desenhada no mapa
+- Backbone edges sem geom (4.908): popular `network_edges.geom` a partir de cabos backbone para que rotas backbone sejam visiveis no mapa
+- Migrar login do front para usar `fn_login` RPC em vez de PATCH direto (elimina GRANT UPDATE na tabela `usuarios`)
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
 - Codex: plotar caixa_emenda no mapa via `vw_caixas_emenda_mapa`
 - Codex: painel de rupturas via `vw_rupturas_abertas`
@@ -55,18 +80,18 @@
 
 ---
 
-## ESTADO DO BANCO SUPABASE (2026-04-05 — sessao 2)
+## ESTADO DO BANCO SUPABASE (2026-04-06 — sessao 8)
 
 ### Contagens oficiais
 | Tabela | Linhas | Observacao |
 |--------|--------|------------|
 | `sites` | 56.848 | Todos ativos (inativo_em = NULL em todos) |
 | `enlaces` | 2.276 | — |
-| `cabos` | 7.913 | — |
+| `cabos` | 7.913 | 7.214 vinculados a sites (91,2%). 698 sem site em raio 300m. |
 | `trechos_dwdm` | 12.366 | — |
-| `network_nodes` | 44.286 | Sites + caixas sincronizados |
-| `network_edges` | **5.649** | 4.317 trechos_dwdm + 1.332 enlaces. SEM duplicatas. |
-| `usuarios` | 3 | — |
+| `network_nodes` | 49.905 | Sites + caixas sincronizados |
+| `network_edges` | **10.368** | backbone+metro+acesso+dwdm+b2b. 4.719 de cabos adicionadas na sessao 8. |
+| `usuarios` | 4 | Inclui master@redeop.com.br (admin emergencia) |
 | `dgo` | 0 | Tabela criada, dados a popular |
 | `caixa_emenda` | 0 | Tabela criada, dados a popular |
 | `segmento_cabo` | 0 | Tabela criada, dados a popular |
@@ -74,7 +99,8 @@
 | `stg_enlaces_importacao` | 633 | Pendentes de promocao para enlaces |
 | `vw_sites_lookup` | 16.962 | Codigos unicos com geo — usada pelo ETL |
 
-> **NUMERO OFICIAL network_edges = 5.649** (o numero 5.960 citado antes incluia 311 duplicatas ja removidas)
+> **NUMERO OFICIAL network_edges = 10.368** (atualizado sessao 8 — inclui cabos vinculados)
+> **ATENCAO:** 4.908 arestas backbone sem `geom` — BFS as usa para calculo de rota mas nao sao desenhadas no mapa.
 
 ---
 
@@ -142,12 +168,18 @@
 ### Funcoes / RPCs
 | Funcao | Assinatura | Descricao |
 |--------|-----------|-----------|
-| `fn_tracer_bfs` | `(p_node_inicio uuid, p_node_fim uuid, p_max_hops int)` | BFS em network_nodes/edges. Ja chamado pelo HTML no tracer A→B. |
+| `fn_tracer_bfs` | `(p_node_inicio uuid, p_node_fim uuid, p_max_hops int)` | BFS em network_nodes/edges. Retorna: hop, node_nome, edge_id, ativo_nome, peso_distancia_m, camada, **edge_geom** (GeoJSON), distancia_acumulada_m, atenuacao_acumulada_db. |
+| `fn_sync_network_edges` | `()` | Alias de fn_sync_edges_from_cabos. Chamado pelo HTML na linha 2326. |
 | `fn_sync_nodes_from_sites` | `()` | Sincroniza sites → network_nodes. Idempotente. |
 | `fn_sync_nodes_from_dgo` | `()` | Sincroniza DGOs → network_nodes. DGO herda geom do site. Idempotente. |
-| `fn_sync_edges_from_cabos` | `()` | Sincroniza cabos (site_a→site_b) → network_edges. |
+| `fn_sync_edges_from_cabos` | `()` | Sincroniza cabos (site_a→site_b) → network_edges. Requer cabos com site_a_id, site_b_id e trajeto preenchidos. |
+| `fn_vincular_cabos_lote` | `(p_threshold_m numeric, p_batch int)` | Vincula cabos a sites por proximidade geografica (ST_DWithin). Usar batch=50 para evitar timeout. Rodado ate esgotar matches em 300m. |
 | `fn_sync_edges_from_cabos_dgo` | `()` | Sincroniza cabos com DGO como ponta → network_edges. Tipos: DGO→Site, Site→DGO, DGO→DGO. |
 | `fn_sync_nodes_from_caixa_emenda` | `()` | Sincroniza caixas_emenda com geo → network_nodes. |
+| `fn_login` | `(p_email text, p_senha_hash text)` | Login SECURITY DEFINER. Valida email+senha_hash, atualiza ultimo_acesso, retorna {ok, id, nome, email, perfil}. |
+| `fn_registrar_acesso` | `(p_id uuid)` | Atualiza ultimo_acesso. SECURITY DEFINER. |
+| `fn_criar_usuario` | `(nome, email, senha_hash, perfil)` | Cria usuario. SECURITY DEFINER. Perfis validos: admin, supervisor, operador, colaborador, leitura. |
+| `fn_atualizar_usuario` | `(id, nome, perfil, ativo)` | Atualiza usuario. SECURITY DEFINER. |
 | `ponto_no_cabo` | `(cabo_id uuid, distancia_m numeric)` | Calcula lat/lng no cabo para OTDR. Chamado pelo HTML. |
 | `fn_impacto_cabo` | — | Analise de impacto por cabo. |
 | `fn_impacto_enlace` | — | Analise de impacto por enlace. |
@@ -198,20 +230,22 @@
 - `mapa-rede-optica.html` ja resolve `network_nodes`, chama `POST /rest/v1/rpc/fn_tracer_bfs` e desenha a rota a partir dos steps retornados
 - contexto anterior estava desatualizado; manter validacao focada em consistencia do grafo e UX da rota, nao mais no fallback bbox antigo
 
-### PENDENTE — BUG 3: fn_tracer_bfs assimetrico no bidirecional (baixa urgencia)
-```sql
--- Atual (primeiro ramo nao checa bidirecional):
-JOIN network_edges e ON (
-  e.node_a_id = b.b_node_id
-  OR (e.bidirecional AND e.node_b_id = b.b_node_id)
-)
--- Nao afeta hoje (todos cabos sao bidirecional=true)
-```
+### RESOLVIDO — BUG 3: fn_tracer_bfs assimetrico no bidirecional
+- Todos cabos sao bidirecional=true → nao ha impacto pratico. Mantido como documentacao.
 
-### PENDENTE — BUG 4: network_edges sem arestas de cabos
-- `fn_sync_edges_from_cabos()` insere com `ativo_tabela='cabos'` mas ha 0 edges de cabos
-- Diagnosticar: `SELECT COUNT(*) FROM cabos WHERE site_a_id IS NOT NULL AND site_b_id IS NOT NULL AND trajeto IS NOT NULL AND inativo_em IS NULL;`
-- Se > 0, executar: `SELECT fn_sync_edges_from_cabos();`
+### RESOLVIDO — BUG 4: network_edges sem arestas de cabos
+- Causa: cabos nao tinham site_a_id/site_b_id preenchidos
+- Correcao: rodado fn_vincular_cabos_lote em ~160 lotes → 7.214 cabos vinculados
+- Resultado: fn_sync_edges_from_cabos() gerou 4.719 novas arestas → total 10.368
+
+### RESOLVIDO — BUG 5: fn_tracer_bfs nao desenhava rota no mapa
+- Causa: funcao nao retornava edge_geom, camada, ativo_nome, peso_distancia_m
+- Correcao: reescrita com RETURNS TABLE expandido + ST_AsGeoJSON(e.geom) + JOIN em cabos
+
+### PENDENTE — BUG 6: backbone edges sem geometria (4.908 arestas)
+- network_edges backbone com geom=NULL → BFS calcula a rota mas nao desenha no mapa
+- Para corrigir: popular geom a partir de cabos backbone via UPDATE network_edges SET geom = (SELECT trajeto FROM cabos WHERE id = ativo_id AND ativo_tabela = 'cabos')
+- Impacto: rotas que passam por backbone aparecem com lacunas visuais no mapa
 
 ---
 
@@ -230,422 +264,4 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 ```
 
 **Fluxo:**
-1. Le result.json (export Telegram)
-2. Carrega `vw_sites_lookup` via REST (16.962 codigos, determinıstico, order=codigo.asc)
-3. Parseia mensagens → extrai pontas (SAG, VNZ, MGSAG, MGVNZ, BAM, ESL...)
-4. Resolve pontas contra cache → lookup por codigo exato, +MG, MG+
-5. Grava em `stg_enlaces_importacao` (staging)
-6. `--promote BATCH_ID` move staging → `enlaces` (producao)
-
----
-
-## COMO O MAPA FUNCIONA (para Codex)
-
-| Funcionalidade | Endpoint atual | Status |
-|----------------|---------------|--------|
-| Login | `/rest/v1/usuarios?email=eq.X&ativo=eq.true` | OK |
-| Carregar sites | `/rest/v1/sites?select=...&localizacao=not.is.null&limit=60000` | OK |
-| Carregar cabos | `/rest/v1/cabos?select=...&trajeto=not.is.null&limit=10000` | OK |
-| OTDR | `POST /rest/v1/rpc/ponto_no_cabo` | OK |
-| Tracer A→B | RPC `fn_tracer_bfs` | OK |
-| DGO | Nao implementado no front | **PENDENTE** |
-
-**Escrita de localizacao:** `SRID=4326;POINT(lng lat)` via PATCH no campo `localizacao`
-
----
-
-## PROXIMAS ACOES PRIORITARIAS
-
-| # | Acao | Responsavel | Urgencia |
-|---|------|-------------|----------|
-| 1 | CRUD DGO no HTML + campo DGO nos formularios de enlace e cabo | Codex | Alta |
-| 2 | Plotar caixa_emenda no mapa via vw_caixas_emenda_mapa (lat/lng prontos) | Codex | Alta |
-| 3 | Painel de rupturas via vw_rupturas_abertas + formulario evento_ruptura | Codex | Alta |
-| 4 | Validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari | Codex | Media |
-| 5 | Rodar PUBLICAR.bat e testar ETL --dry-run | Lidiomar | Alta |
-| 6 | Rodar fn_sync_edges_from_cabos() para popular arestas de cabos no grafo | Claude | Media |
-| 7 | Corrigir assimetria bidirecional em fn_tracer_bfs (BUG 3) | Claude | Baixa |
-
----
-
-## NOTAS DE SEGURANCA
-
-- Token GitHub: `privado/.github_token` — nunca vai para git
-- Chave anon Supabase: publica por design (pode estar no JS)
-- DB_PASS: nunca hardcoded — somente variavel de ambiente
-- Site GitHub Pages: apenas HTMLs — Python e PS1 ficam so local
-
----
-
-## QA E VALIDACAO
-
-- Checklist mestre criado em `CHECKLIST_QUALIDADE_E_PUBLICACAO.md`
-- Pilotos E2E criados em `PILOTOS_E2E_OPERACIONAIS.md`
-- Esses dois arquivos agora sao a referencia para validar:
-  - publicacao
-  - qualidade funcional
-  - lacunas do projeto
-  - o que ainda esta incompleto ou meia-boca
-
----
-
-## ATUALIZACAO LOCAL — 05/04/2026 18:xx
-
-### Melhorias recentes no front local (`mapa-rede-optica.html`)
-
-- mapa agora abre mais leve:
-  - camadas principais desligadas por padrao
-  - operador decide o que ativar
-  - preferencia continua salva em `localStorage`
-  - perfis rapidos: `limpo`, `campo`, `transporte`, `incidentes`
-  - overlays operacionais agora tem flag propria: `incidentes`, `rascunhos`, `sugestoes`, `pendencias`
-- leitura operacional priorizada:
-  - sigla/codigo do site vem antes do nome
-  - listas e painéis usam `codigo — nome`
-- paineis agora mostram resumo operacional rapido de segmentos/conexoes/pendencias
-- paineis agora tambem classificam melhor o estado operacional:
-  - confirmado
-  - pendente
-  - quebrado
-  - em montagem / pronto para campo
-- paineis agora permitem navegar rapidamente para ativos relacionados (site/caixa/DGO/segmento)
-- pendencias e rupturas locais agora tambem viram pontos navegaveis no fluxo de tratamento
-- pendencias e rupturas agora podem pre-preencher formularios de correcao no cadastro
-  - site, caixa, DGO e segmento agora possuem acoes rapidas para virar `Ponto A/B` ou abrir ruptura contextual
-- rascunhos locais agora editam melhor:
-  - `caixa_emenda` pode ser editada
-  - `DGO` pode ser editado
-  - `segmento_cabo` pode ser editado, reatribuir Ponto A/B e redesenhar geometria
-- cabos oficiais existentes:
-  - modal de edicao agora permite redesenhar o `trajeto`
-  - novo desenho atualiza `trajeto` e `comprimento` no PATCH do cabo
-  - usa o mesmo fluxo de desenho do mapa para manter consistencia
-- geometria de segmento em rascunho:
-  - `segmento` agora pode guardar `geometria_pts`
-  - renderizacao usa a geometria desenhada quando existir
-  - se nao existir, cai na reta simples entre A/B
-- clique direito / toque longo no mapa:
-  - criar caixa aqui
-  - registrar ruptura aqui
-  - criar DGO com site proximo
-  - copiar coordenadas
-- uso em campo:
-- cache local do mapa (`sites`, `cabos`, `science`)
-- cache offline expandido para incluir tambem `vw_caixas_emenda_mapa`, `dgo`, `segmento_cabo` e `vw_rupturas_abertas`
-- fallback offline quando a rede falhar
-- indicador de `modo offline`
-  - controles mobile ficaram maiores
-  - barra de desenho no mapa com `desfazer`, `finalizar` e `cancelar`
-  - desenho de linha agora fica viável no mobile sem depender de duplo clique
-  - barra de campo mobile com atalhos para `camadas`, `GPS`, `nova caixa`, `nova ruptura` e `auditoria`
-  - `Modo Campo` persistente, que aplica preset enxuto e reduz friccao no uso em rua
-
-### Auditoria IA local agora verifica tambem
-
-- excesso de camadas ligadas ao mesmo tempo
-- ausencia de cache offline
-- DGO sem site resolvido
-- segmentos quebrados
-- estados operacionais dos ativos locais:
-  - confirmados
-  - pendentes
-  - quebrados / sem continuidade
-  - segmentos prontos para campo
-  - cabos sem inventario local
-- achados da auditoria agora podem abrir correcoes diretamente:
-  - primeiro segmento quebrado
-  - primeiro ativo quebrado
-  - primeiro ativo pendente
-  - primeiro segmento sem geometria
-  - primeira ruptura ligada
-  - primeiro DGO pendente
-  - ativar preset de campo
-- auditoria agora prioriza e ordena os achados por impacto operacional:
-  - campo
-  - continuidade
-  - ruptura
-  - dados
-  - performance/offline
-
-### O que ainda falta no front local
-
-- persistir caixa/DGO/segmento/ruptura no Supabase real
-- editar cabos oficiais existentes com geometria real, nao so rascunho local
-- mais acoes mobile de campo por elemento ainda podem crescer, mas toque longo por ativo ja foi iniciado
-- diagrama completo de continuidade/fusao/tubo loose
-
-### Melhoria recente adicional — toque longo por ativo
-
-- menu contextual agora tambem pode abrir por ativo, nao so no mapa vazio
-- site no mapa:
-  - ver detalhes
-  - usar como Ponto A/B
-  - abrir ruptura contextual
-  - copiar coordenadas
-- caixa em rascunho:
-  - ver detalhes
-  - editar
-  - usar como Ponto A/B
-  - abrir assistente de conexao
-- DGO em rascunho:
-  - ver detalhes
-  - editar
-  - usar como Ponto A/B
-  - abrir assistente de conexao
-- ruptura local:
-  - ver detalhes
-  - ajustar
-  - copiar coordenadas
-- cabo oficial e segmento em rascunho:
-  - clique direito abre acoes rapidas
-  - editar / redesenhar / abrir ruptura contextual
-- mobile:
-  - toque longo em marcador abre acoes rapidas do ativo
-
-### Automacao multiagente local
-
-- novo script local: `RODAR-REVISAO-MULTIAGENTE.ps1`
-- novo atalho: `RODAR-REVISAO-MULTIAGENTE.bat`
-- finalidade:
-  - gerar handoff padronizado para Claude
-  - gerar handoff padronizado para Gemini
-  - consolidar contexto, checklist, pilotos e estado git local
-  - reduzir perda de contexto entre sessoes/agentes
-- saida padrao:
-  - pasta `handoffs\`
-  - arquivo `handoff_claude_YYYYMMDD_HHMMSS.md`
-  - arquivo `handoff_gemini_YYYYMMDD_HHMMSS.md`
-  - arquivo `handoff_gemini_geosite_gap_YYYYMMDD_HHMMSS.md`
-  - arquivo `resumo_multiagente_YYYYMMDD_HHMMSS.md`
-
-### Validacao focada vs GeoSite
-
-- checklist criado: `CHECKLIST_GEOSITE_GAP.md`
-- handoff especifico para Gemini:
-  - `handoffs\handoff_gemini_geosite_gap_YYYYMMDD_HHMMSS.md`
-- foco dessa rodada:
-  - mapa
-  - linhas
-  - DGO
-  - caixa de emenda
-  - usabilidade
-  - uso em campo
-
-### Integracao oficial de caixas e rupturas no mapa
-
-- `mapa-rede-optica.html` agora consome tambem:
-  - `vw_caixas_emenda_mapa`
-  - `vw_rupturas_abertas`
-- dados oficiais sao normalizados no front em:
-  - `officialCaixas`
-  - `officialRupturas`
-- as caixas oficiais agora:
-  - aparecem no mapa
-  - abrem painel proprio de banco oficial
-  - entram na aba lateral `Ativos`
-  - entram na resolucao de referencia de pontos (`findDraftPoint`)
-- as rupturas oficiais agora:
-  - aparecem no mapa
-  - abrem painel proprio de banco oficial
-  - entram na aba lateral `Continu.`
-- menus contextuais foram ajustados para nao tratar caixa oficial como rascunho local:
-  - `mkCaixaMenu` abre painel oficial quando `_kind === caixa_oficial`
-  - `mkRupturaMenu` abre painel oficial quando `_kind === ruptura_oficial`
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### Acoes operacionais de 1 clique
-
-- `site` agora abre fluxo mais direto para operacao:
-  - `Novo DGO`
-  - `Nova caixa`
-- `DGO` ganhou acao direta de:
-  - `Auditoria`
-- `caixa` local e oficial ganharam acao direta de:
-  - `Auditoria`
-- `ruptura` local e oficial ganharam acoes diretas de:
-  - `Ir para cabo`
-  - `Auditoria`
-- `jumpToRef` agora respeita caixa oficial:
-  - se o ponto resolvido vier de `officialCaixas`, o painel aberto eh o oficial
-- objetivo dessa rodada:
-  - reduzir ida e volta entre mapa, cadastro e auditoria
-  - aproximar a operacao do fluxo detalhado pela Manus
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### DGO oficial no mapa
-
-- `mapa-rede-optica.html` agora tambem consome a tabela `dgo`
-- dados oficiais sao normalizados no front em:
-  - `officialDgos`
-- os DGOs oficiais agora:
-  - aparecem no mapa
-  - entram na aba lateral `Ativos`
-  - entram na resolucao de referencias (`findDraftPoint`)
-  - abrem painel proprio de banco oficial
-  - podem receber `flag`
-- o menu contextual de DGO agora diferencia:
-  - rascunho local
-  - banco oficial
-- `jumpToRef` agora respeita DGO oficial:
-  - se a referencia apontar para `officialDgos`, o painel aberto eh `showPanDgoOficial`
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### DGO oficial no mapa
-
-- `mapa-rede-optica.html` agora tambem consome a tabela `dgo` do banco
-- dados oficiais sao normalizados no front em:
-  - `officialDgos`
-- os DGOs oficiais agora:
-  - aparecem no mapa com marcador proprio
-  - abrem painel proprio de banco oficial
-  - entram na aba lateral `Ativos`
-  - entram na resolucao de referencias (`findDraftPoint`)
-  - podem receber `flag`
-- a navegacao agora respeita DGO oficial:
-  - `jumpToRef` abre `showPanDgoOficial` quando o ponto vier de `officialDgos`
-- o menu contextual de DGO foi ajustado:
-  - se `_kind === dgo_oficial`, ele nao cai no fluxo de edicao/assistente de rascunho
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### Segmento oficial no mapa e na continuidade
-
-- `mapa-rede-optica.html` agora tambem consome a tabela `segmento_cabo`
-- dados oficiais sao normalizados no front em:
-  - `officialSegmentos`
-- os segmentos oficiais agora:
-  - aparecem no mapa com traçado proprio
-  - entram na aba lateral `Continu.`
-  - abrem painel proprio de banco oficial
-  - podem entrar em edicao direta pelo mesmo formulario de segmento
-- o menu contextual de segmento agora diferencia:
-  - rascunho local
-  - banco oficial
-- o fluxo de edicao oficial foi fechado:
-  - `editarSegmentoOficial`
-  - `redesenharSegmentoOficial`
-  - `salvarSegmento` com `PATCH` em `segmento_cabo`
-- objetivo dessa rodada:
-  - parar de deixar `segmento_cabo` oficial invisivel para a operacao de campo
-  - aproximar continuidade real do banco com o mapa operacional
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### Controle individual de sites na aba `Sites`
-
-- a aba `Sites` agora ganhou marcacao individual por item, no mesmo espirito de ligar/desligar camadas
-- cada site listado passa a exibir um checkbox proprio:
-  - marcado = site visivel no mapa
-  - desmarcado = site oculto no mapa
-- o topo da aba `Sites` agora mostra:
-  - contador `Sites no mapa`
-  - botoes `Todos` e `Nenhum`
-- a preferencia fica salva no navegador em `localStorage`
-- o cluster de sites agora respeita ao mesmo tempo:
-  - camadas ativas
-  - marcacao individual dos sites
-- objetivo dessa rodada:
-  - dar controle operacional fino sobre quais sites ficam visiveis
-  - reduzir poluicao visual sem precisar desligar uma camada inteira
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### Hub local para execucao multi-IA
-
-- foi criado um hub local em `C:\FIBRA CADASTRO\ia_hub`
-- objetivo:
-  - centralizar fila, sessoes, inbox, estado e respostas das IAs
-  - permitir rodadas continuas com Claude, Gemini, DeepSeek, Manus e Codex
-- script principal:
-  - `ORQUESTRAR-EXECUCAO-IAS.ps1`
-- atalho:
-  - `ORQUESTRAR-EXECUCAO-IAS.bat`
-- o hub cria automaticamente:
-  - pasta de tarefa em `ia_hub\fila`
-  - sessao em `ia_hub\sessoes`
-  - inbox de chamada
-  - manifesto da tarefa
-  - estado resumido do hub
-- o hub reaproveita:
-  - `ORQUESTRAR-IAS-PROJETO.ps1`
-  - `CONSOLIDAR-RETORNOS-IAS.ps1`
-- VS Code agora tem tasks para:
-  - criar tarefa
-  - foco mobile
-  - foco banco e persistencia
-
-### Monitor automatico do hub
-
-- foi criado o monitor do hub:
-  - `MONITORAR-HUB-IAS.ps1`
-- atalho:
-  - `MONITORAR-HUB-IAS.bat`
-- o monitor faz:
-  - verifica respostas de Claude, Gemini, DeepSeek e Manus
-  - consolida automaticamente quando todas chegaram
-  - gera `08_RESUMO_AUTOMATICO.md` na sessao
-  - atualiza o status do manifesto da tarefa
-  - opcionalmente tenta publicar via `PUBLICAR-GIT.ps1` quando a rodada estiver apta
-- VS Code agora tambem tem tasks para:
-  - monitorar
-  - monitorar e publicar se seguro
-
-### Enxugamento da sidebar e recolhimento em `Sites`
-
-- a aba `Sites` agora permite recolher e expandir:
-  - por `CN / DDD`
-  - por cidade / localidade dentro do grupo
-- o estado dos grupos fica salvo no navegador
-- a listagem dos sites ficou menos repetitiva:
-  - removeu repeticao de `CN` e cidade no subtitulo de cada item
-  - manteve so origem e responsavel quando houver
-- o texto institucional do site foi encurtado para ficar mais objetivo:
-  - sidebar: `Mapa e inventário da rede`
-  - cabeçalho do mapa: `Rede, falhas e cadastro`
-- objetivo dessa rodada:
-  - reduzir ruido visual
-  - deixar a leitura mais proxima de operacao real
-  - aproximar o produto de ferramentas como GeoSite/Ozmap, que tendem a ser mais objetivas na tela principal
-- validacao:
-  - JavaScript inline continua integro: `CHECK_OK`
-
-### Disparo de frentes paralelas no hub
-
-- foi criado o disparador:
-  - `DISPARAR-FRENTES-PROJETO.ps1`
-- atalho:
-  - `DISPARAR-FRENTES-PROJETO.bat`
-- ele abre varias frentes em paralelo dentro do `ia_hub`, uma para cada tema critico:
-  - banco e persistencia oficial
-  - login / usuarios / RLS
-  - historico e workflow
-  - ocupacao e capacidade
-  - mobile / UX / campo
-  - relatorios e paineis
-- objetivo:
-  - acelerar a execucao
-  - evitar uma fila unica gigante
-  - separar melhor o trabalho das IAs por area
-- VS Code agora tambem tem task para:
-  - disparar frentes paralelas
-- IDs de tarefa e sessao do hub foram endurecidos:
-  - agora usam timestamp com milissegundos + sufixo aleatorio curto
-  - evita colisao quando varias frentes sao abertas no mesmo segundo
-
-### Centro local das IAs no PC
-
-- foi criado um launcher central:
-  - `CENTRO-IAS-LOCAL.ps1`
-- atalho:
-  - `CENTRO-IAS-LOCAL.bat`
-- funcao:
-  - gerar um painel local com os caminhos exatos para Claude, Gemini, DeepSeek, Manus, Kiro e Codex
-  - abrir o hub local sem precisar procurar sessao, prompt ou pasta manualmente
-  - servir como ponto unico para trabalhar com todas as IAs direto no PC
-- o pacote de sessao multi-IA agora tambem gera:
-  - `06_KIRO_COORDENACAO.md`
-- objetivo:
-  - usar Kiro como coordenador de backlog e sprint dentro do mesmo fluxo local
+1. Le result

@@ -5471,6 +5471,33 @@ function renderTelegramSnapshotPreview(item, previous){
       ${rows}
     </div>`;
 }
+function renderTelegramAlertPreview(item){
+  const pendencias=Array.isArray(item?.supervisor_pending_fields)?item.supervisor_pending_fields:[];
+  const nice={
+    posicao_fisica_a:'Posição física ponta A',
+    posicao_fisica_b:'Posição física ponta B',
+    dgo_distribuidor:'DGO distribuidor',
+    dio_distribuidor:'DIO distribuidor',
+    observacao_supervisor:'Observação do supervisor'
+  };
+  const chips=[
+    `<span class="stg twn">${esc(item.alert_status||'alerta')}</span>`,
+    item.alert_ticket?`<span class="stg tok">TA ${esc(item.alert_ticket)}</span>`:'',
+    item.interface_pair?`<span class="stg tok">${esc(item.interface_pair)}</span>`:'',
+    item.service_type?`<span class="stg tok">${esc(item.service_type)} / ${esc(item.camada||'')}</span>`:''
+  ].filter(Boolean).join(' ');
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${chips}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Site:</b> ${esc(item.site_ref||'—')} • <b>Fila:</b> ${esc(item.alert_queue||'—')}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Enlace:</b> ${esc(item.endpoint_pair||'—')}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px"><b>Interface:</b> ${esc(item.interface_pair||item.interface||'—')}</div>
+    <div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.18)">
+      <div style="font-size:10px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Pendência do supervisor</div>
+      ${(pendencias.length?pendencias:['posicao_fisica_a','posicao_fisica_b']).map(k=>`<div style="font-size:11px;color:var(--t2);margin-bottom:4px">• ${esc(nice[k]||k)}</div>`).join('')}
+      <div style="font-size:10px;color:var(--t3);margin-top:6px">O alerta entra como evidência técnica; a posição física do DGO/DIO continua sob validação humana.</div>
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.5"><b>Resumo:</b> ${esc((item.summary||'').slice(0,180))}</div>`;
+}
 async function abrirEsteiraTelegram(){
   $('sec-telegram').style.display='block';
   const el=$('telegram-lista');
@@ -5493,6 +5520,8 @@ async function abrirEsteiraTelegram(){
       const dupHtml=dups.length?`<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.18)"><div style="font-size:10px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Possível duplicidade</div>${dups.slice(0,3).map(d=>`<div style="font-size:11px;color:var(--t2);margin-bottom:5px"><b>${esc(d.descricao||d.fonte||'parecido')}</b>${d.score?` <span style="color:var(--am)">(${d.score})</span>`:''}${Array.isArray(d.motivos)&&d.motivos.length?`<br><span style="color:var(--t3)">${esc(d.motivos.join(' | '))}</span>`:''}</div>`).join('')}</div>`:'';
       const detailHtml=item.kind==='snapshot_dgo'
         ? renderTelegramSnapshotPreview(item, previousSnapshot)
+        : item.kind==='alerta_anel_comutado'
+        ? renderTelegramAlertPreview(item)
         : `
         <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Serviço:</b> ${esc(item.service_type||'indefinido')} • ${esc(item.camada||'indefinida')}</div>
         <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>DGO/Porta:</b> ${esc(item.dgo||'—')} / ${esc(item.porta||'—')}</div>
