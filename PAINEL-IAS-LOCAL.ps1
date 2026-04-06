@@ -53,6 +53,47 @@ function Get-Badge {
     return "<span class='badge $Kind'>$Label</span>"
 }
 
+function Get-SessionMeta {
+    param([string]$SessionDir)
+
+    $summaryPath = Join-Path $SessionDir "00_RESUMO_SESSAO.md"
+    $text = if (Test-Path $summaryPath) { Get-Content -Path $summaryPath -Raw -ErrorAction SilentlyContinue } else { "" }
+    $focus = ""
+    if ($text -match 'Foco da rodada:\s*(.+)') {
+        $focus = $matches[1].Trim()
+    }
+
+    $focusLc = $focus.ToLowerInvariant()
+    $front = "geral"
+    $priority = "media"
+
+    if ($focusLc -match 'login|rls|usuarios|autentic') {
+        $front = "login e permissoes"
+        $priority = "critica"
+    } elseif ($focusLc -match 'banco|persistencia|continuidade|caixa_emenda|segmento_cabo|evento_ruptura|dgo') {
+        $front = "banco e persistencia"
+        $priority = "alta"
+    } elseif ($focusLc -match 'mobile|campo|sobreposicao|ozmap|geosite|experiencia de rua|performance') {
+        $front = "mobile e campo"
+        $priority = "alta"
+    } elseif ($focusLc -match 'historico|workflow|auditoria de manutencao|trilha') {
+        $front = "historico e workflow"
+        $priority = "alta"
+    } elseif ($focusLc -match 'ocupacao|capacidade|fibras livres|portas|disponibilidade') {
+        $front = "ocupacao e capacidade"
+        $priority = "media"
+    } elseif ($focusLc -match 'relatorios|dashboards|exportacoes|gerencial|produtividade') {
+        $front = "relatorios e paineis"
+        $priority = "media"
+    }
+
+    return @{
+        Focus = $focus
+        Front = $front
+        Priority = $priority
+    }
+}
+
 if ($DispararFrentes) {
     $params = @{}
     if ($SemGit) { $params.SemGit = $true }
@@ -80,6 +121,7 @@ $sessionCards = foreach ($sessao in $sessions) {
     $kiroResp = Join-Path $respostas "kiro_resposta.md"
     $consolidado = Join-Path $sessao.FullName "07_RELATORIO_CONSOLIDADO.md"
     $monitor = Join-Path $sessao.FullName "08_RESUMO_AUTOMATICO.md"
+    $meta = Get-SessionMeta -SessionDir $sessao.FullName
 
     $readyCount = @(
         (Has-RealResponse $claudeResp),
@@ -90,6 +132,8 @@ $sessionCards = foreach ($sessao in $sessions) {
     ) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
 
     $badges = @()
+    $badges += Get-Badge -Label $meta.Front -Kind "front"
+    $badges += Get-Badge -Label $meta.Priority -Kind "priority-$($meta.Priority)"
     if (Test-Path $monitor) { $badges += Get-Badge -Label "monitorado" -Kind "ok" }
     if (Test-Path $consolidado) { $badges += Get-Badge -Label "consolidado" -Kind "info" }
     if ($readyCount -eq 5) { $badges += Get-Badge -Label "5/5 respostas" -Kind "ok" }
@@ -103,6 +147,7 @@ $sessionCards = foreach ($sessao in $sessions) {
           <a class="pill" href="$(To-FileUrl $sessao.FullName)">abrir sessao</a>
         </div>
         <p class="session-path">$($sessao.FullName)</p>
+        <p class="session-path">foco: $($meta.Focus)</p>
         <div class="badge-row">$($badges -join '')</div>
         <div class="agent-grid">
           <a class="agent-link claude" href="$(To-FileUrl $claude)">Claude</a>
@@ -289,6 +334,10 @@ $html = @"
     .badge.warn{background:rgba(255,191,71,.12); border-color:rgba(255,191,71,.35); color:#ffd27f}
     .badge.info{background:rgba(94,200,255,.12); border-color:rgba(94,200,255,.35); color:#9fdcff}
     .badge.muted{background:rgba(142,163,194,.12); border-color:rgba(142,163,194,.25); color:#a9b8d0}
+    .badge.front{background:rgba(56,216,210,.12); border-color:rgba(56,216,210,.28); color:#8ef3ef}
+    .badge.priority-critica{background:rgba(255,92,92,.12); border-color:rgba(255,92,92,.35); color:#ff9d9d}
+    .badge.priority-alta{background:rgba(255,191,71,.12); border-color:rgba(255,191,71,.35); color:#ffd27f}
+    .badge.priority-media{background:rgba(142,163,194,.12); border-color:rgba(142,163,194,.25); color:#b8c5d8}
     .tools{
       padding:22px;
       display:grid;
