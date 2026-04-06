@@ -984,7 +984,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-let map,allS=[],allC=[],allR=[],scienceSites=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -1060,6 +1060,54 @@ function saveMapCache(sites,cabos,science){
 }
 function loadMapCache(){
   try{return JSON.parse(localStorage.getItem(MAP_CACHE_KEY)||'null');}catch{return null;}
+}
+function pointFromAnyGeom(row){
+  const cand=[row?.localizacao,row?.geom_falha,row?.geom,row?.geometria,row?.ponto];
+  for(const g of cand){
+    const pt=PP(g);
+    if(pt)return pt;
+  }
+  if(row?.lat&&row?.lng)return [Number(row.lat),Number(row.lng)];
+  if(row?.latitude&&row?.longitude)return [Number(row.latitude),Number(row.longitude)];
+  return null;
+}
+function normalizeCaixaMapaRow(row){
+  const pt=pointFromAnyGeom(row);
+  return {
+    ...row,
+    _kind:'caixa_oficial',
+    _pt:pt,
+    id:String(row.id||row.codigo||row.nome||crypto.randomUUID()),
+    codigo:row.codigo||row.sigla||row.nome||'CAIXA',
+    nome:row.nome||row.codigo||row.sigla||'Caixa oficial',
+    tipo_instalacao:row.tipo_instalacao||row.instalacao||row.tipo_lancamento||'—',
+    modelo:row.modelo||row.modelo_caixa||'—',
+    fabricante:row.fabricante||'—',
+    status:row.status||'ativo',
+    vistoriada:!!row.vistoriada,
+    precisa_troca:!!row.precisa_troca,
+    observacao:row.observacao||row.obs||'',
+    lat:pt?.[0],
+    lng:pt?.[1],
+  };
+}
+function normalizeRupturaMapaRow(row){
+  const pt=pointFromAnyGeom(row);
+  return {
+    ...row,
+    _kind:'ruptura_oficial',
+    _pt:pt,
+    id:String(row.id||row.codigo||row.cabo_segmento||crypto.randomUUID()),
+    cabo_segmento:row.cabo_segmento||row.cabo||row.segmento||row.codigo||'Ruptura oficial',
+    distancia_otdr_m:Number(row.distancia_otdr_m||row.distancia_m||0),
+    metragem_lancada_m:Number(row.metragem_lancada_m||row.metragem_m||0),
+    nova_caixa:row.nova_caixa||row.caixa_nova_codigo||row.caixa_codigo||'',
+    tipo_reparo:row.tipo_reparo||row.tipo_falha||row.causa||'ruptura',
+    observacao:row.observacao||row.descricao||'',
+    status:row.status||'aberta',
+    lat:pt?.[0],
+    lng:pt?.[1],
+  };
 }
 function isMobileUI(){return window.innerWidth<=680;}
 function setMobileToolsExpanded(on){
@@ -1218,16 +1266,17 @@ function mkSiteMenu(s,pt){
 }
 function mkCaixaMenu(cx){
   const flagged=!!getFlagForAsset('caixa',cx.id);
+  const isOfficial=cx?._kind==='caixa_oficial';
   return {
     title:`Caixa ${normText(cx.codigo)||'Rascunho'}`,
-    subtitle:`${esc(cx.nome||'Caixa de emenda')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}`,
+    subtitle:`${esc(cx.nome||'Caixa de emenda')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}${isOfficial?'<br>banco oficial':''}`,
     actions:[
-      {label:'📋 Ver detalhes',action:()=>showPanCaixaDraft(cx)},
+      {label:'📋 Ver detalhes',action:()=>isOfficial?showPanCaixaOficial(cx):showPanCaixaDraft(cx)},
       {label:flagged?'🚩 Editar flag':'🚩 Marcar caixa',action:()=>openFlagEditor('caixa',cx.id)},
-      {label:'✏️ Editar caixa',action:()=>editarCaixaDraft(cx.id)},
+      ...(!isOfficial?[{label:'✏️ Editar caixa',action:()=>editarCaixaDraft(cx.id)}]:[]),
       {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-a')},
       {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(cx.codigo||cx.nome||'','sg-b')},
-      {label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexao(cx.codigo||'')},
+      ...(!isOfficial?[{label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexao(cx.codigo||'')}]:[]),
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(cx.lat),Number(cx.lng))},
     ]
   };
@@ -1249,11 +1298,12 @@ function mkDgoMenu(dg,site){
   };
 }
 function mkRupturaMenu(rp){
+  const isOfficial=rp?._kind==='ruptura_oficial';
   return {
     title:`Ruptura ${normText(rp.cabo_segmento)||'Local'}`,
-    subtitle:`OTDR: ${rp.distancia_otdr_m||0}m<br>Lançado: ${rp.metragem_lancada_m||0}m | Nova caixa: ${esc(rp.nova_caixa||'—')}`,
+    subtitle:`OTDR: ${rp.distancia_otdr_m||0}m<br>Lançado: ${rp.metragem_lancada_m||0}m | Nova caixa: ${esc(rp.nova_caixa||'—')}${isOfficial?'<br>banco oficial':''}`,
     actions:[
-      {label:'📋 Ver detalhes',action:()=>showPanRupturaDraft(rp)},
+      {label:'📋 Ver detalhes',action:()=>isOfficial?showPanRupturaOficial(rp):showPanRupturaDraft(rp)},
       {label:'✏️ Ajustar ruptura',warn:true,action:()=>abrirRupturaPorContexto(rp)},
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(rp.lat),Number(rp.lng))},
     ]
@@ -1644,7 +1694,7 @@ async function loadMap(){
   
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
-    let sites,cabos,science;
+    let sites,cabos,science,caixasMapa,rupturasMapa;
     try{
       const zoom = map.getZoom();
       let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
@@ -1657,10 +1707,12 @@ async function loadMap(){
         caboUrl += `&trajeto=ov.${bbox}`;
       }
 
-      [sites,cabos,science]=await Promise.all([
+      [sites,cabos,science,caixasMapa,rupturasMapa]=await Promise.all([
         fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
+        fetch(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
       ]);
       saveMapCache(sites,cabos,science);
       setOfflineState(false);
@@ -1670,11 +1722,15 @@ async function loadMap(){
       sites=cache.sites||[];
       cabos=cache.cabos||[];
       science=cache.science||[];
+      caixasMapa=[];
+      rupturasMapa=[];
       setOfflineState(true,'Sem rede estável. Carregando último cache local.');
     }
     scienceSites=Array.isArray(science)?science:[];
     allS=mergeSitesData(Array.isArray(sites)?sites:[],scienceSites);
     allC=Array.isArray(cabos)?cabos:[];
+    officialCaixas=(Array.isArray(caixasMapa)?caixasMapa:[]).map(normalizeCaixaMapaRow).filter(x=>x._pt);
+    officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
     const totalSites=allS.length.toLocaleString('pt-BR');
     const totalCabos=allC.length.toLocaleString('pt-BR');
     $('ce').textContent=totalSites;
@@ -2088,27 +2144,38 @@ function renderSBv2(q=''){
         cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
       };
     });
-    const rupts=store.rupturas.map(rp=>({
-      kind:'ruptura',
-      id:rp.id,
-      label:rp.cabo_segmento||'Ruptura local',
-      sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
-      status:rp._synced?'registrada':'rascunho',
-      cls:rp._synced?'tok':'twn'
-    }));
+    const rupts=[
+      ...store.rupturas.map(rp=>({
+        kind:'ruptura',
+        id:rp.id,
+        label:rp.cabo_segmento||'Ruptura local',
+        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
+        status:rp._synced?'registrada':'rascunho',
+        cls:rp._synced?'tok':'twn'
+      })),
+      ...officialRupturas.map(rp=>({
+        kind:'ruptura_oficial',
+        id:rp.id,
+        label:rp.cabo_segmento||'Ruptura oficial',
+        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`,'banco oficial'].filter(Boolean).join(' • '),
+        status:rp.status||'aberta',
+        cls:String(rp.status||'').toLowerCase().includes('fech')?'tok':'ter'
+      }))
+    ];
     const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
     if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
     let h='';
     const groups=[
       ['segmento','Segmentos físicos','#22d3ee'],
-      ['ruptura','Rupturas / reparos','#e84455']
+      ['ruptura','Rupturas / reparos','#e84455'],
+      ['ruptura_oficial','Rupturas oficiais','#ff7a8c']
     ];
     groups.forEach(([kind,label,color])=>{
       const arr=items.filter(i=>i.kind===kind).sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'));
       if(!arr.length)return;
       h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
       arr.forEach(i=>{
-        const id=`${kind==='segmento'?'seg':'rp'}-${i.id}`;
+        const id=kind==='segmento'?`seg-${i.id}`:(kind==='ruptura_oficial'?`rp-db-${i.id}`:`rp-${i.id}`);
         h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${kind==='segmento'?'ln':''}" style="background:${color}${kind==='segmento'?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
       });
     });
@@ -2119,11 +2186,12 @@ function renderSBv2(q=''){
     const store=getInvStore();
     const ativos=[
       ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+      ...officialCaixas.map(cx=>({kind:'caixa_oficial',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'ativo',flag:getFlagIndicatorHtml('caixa',cx.id)})),
       ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)}))
     ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
     if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
     const groups={
-      caixas:ativos.filter(a=>a.kind==='caixa').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
+      caixas:ativos.filter(a=>a.kind==='caixa'||a.kind==='caixa_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
       dgos:ativos.filter(a=>a.kind==='dgo').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
     };
     let h='';
@@ -2133,8 +2201,8 @@ function renderSBv2(q=''){
       if(!arr.length)return;
       h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
       arr.forEach(i=>{
-        const tone=i.kind==='caixa'?'#3ecf8e':'#7c93ff';
-        const id=`${i.kind==='caixa'?'cx':'dg'}-${i.id}`;
+        const tone=i.kind==='caixa'||i.kind==='caixa_oficial'?'#3ecf8e':'#7c93ff';
+        const id=i.kind==='caixa_oficial'?`cx-db-${i.id}`:`${i.kind==='caixa'?'cx':'dg'}-${i.id}`;
         const cls=i.status&&String(i.status).toLowerCase().includes('quebrado')?'ter':i.status&&String(i.status).toLowerCase().includes('pend')?'twn':'tok';
         h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii" style="background:${tone}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${i.flag}<span>${esc(i.label)}</span></div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${cls}">${esc(i.status||'ativo')}</span></div>`;
       });
@@ -3096,6 +3164,8 @@ function findDraftPoint(ref){
   const store=getInvStore();
   const cx=store.caixas.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
   if(cx&&cx.lat&&cx.lng)return{tipo:'caixa',codigo:cx.codigo||cx.nome,lat:cx.lat,lng:cx.lng,item:cx};
+  const ocx=officialCaixas.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
+  if(ocx&&ocx.lat&&ocx.lng)return{tipo:'caixa',codigo:ocx.codigo||ocx.nome,lat:ocx.lat,lng:ocx.lng,item:ocx};
   const dg=store.dgos.find(x=>(x.codigo||x.nome||'').toUpperCase()===key);
   if(dg){
     const site=allS.find(s=>((s.codigo||'').toUpperCase()===((dg.site||'').toUpperCase()))||((s.nome||'').toUpperCase()===((dg.site||'').toUpperCase())));
@@ -3331,6 +3401,24 @@ function showPanRupturaDraft(rp){
     ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac g" onclick="abrirRupturaPorContexto(findRupturaDraft('${String(rp.id||'').replace(/'/g,"\\'")}'))">✏ Ajustar ruptura</button><button class="pac a" onclick="toast('Ruptura mantida para tratamento operacional','wn')">📍 Tratar em campo</button>`;
+  $('pan').style.display='block';
+}
+function showPanRupturaOficial(rp){
+  closePan();
+  const rel=getCableDraftRelations(rp.cabo_segmento||'');
+  $('pt').textContent=`🚨 ${rp.cabo_segmento||'Ruptura oficial'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(rp.status||'aberta')}</span></div>
+    <div class="pr"><span class="pl">Causa / reparo</span><span class="pv">${esc(rp.tipo_reparo||'—')}</span></div>
+    <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
+    <div class="pr"><span class="pl">Cabo lançado</span><span class="pv">${km(rp.metragem_lancada_m||0)}</span></div>
+    <div class="pr"><span class="pl">Nova caixa</span><span class="pv">${esc(rp.nova_caixa||'—')}</span></div>
+    ${buildRupturaLinksHtml(rel.rupts)}
+    ${rp.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.7">${esc(rp.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac a" onclick="abrirNovaRupturaContextual('${String(rp.cabo_segmento||'').replace(/'/g,"\\'")}',${Number(rp.lat||0)},${Number(rp.lng||0)})">✏ Abrir no cadastro</button><button class="pac g" onclick="toast('Ruptura oficial carregada do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function abrirAssistenteConexaoCaixa(codigo,lat,lng){
@@ -3769,6 +3857,30 @@ function showPanCaixaDraft(cx){
   $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarCaixaDraft('${cx.id}')">✏ Editar caixa</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoCaixa('${(cx.codigo||'').replace(/'/g,"\\'")}',${cx.lat||0},${cx.lng||0})">🔗 Assistente de conexão</button>`;
   $('pan').style.display='block';
 }
+function showPanCaixaOficial(cx){
+  if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
+  closePan();
+  const caixaFlag=getFlagForAsset('caixa',cx.id);
+  $('pt').textContent=`🧰 ${cx.codigo||'Caixa oficial'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Nome</span><span class="pv">${esc(cx.nome||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(cx.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(cx.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Instalação</span><span class="pv">${esc(cx.tipo_instalacao||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(cx.status||'—')}</span></div>
+    <div class="pr"><span class="pl">Vistoria</span><span class="pv">${cx.vistoriada?'vistoriada':'pendente'}</span></div>
+    <div class="pr"><span class="pl">Troca</span><span class="pv">${cx.precisa_troca?'necessária':'não'}</span></div>
+    ${caixaFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [caixaFlag.priority||'normal',caixaFlag.color||'var(--am)'],
+      [caixaFlag.category||'operacao',caixaFlag.color||'var(--am)']
+    ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
+    ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pan').style.display='block';
+}
 function showPanSegmentoDraft(seg){
   if(mapPointTarget)return;
   closePan();
@@ -3898,6 +4010,16 @@ function renderInventarioDraftsV2(){
   if(!draftInvLayer)return;
   draftInvLayer.clearLayers();
   const store=getInvStore();
+  officialCaixas.forEach(cx=>{
+    if(cx.lat&&cx.lng){
+      const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(true),zIndexOffset:3500})
+        .bindPopup(`<b>🧰 ${esc(cx.codigo||'Caixa')}</b><br>${esc(cx.nome||'Caixa oficial')}<br>${esc(cx.tipo_instalacao||'—')} | ${esc(cx.modelo||'—')}<br>${esc(cx.status||'ativo')} • banco oficial`)
+        .on('click',()=>showPanCaixaOficial(cx))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
+      fmap['cx-db-'+cx.id]=()=>{map.setView([Number(cx.lat),Number(cx.lng)],18);showPanCaixaOficial(cx);};
+    }
+  });
   store.caixas.forEach(cx=>{
     if(cx.lat&&cx.lng){
       const mk=L.marker([cx.lat,cx.lng],{icon:mkDraftCaixa(!!cx._synced),zIndexOffset:3600})
@@ -3952,6 +4074,19 @@ function renderInventarioDraftsV2(){
       fmap['rp-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaDraft(rp);};
       if(rp.metragem_lancada_m){
         L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3900}).addTo(draftInvLayer);
+      }
+    }
+  });
+  officialRupturas.forEach(rp=>{
+    if(rp.lat&&rp.lng){
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(true),zIndexOffset:3950})
+        .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${km(rp.distancia_otdr_m||0)}<br>Cabo lançado: ${km(rp.metragem_lancada_m||0)}<br>${esc(rp.status||'aberta')} • banco oficial`)
+        .on('click',()=>showPanRupturaOficial(rp))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkRupturaMenu(rp));
+      fmap['rp-db-'+rp.id]=()=>{map.setView([Number(rp.lat),Number(rp.lng)],18);showPanRupturaOficial(rp);};
+      if(rp.metragem_lancada_m){
+        L.marker([rp.lat,rp.lng],{icon:mkNovaBox(rp.metragem_lancada_m),zIndexOffset:3920}).addTo(draftInvLayer);
       }
     }
   });

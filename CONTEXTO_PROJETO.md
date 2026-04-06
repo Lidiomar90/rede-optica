@@ -25,6 +25,8 @@
 10. Abas `Ativos` e `Continu.` ganharam filtros rápidos por status (`Todos`, `Quebrados`, `Pendentes`, `Confirmados`) para inspeção operacional mais rápida
 11. Mapa ganhou `edição rápida` por duplo clique no desktop para `site`, `cabo`, `caixa`, `DGO`, `segmento` e `ruptura`, reduzindo cliques no fluxo operacional
 12. Fluxo de autenticação/usuários no front foi preparado para `RPC segura + fallback REST`, com mensagens mais claras quando `usuarios` estiver bloqueado por RLS
+13. Criado orquestrador local `ORQUESTRAR-IAS-PROJETO.ps1` + `.bat` + task do VS Code para gerar pacotes de sessao separados para Claude, Gemini, Codex, DeepSeek e Manus, com foco, contexto, checklist e estado consolidado
+14. Criado consolidado local `CONSOLIDAR-RETORNOS-IAS.ps1` + `.bat` para reunir respostas de Claude, Gemini, DeepSeek e Manus em um unico relatorio por sessao, com pasta `respostas` dedicada
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
@@ -439,3 +441,26 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - caixa de emenda
   - usabilidade
   - uso em campo
+
+### Integracao oficial de caixas e rupturas no mapa
+
+- `mapa-rede-optica.html` agora consome tambem:
+  - `vw_caixas_emenda_mapa`
+  - `vw_rupturas_abertas`
+- dados oficiais sao normalizados no front em:
+  - `officialCaixas`
+  - `officialRupturas`
+- as caixas oficiais agora:
+  - aparecem no mapa
+  - abrem painel proprio de banco oficial
+  - entram na aba lateral `Ativos`
+  - entram na resolucao de referencia de pontos (`findDraftPoint`)
+- as rupturas oficiais agora:
+  - aparecem no mapa
+  - abrem painel proprio de banco oficial
+  - entram na aba lateral `Continu.`
+- menus contextuais foram ajustados para nao tratar caixa oficial como rascunho local:
+  - `mkCaixaMenu` abre painel oficial quando `_kind === caixa_oficial`
+  - `mkRupturaMenu` abre painel oficial quando `_kind === ruptura_oficial`
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`
