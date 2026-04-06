@@ -984,7 +984,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -1089,6 +1089,25 @@ function normalizeCaixaMapaRow(row){
     observacao:row.observacao||row.obs||'',
     lat:pt?.[0],
     lng:pt?.[1],
+  };
+}
+function normalizeDgoRow(row){
+  return {
+    ...row,
+    _kind:'dgo_oficial',
+    id:String(row.id||row.codigo||row.nome||crypto.randomUUID()),
+    codigo:row.codigo||row.sigla||row.nome||'DGO',
+    nome:row.nome||row.codigo||'DGO oficial',
+    site_id:row.site_id||row.siteId||row.site?.id||null,
+    site_codigo:row.site_codigo||row.site?.codigo||row.site_ref||row.site_nome||'',
+    site_nome:row.site_nome||row.site?.nome||'',
+    rack:row.rack||'',
+    fila:row.fila||'',
+    bastidor:row.bastidor||'',
+    modelo:row.modelo||'',
+    fabricante:row.fabricante||'',
+    status:row.status||'ativo',
+    observacao:row.observacao||row.obs||'',
   };
 }
 function normalizeRupturaMapaRow(row){
@@ -1283,16 +1302,17 @@ function mkCaixaMenu(cx){
 }
 function mkDgoMenu(dg,site){
   const flagged=!!getFlagForAsset('dgo',dg.id);
+  const isOfficial=dg?._kind==='dgo_oficial';
   return {
     title:`DGO ${normText(dg.codigo)||'Rascunho'}`,
-    subtitle:`Site: ${esc(dg.site||'—')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}`,
+    subtitle:`Site: ${esc(dg.site||dg.site_codigo||dg.site_nome||'—')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}${isOfficial?'<br>banco oficial':''}`,
     actions:[
-      {label:'📋 Ver detalhes',action:()=>showPanDgoDraft(dg)},
+      {label:'📋 Ver detalhes',action:()=>isOfficial?showPanDgoOficial(dg):showPanDgoDraft(dg)},
       {label:flagged?'🚩 Editar flag':'🚩 Marcar DGO',action:()=>openFlagEditor('dgo',dg.id)},
-      {label:'✏️ Editar DGO',action:()=>editarDgoDraft(dg.id)},
+      ...(!isOfficial?[{label:'✏️ Editar DGO',action:()=>editarDgoDraft(dg.id)}]:[]),
       {label:'🅰️ Usar como Ponto A',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-a')},
       {label:'🅱️ Usar como Ponto B',action:()=>usarComoPontoSegmento(dg.codigo||dg.site||'','sg-b')},
-      {label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexaoDgo(dg.codigo||'')},
+      ...(!isOfficial?[{label:'🔗 Assistente de conexão',primary:true,action:()=>abrirAssistenteConexaoDgo(dg.codigo||'')}]:[]),
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(site.lat),Number(site.lng))},
     ]
   };
@@ -1438,8 +1458,8 @@ function getFlagAnchor(kind,id){
     return Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng,label:cx.codigo||cx.nome||`Caixa ${id}`,asset:cx}:null;
   }
   if(kind==='dgo'){
-    const dg=getInvStore().dgos.find(x=>String(x.id)===String(id));
-    const site=findDraftPoint(dg?.site||'');
+    const dg=getInvStore().dgos.find(x=>String(x.id)===String(id))||officialDgos.find(x=>String(x.id)===String(id));
+    const site=dg?._kind==='dgo_oficial'?resolveOfficialDgoSite(dg):findDraftPoint(dg?.site||'');
     const lat=Number(site?.lat),lng=Number(site?.lng);
     return Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng,label:dg.codigo||dg.nome||dg.site||`DGO ${id}`,asset:dg}:null;
   }
@@ -1457,7 +1477,7 @@ function renderFlags(){
         if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
         else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
         else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
-        else if(f.kind==='dgo'&&anchor.asset)showPanDgoDraft(anchor.asset);
+        else if(f.kind==='dgo'&&anchor.asset)anchor.asset?._kind==='dgo_oficial'?showPanDgoOficial(anchor.asset):showPanDgoDraft(anchor.asset);
       });
     attachMarkerFieldActions(mk,()=>({
       title:`Flag ${f.title||anchor.label||'operacional'}`,
@@ -1468,7 +1488,7 @@ function renderFlags(){
           if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
           else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
           else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
-          else if(f.kind==='dgo'&&anchor.asset)showPanDgoDraft(anchor.asset);
+          else if(f.kind==='dgo'&&anchor.asset)anchor.asset?._kind==='dgo_oficial'?showPanDgoOficial(anchor.asset):showPanDgoDraft(anchor.asset);
         }},
         {label:'🗑 Remover flag',warn:true,action:()=>removeFlag(f.kind,f.assetId)}
       ]
@@ -1690,11 +1710,11 @@ async function loadMap(){
   initMapObj();
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
-  allS=[];allC=[];scienceSites=[];fmap={};cableFx={};activeCableId=null;
+  allS=[];allC=[];scienceSites=[];officialCaixas=[];officialDgos=[];officialRupturas=[];fmap={};cableFx={};activeCableId=null;
   
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
-    let sites,cabos,science,caixasMapa,rupturasMapa;
+    let sites,cabos,science,caixasMapa,dgosMapa,rupturasMapa;
     try{
       const zoom = map.getZoom();
       let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
@@ -1707,11 +1727,12 @@ async function loadMap(){
         caboUrl += `&trajeto=ov.${bbox}`;
       }
 
-      [sites,cabos,science,caixasMapa,rupturasMapa]=await Promise.all([
+      [sites,cabos,science,caixasMapa,dgosMapa,rupturasMapa]=await Promise.all([
         fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
         fetch(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetch(`${SU}/rest/v1/dgo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
       ]);
       saveMapCache(sites,cabos,science);
@@ -1723,6 +1744,7 @@ async function loadMap(){
       cabos=cache.cabos||[];
       science=cache.science||[];
       caixasMapa=[];
+      dgosMapa=[];
       rupturasMapa=[];
       setOfflineState(true,'Sem rede estável. Carregando último cache local.');
     }
@@ -1730,6 +1752,7 @@ async function loadMap(){
     allS=mergeSitesData(Array.isArray(sites)?sites:[],scienceSites);
     allC=Array.isArray(cabos)?cabos:[];
     officialCaixas=(Array.isArray(caixasMapa)?caixasMapa:[]).map(normalizeCaixaMapaRow).filter(x=>x._pt);
+    officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
     const totalSites=allS.length.toLocaleString('pt-BR');
     const totalCabos=allC.length.toLocaleString('pt-BR');
@@ -1875,6 +1898,8 @@ function renderSiteClusters(){
   if(!siteClusterGroup) return;
   siteClusterGroup.clearLayers();
   const visibleMarkers = [];
+  
+  // Renderizar Sites
   allS.forEach(s => {
     const cv = camVis(s.camada, s.tipo);
     const layerId = getSiteLayer(cv);
@@ -1894,7 +1919,122 @@ function renderSiteClusters(){
        visibleMarkers.push(mk);
     }
   });
+
+  // Renderizar Caixas Oficiais
+  officialCaixas.forEach(cx => {
+    if(!cx._pt) return;
+    const mk = L.marker(cx._pt, {
+      icon: L.divIcon({
+        className: '',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+        html: `<div style="width:20px;height:20px;border-radius:6px;background:${cx.status==='operacional'?'#3ecf8e':cx.status==='manutencao'?'#ffb648':'#ff5a68'};border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#000">📦</div>`
+      }),
+      zIndexOffset: 2000
+    }).on('click', e => {
+      L.DomEvent.stopPropagation(e);
+      if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
+      showPanCaixaOficial(cx);
+    });
+    
+    attachMarkerFieldActions(mk, () => ({
+      title: `Caixa: ${cx.codigo}`,
+      subtitle: `${esc(cx.tipo || '—')} | ${esc(cx.modelo || '—')}<br>Status: ${esc(cx.status || '—')}`,
+      actions: [
+        {label: '📋 Ver detalhes', action: () => showPanCaixaOficial(cx)},
+        {label: '✏️ Editar caixa', action: () => editarCaixaOficial(cx.id)},
+        {label: '🚨 Nova ruptura', warn: true, action: () => abrirNovaRupturaContextual(cx, cx._pt[0], cx._pt[1])},
+        {label: '📋 Copiar coordenadas', action: () => copiarCoordenadasAt(cx._pt[0], cx._pt[1])}
+      ]
+    }));
+    
+    visibleMarkers.push(mk);
+  });
+
   siteClusterGroup.addLayers(visibleMarkers);
+}
+
+function showPanCaixaOficial(cx){
+  closePan();
+  const rows = [
+    ['Código', cx.codigo],
+    ['Tipo', cx.tipo || '—'],
+    ['Modelo', cx.modelo || '—'],
+    ['Fabricante', cx.fabricante || '—'],
+    ['Status', cx.status || '—', TC(cx.status)],
+    ['Fibras Livres', cx.fibras_livres || '—'],
+    ['Observação', cx.observacao || '—']
+  ];
+  
+  showPan(`Caixa: ${cx.codigo}`, rows, [
+    {l: 'Editar', c: 'g', fn: `editarCaixaOficial('${cx.id}')`},
+    {l: 'Nova ruptura', c: 'r', fn: `abrirNovaRupturaContextual('${esc(cx.codigo).replace(/'/g,"\\'")}', ${cx._pt[0]}, ${cx._pt[1]})`},
+    {l: 'Ponto A', c: 'b', fn: `usarComoPontoSegmento('${esc(cx.codigo).replace(/'/g,"\\'")}', 'sg-a')`},
+    {l: 'Ponto B', c: 'b', fn: `usarComoPontoSegmento('${esc(cx.codigo).replace(/'/g,"\\'")}', 'sg-b')`},
+    sessao.perfil==='admin' && {l: 'Excluir', c: 'r', fn: `del('caixa_emenda', '${cx.id}')`}
+  ].filter(Boolean));
+}
+
+async function editarCaixaOficial(id){
+  toast('Carregando dados da caixa...','in');
+  try {
+    const res = await fetch(`${SU}/rest/v1/caixa_emenda?id=eq.${id}&select=*`, {headers:RH});
+    const cx = (await res.json())[0];
+    if(!cx) throw new Error('Caixa não encontrada');
+    
+    goTab('cadastro', document.querySelector('.nt[onclick*="cadastro"]'));
+    $('cx-codigo').value = cx.codigo || '';
+    $('cx-nome').value = cx.nome || '';
+    $('cx-inst').value = cx.tipo_instalacao || 'aereo';
+    $('cx-modelo').value = cx.modelo || '';
+    $('cx-fab').value = cx.fabricante || '';
+    $('cx-status').value = cx.status || 'ativo';
+    $('cx-obs').value = cx.observacao || '';
+    $('cx-vist').checked = !!cx.vistoriada;
+    $('cx-troca').checked = !!cx.precisa_troca;
+    
+    const pt = PP(cx.localizacao);
+    if(pt){
+      $('cx-lat').value = pt[0].toFixed(6);
+      $('cx-lng').value = pt[1].toFixed(6);
+    }
+    
+    $('cx-msg').innerHTML = `<span style="color:var(--am)">Editando caixa oficial (ID: ${id})</span>`;
+    $('cx-msg').dataset.editId = id;
+    
+    closeM();
+    toast('Dados carregados para edição','ok');
+  } catch(err) {
+    toast(err.message, 'er');
+  }
+}
+
+async function editarDgoOficial(id){
+  toast('Carregando dados do DGO...','in');
+  try {
+    const res = await fetch(`${SU}/rest/v1/dgo?id=eq.${id}&select=*,site:site_id(codigo,nome)`, {headers:RH});
+    const dg = (await res.json())[0];
+    if(!dg) throw new Error('DGO não encontrado');
+    
+    goTab('cadastro', document.querySelector('.nt[onclick*="cadastro"]'));
+    $('dg-codigo').value = dg.codigo || '';
+    $('dg-site').value = dg.site?.codigo || dg.site?.nome || '';
+    $('dg-rack').value = dg.rack || '';
+    $('dg-fila').value = dg.fila || '';
+    $('dg-bast').value = dg.bastidor || '';
+    $('dg-modelo').value = dg.modelo || '';
+    $('dg-fab').value = dg.fabricante || '';
+    $('dg-status').value = dg.status || 'ativo';
+    $('dg-obs').value = dg.observacao || '';
+    
+    $('dg-msg').innerHTML = `<span style="color:var(--am)">Editando DGO oficial (ID: ${id})</span>`;
+    $('dg-msg').dataset.editId = id;
+    
+    closeM();
+    toast('Dados carregados para edição','ok');
+  } catch(err) {
+    toast(err.message, 'er');
+  }
 }
 function setAll(on){Object.keys(VIS).forEach(k=>VIS[k]=on);buildLayerPanel();applyVis();savePref();}
 function applyPreset(name){
@@ -2187,12 +2327,13 @@ function renderSBv2(q=''){
     const ativos=[
       ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
       ...officialCaixas.map(cx=>({kind:'caixa_oficial',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'ativo',flag:getFlagIndicatorHtml('caixa',cx.id)})),
-      ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)}))
+      ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)})),
+      ...officialDgos.map(dg=>({kind:'dgo_oficial',id:dg.id,label:dg.codigo||dg.nome||dg.site_codigo||'DGO',sub:[dg.site_codigo||dg.site_nome,dg.rack,dg.fila,dg.bastidor,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site_codigo||'')||{}).status||dg.status||'ativo',flag:getFlagIndicatorHtml('dgo',dg.id)}))
     ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
     if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
     const groups={
       caixas:ativos.filter(a=>a.kind==='caixa'||a.kind==='caixa_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
-      dgos:ativos.filter(a=>a.kind==='dgo').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
+      dgos:ativos.filter(a=>a.kind==='dgo'||a.kind==='dgo_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
     };
     let h='';
     const groupDefs=[['caixas','Caixas / emendas'],['dgos','DGOs']];
@@ -2202,7 +2343,7 @@ function renderSBv2(q=''){
       h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
       arr.forEach(i=>{
         const tone=i.kind==='caixa'||i.kind==='caixa_oficial'?'#3ecf8e':'#7c93ff';
-        const id=i.kind==='caixa_oficial'?`cx-db-${i.id}`:`${i.kind==='caixa'?'cx':'dg'}-${i.id}`;
+        const id=i.kind==='caixa_oficial'?`cx-db-${i.id}`:(i.kind==='dgo_oficial'?`dg-db-${i.id}`:`${i.kind==='caixa'?'cx':'dg'}-${i.id}`);
         const cls=i.status&&String(i.status).toLowerCase().includes('quebrado')?'ter':i.status&&String(i.status).toLowerCase().includes('pend')?'twn':'tok';
         h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii" style="background:${tone}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${i.flag}<span>${esc(i.label)}</span></div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${cls}">${esc(i.status||'ativo')}</span></div>`;
       });
@@ -2359,7 +2500,7 @@ function jumpToRef(ref){
   if(!p||!map){toast('Referência não localizada no mapa','wn');return;}
   map.setView([p.lat,p.lng],17);
   if(p.tipo==='caixa')p.item?._kind==='caixa_oficial'?showPanCaixaOficial(p.item):showPanCaixaDraft(p.item);
-  else if(p.tipo==='dgo')showPanDgoDraft(p.item);
+  else if(p.tipo==='dgo')p.item?._kind==='dgo_oficial'?showPanDgoOficial(p.item):showPanDgoDraft(p.item);
   else if(p.tipo==='site')showPanSite(p.item,[p.lat,p.lng]);
 }
 function jumpToSegmentDraft(id){
@@ -3312,10 +3453,23 @@ function findDraftPoint(ref){
     const pt=PP(site?.localizacao);
     if(pt)return{tipo:'dgo',codigo:dg.codigo||dg.nome,lat:pt[0],lng:pt[1],item:dg,site};
   }
+  const odg=officialDgos.find(x=>(x.codigo||x.nome||x.site_codigo||'').toUpperCase()===key);
+  if(odg){
+    const site=resolveOfficialDgoSite(odg);
+    if(site)return{tipo:'dgo',codigo:odg.codigo||odg.nome,lat:site.lat,lng:site.lng,item:odg,site};
+  }
   const st=allS.find(s=>((s.codigo||'').toUpperCase()===key)||((s.nome||'').toUpperCase()===key));
   const pt=PP(st?.localizacao);
   if(pt)return{tipo:'site',codigo:st.codigo||st.nome,lat:pt[0],lng:pt[1],item:st};
   return null;
+}
+function resolveOfficialDgoSite(dg){
+  if(!dg)return null;
+  const site=allS.find(s=>String(s.id||'')===String(dg.site_id||''))||
+    allS.find(s=>String(s.codigo||'').toUpperCase()===String(dg.site_codigo||'').toUpperCase())||
+    allS.find(s=>String(s.nome||'').toUpperCase()===String(dg.site_nome||'').toUpperCase());
+  const pt=PP(site?.localizacao);
+  return pt?{lat:pt[0],lng:pt[1],item:site}:null;
 }
 function buildDgoConnectionDiagram(codigo){
   const segs=getInvStore().segmentos.filter(s=>((s.ponto_a||'').toUpperCase()===(codigo||'').toUpperCase())||((s.ponto_b||'').toUpperCase()===(codigo||'').toUpperCase()));
@@ -3364,6 +3518,34 @@ function showPanDgoDraft(dg){
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="editarDgoDraft('${dg.id}')">✏ Editar DGO</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac g" onclick="abrirAssistenteConexaoDgo('${(dg.codigo||'').replace(/'/g,"\\'")}')">Conectar DGO</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button>`;
+  $('pan').style.display='block';
+}
+function showPanDgoOficial(dg){
+  if(aplicarPontoSelecionado(dg.codigo||dg.nome||''))return;
+  closePan();
+  const dgoFlag=getFlagForAsset('dgo',dg.id);
+  const site=resolveOfficialDgoSite(dg);
+  const resumo=operationalSummaryHtml(dg.codigo||dg.nome||dg.site_codigo||'');
+  $('pt').textContent=`${dg.codigo||'DGO oficial'}${dg.site_codigo?` — ${dg.site_codigo}`:''}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(dg.codigo||'—')}</span></div>
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Site</span><span class="pv">${esc(dg.site_codigo||dg.site_nome||'—')}</span></div>
+    <div class="pr"><span class="pl">Rack</span><span class="pv">${esc(dg.rack||'—')}</span></div>
+    <div class="pr"><span class="pl">Fila</span><span class="pv">${esc(dg.fila||'—')}</span></div>
+    <div class="pr"><span class="pl">Bastidor</span><span class="pv">${esc(dg.bastidor||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(dg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(dg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Status</span><span class="pv">${esc(dg.status||'—')}</span></div>
+    ${dgoFlag?`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+      [dgoFlag.priority||'normal',dgoFlag.color||'var(--am)'],
+      [dgoFlag.category||'operacao',dgoFlag.color||'var(--am)']
+    ])}</div>${dgoFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dgoFlag.note)}</div>`:''}</div>`:''}
+    ${resumo}
+    ${buildRefLinksHtml(dg.codigo||dg.nome||dg.site_codigo||'')}
+    ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('DGO oficial carregado do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -3782,6 +3964,7 @@ async function pushToSupabase(tbl, payload, msgId){
 async function salvarCaixa(){
   const codigo=gv('cx-codigo'); if(!codigo){msgField('cx-msg','Código é obrigatório');return;}
   const editId=$('cx-edit-id')?.value||'';
+  const officialId = $('cx-msg').dataset.editId;
   const lat=gf('cx-lat'), lng=gf('cx-lng');
   const payload={
     codigo,nome:gv('cx-nome'),tipo_instalacao:gv('cx-inst'),modelo:gv('cx-modelo'),
@@ -3789,23 +3972,38 @@ async function salvarCaixa(){
     precisa_troca:$('cx-troca')?.checked||false,lat,lng,observacao:gv('cx-obs')
   };
   
-  if(editId){
+  if(officialId){
+    toast('Salvando alterações na Caixa oficial...','in');
+    const dbPayload = {
+      codigo: payload.codigo, nome: payload.nome, tipo_instalacao: payload.tipo_instalacao,
+      modelo: payload.modelo, fabricante: payload.fabricante, status: payload.status,
+      vistoriada: payload.vistoriada, precisa_troca: payload.precisa_troca,
+      localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
+      observacao: payload.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/caixa_emenda?id=eq.${officialId}`, {
+      method: 'PATCH',
+      headers: {...WH, 'Content-Type': 'application/json'},
+      body: JSON.stringify(dbPayload)
+    });
+    if(res.ok){
+      msgField('cx-msg','✓ Caixa oficial atualizada com sucesso.','ok');
+      delete $('cx-msg').dataset.editId;
+      toast('Caixa atualizada','ok');
+      loadMap();
+    } else {
+      msgField('cx-msg','Erro ao atualizar caixa oficial.');
+    }
+  } else if(editId){
     updateInvItem('caixas',editId,payload);
     msgField('cx-msg','✓ Caixa atualizada em rascunho local.','ok');
   }else{
     addInvItem('caixas',payload);
     msgField('cx-msg','✓ Caixa salva em rascunho local.','ok');
-    
-    // Tenta persistir no banco (tabela caixa_emenda)
     const dbPayload = {
-      codigo: payload.codigo,
-      nome: payload.nome,
-      tipo_instalacao: payload.tipo_instalacao,
-      modelo: payload.modelo,
-      fabricante: payload.fabricante,
-      status: payload.status,
-      vistoriada: payload.vistoriada,
-      precisa_troca: payload.precisa_troca,
+      codigo: payload.codigo, nome: payload.nome, tipo_instalacao: payload.tipo_instalacao,
+      modelo: payload.modelo, fabricante: payload.fabricante, status: payload.status,
+      vistoriada: payload.vistoriada, precisa_troca: payload.precisa_troca,
       localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
       observacao: payload.observacao
     };
@@ -3818,32 +4016,46 @@ async function salvarDgo(){
   const codigo=gv('dg-codigo'),siteRef=gv('dg-site'); 
   if(!codigo||!siteRef){msgField('dg-msg','Código e site são obrigatórios');return;}
   const editId=$('dg-edit-id')?.value||'';
+  const officialId = $('dg-msg').dataset.editId;
   const payload={
     codigo,site:siteRef,rack:gv('dg-rack'),fila:gv('dg-fila'),bastidor:gv('dg-bast'),
     modelo:gv('dg-modelo'),fabricante:gv('dg-fab'),status:gv('dg-status'),observacao:gv('dg-obs')
   };
   
-  if(editId){
+  const site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
+  
+  if(officialId){
+    toast('Salvando alterações no DGO oficial...','in');
+    const dbPayload = {
+      codigo: payload.codigo, nome: payload.nome, site_id: site?.id,
+      rack: payload.rack, fila: payload.fila, bastidor: payload.bastidor,
+      modelo: payload.modelo, fabricante: payload.fabricante, status: payload.status,
+      observacao: payload.observacao
+    };
+    const res = await fetch(`${SU}/rest/v1/dgo?id=eq.${officialId}`, {
+      method: 'PATCH',
+      headers: {...WH, 'Content-Type': 'application/json'},
+      body: JSON.stringify(dbPayload)
+    });
+    if(res.ok){
+      msgField('dg-msg','✓ DGO oficial atualizado com sucesso.','ok');
+      delete $('dg-msg').dataset.editId;
+      toast('DGO atualizado','ok');
+      loadMap();
+    } else {
+      msgField('dg-msg','Erro ao atualizar DGO oficial.');
+    }
+  } else if(editId){
     updateInvItem('dgos',editId,payload);
     msgField('dg-msg','✓ DGO atualizado em rascunho local.','ok');
   }else{
     addInvItem('dgos',payload);
     msgField('dg-msg','✓ DGO salvo em rascunho local.','ok');
-    
-    // Tenta persistir no banco (tabela dgo)
-    // Precisa do site_id (UUID)
-    const site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
     if(site && site.id && String(site.id).indexOf('science-')!==0){
       const dbPayload = {
-        codigo: payload.codigo,
-        nome: payload.nome,
-        site_id: site.id,
-        rack: payload.rack,
-        fila: payload.fila,
-        bastidor: payload.bastidor,
-        modelo: payload.modelo,
-        fabricante: payload.fabricante,
-        status: payload.status,
+        codigo: payload.codigo, nome: payload.nome, site_id: site.id,
+        rack: payload.rack, fila: payload.fila, bastidor: payload.bastidor,
+        modelo: payload.modelo, fabricante: payload.fabricante, status: payload.status,
         observacao: payload.observacao
       };
       await pushToSupabase('dgo', dbPayload, 'dg-msg');
@@ -4169,6 +4381,18 @@ function renderInventarioDraftsV2(){
       attachMarkerFieldActions(mk,()=>mkCaixaMenu(cx));
       attachMarkerEditShortcut(mk,()=>editarCaixaDraft(cx.id),'caixa');
       fmap['cx-'+cx.id]=()=>{map.setView([Number(cx.lat),Number(cx.lng)],18);showPanCaixaDraft(cx);};
+    }
+  });
+  officialDgos.forEach(dg=>{
+    const site=resolveOfficialDgoSite(dg);
+    if(site?.lat&&site?.lng){
+      const dgoIcon=L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:6px;background:#7c93ff;border:2px solid #fff;box-shadow:0 0 0 5px rgba(124,147,255,.12),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:10px;color:#08112d">D</div>`});
+      const mk=L.marker([site.lat,site.lng],{icon:dgoIcon,zIndexOffset:3600})
+        .bindPopup(`<b>DGO ${esc(dg.codigo||'Oficial')}</b><br>Site: ${esc(dg.site_codigo||dg.site_nome||'-')}<br>${esc(dg.rack||'-')} | ${esc(dg.fila||'-')} | ${esc(dg.bastidor||'-')}<br>${esc(dg.modelo||'-')} | ${esc(dg.status||'-')} • banco oficial`)
+        .on('click',()=>showPanDgoOficial(dg))
+        .addTo(draftInvLayer);
+      attachMarkerFieldActions(mk,()=>mkDgoMenu(dg,site));
+      fmap['dg-db-'+dg.id]=()=>{map.setView([Number(site.lat),Number(site.lng)],18);showPanDgoOficial(dg);};
     }
   });
   store.dgos.forEach(dg=>{
