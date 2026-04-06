@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-05 (sessao 4 — mobile feedback, cache e fila de sync)
+**Atualizado em:** 2026-04-06 (sessao 6 — edge swipe no drawer mobile)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,7 +10,7 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-05 — sessao 4
+**Data:** 2026-04-06 — sessao 6
 **O que foi feito:**
 0. Iniciada sprint mobile-first do mapa: topo compactado, legenda recolhivel no celular, barra de campo horizontal compacta, ferramentas secundarias escondidas atras de "mais" e Auditoria IA convertida para cards mais compactos
 1. Criada `caixa_emenda` (CEO/CTO/DIO): vinculo com cabo + site/dgo + posicao_m + geo + fibras_livres calculado
@@ -31,14 +31,15 @@
 16. Ligados indicadores ja previstos no front: badge de fila de sincronizacao pendente, timestamp do cache offline no mobile e aviso de rede lenta/online/offline
 17. Drawer mobile passou a usar a classe `show` no overlay, evitando inconsistencias de display inline ao abrir/fechar a sidebar
 18. Botao mobile de `Modo campo` agora reflete o estado ativo com destaque visual persistente
+19. Drawer mobile agora fecha por gesto horizontal (swipe para a esquerda), com arraste visual durante o toque, fade proporcional do overlay e fallback preservado por overlay/botao
+20. Drawer mobile agora tambem abre por gesto de borda (edge swipe da esquerda para a direita), com arraste visual e reaproveitando o overlay existente
 
 **Proximo agente deve fazer:**
 - Codex: CRUD DGO no HTML + campo DGO em formulario de enlace
 - Codex: plotar caixa_emenda no mapa via `vw_caixas_emenda_mapa`
 - Codex: painel de rupturas via `vw_rupturas_abertas`
-- Codex: conectar `execRast()` ao RPC `fn_tracer_bfs` (BUG 2 — ainda pendente)
 - Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
-- Codex: testar drawer mobile com swipe/gesto; ainda nao implementado
+- Codex: validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari, incluindo fade do overlay e conflito com scroll vertical da lista lateral
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
@@ -141,7 +142,7 @@
 ### Funcoes / RPCs
 | Funcao | Assinatura | Descricao |
 |--------|-----------|-----------|
-| `fn_tracer_bfs` | `(p_node_inicio uuid, p_node_fim uuid, p_max_hops int)` | BFS em network_nodes/edges. NAO chamado pelo HTML ainda (BUG 2). |
+| `fn_tracer_bfs` | `(p_node_inicio uuid, p_node_fim uuid, p_max_hops int)` | BFS em network_nodes/edges. Ja chamado pelo HTML no tracer A→B. |
 | `fn_sync_nodes_from_sites` | `()` | Sincroniza sites → network_nodes. Idempotente. |
 | `fn_sync_nodes_from_dgo` | `()` | Sincroniza DGOs → network_nodes. DGO herda geom do site. Idempotente. |
 | `fn_sync_edges_from_cabos` | `()` | Sincroniza cabos (site_a→site_b) → network_edges. |
@@ -173,7 +174,7 @@
 
 | Arquivo | Estado | Observacao |
 |---------|--------|------------|
-| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa bbox (BUG 2 pendente). |
+| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa `fn_tracer_bfs`; drawer mobile abre/fecha por gesto. |
 | `dashboard.html` | Ativo | Dashboard de metricas. |
 | `ia-assistente.html` | Ativo | Interface IA. |
 | `auditoria-revisao.html` | Ativo | Auditoria de cadastro. |
@@ -246,7 +247,7 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 | Carregar sites | `/rest/v1/sites?select=...&localizacao=not.is.null&limit=60000` | OK |
 | Carregar cabos | `/rest/v1/cabos?select=...&trajeto=not.is.null&limit=10000` | OK |
 | OTDR | `POST /rest/v1/rpc/ponto_no_cabo` | OK |
-| Tracer A→B | Filtro bbox nos cabos | **INCORRETO** — deve usar `fn_tracer_bfs` |
+| Tracer A→B | RPC `fn_tracer_bfs` | OK |
 | DGO | Nao implementado no front | **PENDENTE** |
 
 **Escrita de localizacao:** `SRID=4326;POINT(lng lat)` via PATCH no campo `localizacao`
@@ -260,7 +261,7 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 | 1 | CRUD DGO no HTML + campo DGO nos formularios de enlace e cabo | Codex | Alta |
 | 2 | Plotar caixa_emenda no mapa via vw_caixas_emenda_mapa (lat/lng prontos) | Codex | Alta |
 | 3 | Painel de rupturas via vw_rupturas_abertas + formulario evento_ruptura | Codex | Alta |
-| 4 | Conectar execRast() ao RPC fn_tracer_bfs (BUG 2) | Codex | Alta |
+| 4 | Validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari | Codex | Media |
 | 5 | Rodar PUBLICAR.bat e testar ETL --dry-run | Lidiomar | Alta |
 | 6 | Rodar fn_sync_edges_from_cabos() para popular arestas de cabos no grafo | Claude | Media |
 | 7 | Corrigir assimetria bidirecional em fn_tracer_bfs (BUG 3) | Claude | Baixa |

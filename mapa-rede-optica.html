@@ -158,13 +158,15 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 /* MAPA */
 #mw{flex:1;position:relative;overflow:hidden}
 #map{width:100%;height:100%;background:linear-gradient(180deg,#dbe9f8,#f5f8fc)}
-#maphead{position:absolute;top:14px;left:14px;z-index:401;background:rgba(9,18,31,.78);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);backdrop-filter:blur(16px);max-width:min(360px,calc(100vw - 120px))}
+#maphead{position:absolute;top:14px;left:14px;z-index:401;background:rgba(9,18,31,.78);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;box-shadow:0 16px 40px rgba(0,0,0,.22);backdrop-filter:blur(16px);max-width:min(360px,calc(100vw - 120px));transition:opacity .18s ease,transform .18s ease}
 .mhk{font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.18em;margin-bottom:5px}
 .mht{font-size:15px;font-weight:800;line-height:1.15;margin-bottom:4px}
 .mhs{font-size:11px;color:var(--t2);line-height:1.45}
 .mmeta{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .mchip{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer}
 .mchip.on{background:rgba(69,208,140,.16);border-color:rgba(69,208,140,.26);color:var(--gr)}
+#mw.focus-map #maphead{opacity:0;transform:translateY(-10px);pointer-events:none}
+#mw.focus-map #leg{opacity:0;transform:translateY(10px);pointer-events:none}
 @media(max-width:680px){#maphead{top:62px;left:10px;right:68px;max-width:none;padding:10px 12px}.mht{font-size:13px}.mhs{font-size:10px}}
 #mt{position:absolute;top:10px;right:10px;z-index:400;display:flex;flex-direction:column;gap:5px}
 .mb{width:42px;height:42px;border-radius:14px;background:rgba(11,21,35,.82);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);color:var(--t2);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s;position:relative;box-shadow:0 12px 24px rgba(0,0,0,.22)}
@@ -526,12 +528,13 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   </div>
   <div id="mob-ov" onclick="closeSB()"></div>
   <div id="mw">
-    <div id="maphead">
-      <div class="mhk">Mapa</div>
-      <div class="mht">Rede, falhas e cadastro</div>
-      <div class="mhs" id="mapsub">Filtre ativos na lateral e execute ações de campo no mapa.</div>
+  <div id="maphead">
+      <div class="mhk">Operação</div>
+      <div class="mht">Rede e cadastro</div>
+      <div class="mhs" id="mapsub">Filtre, localize e aja direto no mapa.</div>
       <div class="mmeta">
         <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
+        <button class="mchip" id="map-focus-chip" onclick="toggleMapFocus()">▣ Foco mapa</button>
       </div>
     </div>
     <div id="map"></div>
@@ -551,6 +554,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     </div>
     <div id="fieldbar">
       <button class="fbtn" data-role="field-mode" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
+      <button class="fbtn" data-role="map-focus" onclick="toggleMapFocus()"><span class="fi">▣</span><span class="ft">Foco</span></button>
       <button class="fbtn" onclick="toggleSB()"><span class="fi">☰</span><span class="ft">Camadas</span></button>
       <button class="fbtn" onclick="goLoc()"><span class="fi">📍</span><span class="ft">GPS</span></button>
       <button class="fbtn" onclick="novaCaixaNoCentro()"><span class="fi">🧰</span><span class="ft">Caixa</span></button>
@@ -560,6 +564,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     <div id="mt">
       <div style="position:relative"><button class="mb" id="mt-toggle" onclick="toggleMobileTools()">⋯<div class="tip">Mais ferramentas</div></button></div>
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" id="bfocus" onclick="toggleMapFocus()">▣<div class="tip">Foco no mapa</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bmed" onclick="toggleMed()">📏<div class="tip">Medir distância</div></button></div>
@@ -1042,6 +1047,7 @@ let netFlashTimer=null;
 let ctxActions=[];
 let drawTarget='segmento';
 let fieldMode=localStorage.getItem('_field_mode')==='1';
+let mapFocus=localStorage.getItem('redeoptica_map_focus_v1')==='1';
 let mobileToolsExpanded=false;
 const LEGEND_PREF_KEY='redeoptica_legenda_mobile_v1';
 const LONG_PRESS_MS=320;
@@ -1201,6 +1207,7 @@ function flashNetworkOnline(msg='Online'){
 }
 function refreshMobileUiBadges(){
   document.querySelectorAll('#fieldbar .fbtn[data-role=\"field-mode\"]').forEach(btn=>btn.classList.toggle('campo-on',fieldMode));
+  document.querySelectorAll('#fieldbar .fbtn[data-role=\"map-focus\"]').forEach(btn=>btn.classList.toggle('campo-on',mapFocus));
   if(isMobileUI())updateCacheTimestamp(loadMapCache()?.salvo_em,{offline:mapOffline});
   else updateCacheTimestamp(null);
   updateSyncQueueBadge();
@@ -1303,6 +1310,19 @@ function setMobileToolsExpanded(on){
   }
 }
 function toggleMobileTools(){setMobileToolsExpanded(!mobileToolsExpanded);}
+function applyMapFocus(on,persist=true){
+  mapFocus=!!on;
+  const root=$('mw');
+  if(root)root.classList.toggle('focus-map',mapFocus);
+  if($('map-focus-chip'))$('map-focus-chip').classList.toggle('on',mapFocus);
+  if($('bfocus'))$('bfocus').classList.toggle('on-b',mapFocus);
+  document.querySelectorAll('#fieldbar .fbtn[data-role=\"map-focus\"]').forEach(btn=>btn.classList.toggle('campo-on',mapFocus));
+  if(persist)localStorage.setItem('redeoptica_map_focus_v1',mapFocus?'1':'0');
+}
+function toggleMapFocus(){
+  applyMapFocus(!mapFocus,true);
+  toast(mapFocus?'Foco no mapa ativado.':'Foco no mapa desativado.','ok');
+}
 function applyLegendState(collapsed,persist=false){
   legendCollapsed=!!collapsed;
   const leg=$('leg'),tog=$('leg-toggle');
@@ -1325,18 +1345,21 @@ function applyResponsiveLayout(){
     setMobileToolsExpanded(false);
     applyLegendState(false,false);
   }
+  applyMapFocus(mapFocus,false);
   refreshMobileUiBadges();
 }
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
-  const base='Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.';
+  const base='Filtre, localize e aja direto no mapa.';
   const badges=[
     mapOffline?`<span class="ctx-off">modo offline</span>`:'',
-    fieldMode?`<span class="ctx-off" style="border-color:rgba(69,208,140,.26);background:rgba(69,208,140,.12);color:var(--gr)">modo campo</span>`:''
+    fieldMode?`<span class="ctx-off" style="border-color:rgba(69,208,140,.26);background:rgba(69,208,140,.12);color:var(--gr)">modo campo</span>`:'',
+    mapFocus?`<span class="ctx-off" style="border-color:rgba(65,157,255,.26);background:rgba(65,157,255,.12);color:var(--cy)">foco mapa</span>`:''
   ].filter(Boolean).join('');
   const badge=badges?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${badges}</div>`:'';
   if($('mapsub'))$('mapsub').innerHTML=base+badge;
   if($('field-mode-chip'))$('field-mode-chip').classList.toggle('on',fieldMode);
+  if($('map-focus-chip'))$('map-focus-chip').classList.toggle('on',mapFocus);
   if(mapOffline)setNetworkIndicator('offline','Sem rede');
   else if(!netSlowTimer)flashNetworkOnline('Online');
   refreshMobileUiBadges();
@@ -2297,7 +2320,10 @@ function renderSidebarFilters(){
   if(sbMode==='sites'){
     const total=allS.length;
     const visiveis=allS.filter(s=>isSiteVisible(s.id)).length;
-    el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Sites no mapa <span style="color:var(--cy)">${visiveis}/${total}</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="setAllSites(true)">Todos</button><button class="overlay-chip" onclick="setAllSites(false)">Nenhum</button></div></div>`;
+    el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Sites no mapa <span style="color:var(--cy)">${visiveis}/${total}</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="setAllSites(true)">Todos</button><button class="overlay-chip" onclick="setAllSites(false)">Nenhum</button></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="overlay-chip" onclick="setAllSiteGroups(true)">Expandir</button><button class="overlay-chip" onclick="setAllSiteGroups(false)">Recolher</button></div>
+    </div>`;
     el.classList.add('on');
     return;
   }
@@ -2354,6 +2380,20 @@ function setAllSites(on){
     renderSidebarFilters();
     renderSB($('si')?.value||'');
   }
+}
+function setAllSiteGroups(open){
+  const q=($('si')?.value||'').toLowerCase();
+  const filtered=allS.filter(i=>!q||[i.codigo,i.nome,i.cidade,i.localidade,i.endereco,i.tipo,i.camada].join(' ').toLowerCase().includes(q));
+  const touched=new Set();
+  filtered.forEach(i=>{
+    const cn=i.cn_ddd||'sem-cn';
+    const loc=(i.localidade||i.cidade||'sem-localidade');
+    touched.add(`cn:${cn}`);
+    touched.add(`cn:${cn}|loc:${loc}`);
+  });
+  touched.forEach(key=>SITEGROUPS[key]=!!open);
+  saveSiteGroupPref();
+  if(sbMode==='sites')renderSB($('si')?.value||'');
 }
 function isSiteGroupOpen(key,defaultOpen=true){
   return Object.prototype.hasOwnProperty.call(SITEGROUPS,key)?SITEGROUPS[key]!==false:defaultOpen;
