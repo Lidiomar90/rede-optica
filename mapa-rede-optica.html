@@ -4126,29 +4126,73 @@ async function validarEventoSigitm(ta){
   });
 }
 
-// Lógica de Auditoria de Trecho (GeoSite Plus)
-function auditarTrechoFalha(siteRef, latFalha, lngFalha){
-  const site = allS.find(s => s.codigo === siteRef);
-  if(!site) return "Site de referência não localizado.";
-  
-  const ptSite = PP(site.localizacao);
-  const ptFalha = [latFalha, lngFalha];
-  
-  // Busca todas as caixas em um raio de 5km para auditoria
-  const caixasNoTrecho = getInvStore().caixas.filter(cx => {
-     const d = map.distance(ptSite, [cx.lat, cx.lng]);
-     return d < 5000; 
-  });
-  
-  // Ordena por distância do site
-  caixasNoTrecho.sort((a,b) => map.distance(ptSite, [a.lat, a.lng]) - map.distance(ptSite, [b.lat, b.lng]));
-  
-  return caixasNoTrecho.map((cx, i) => ({
-    ordem: i+1,
-    codigo: cx.codigo,
-    distancia: map.distance(ptSite, [cx.lat, cx.lng]).toFixed(0) + 'm',
-    status: cx.vistoriada ? '✓' : '⚠'
-  }));
+function estimarTempoReparo(causa, numCaixas){
+  let base = 120; // 2h base para deslocamento e análise
+  const causas = {
+    'rompimento': 180,
+    'vandalismo': 240,
+    'alta_atenuacao': 90,
+    'degradacao': 60,
+    'falha_equip': 45
+  };
+  base += (causas[causa.toLowerCase()] || 120);
+  base += (numCaixas * 40); // 40 min por caixa para abrir, testar e fechar
+  return Math.round(base / 60);
+}
+
+function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
+  const cadeia = auditarTrechoFalha(siteRef, lat, lng);
+  const tempoEst = estimarTempoReparo(causa, cadeia.length);
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html>
+    <head>
+      <title>Relatório de Intervenção - TA ${ta}</title>
+      <style>
+        body { font-family: sans-serif; padding: 40px; color: #333; }
+        .h { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .sec { margin-top: 25px; }
+        .t { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+        th { background: #f5f5f5; }
+        .sla-warn { color: red; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="h">
+        <div><h1>Rede Óptica MG</h1><p>Relatório de Auditoria de Trecho</p></div>
+        <div style="text-align:right"><p><b>TA:</b> ${ta}</p><p>Data: ${new Date().toLocaleDateString()}</p></div>
+      </div>
+      <div class="sec">
+        <div class="t">Dados do Evento</div>
+        <p><b>Causa:</b> ${causa} | <b>Estação de Origem:</b> ${siteRef}</p>
+        <p><b>Coordenadas da Falha:</b> ${lat}, ${lng}</p>
+        <p><b>Observação:</b> ${obs}</p>
+      </div>
+      <div class="sec">
+        <div class="t">Estimativa de Reparo</div>
+        <p>Tempo estimado: <b>${tempoEst} horas</b> 
+        ${tempoEst > 5 ? '<span class="sla-warn">(Risco de estouro de SLA de 5h)</span>' : '<span style="color:green">(Dentro do SLA)</span>'}
+        </p>
+      </div>
+      <div class="sec">
+        <div class="t">Cadeia de Emendas para Vistoria</div>
+        <table>
+          <thead><tr><th>Ordem</th><th>Código da Caixa</th><th>Distância da Estação</th><th>Status Vistoria</th></tr></thead>
+          <tbody>
+            ${cadeia.map(c => `<tr><td>${c.ordem}</td><td>${c.codigo}</td><td>${c.distancia}</td><td>${c.status === '✓' ? 'OK' : 'PENDENTE'}</td></tr>`).join('')}
+            <tr><td>-</td><td><b>PONTO DA FALHA</b></td><td>-</td><td>ALVO</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sec" style="margin-top:50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 10px; color: #999;">
+        Documento gerado automaticamente pelo Sistema de Cadastro de Fibra MG.
+      </div>
+      <script>window.print();</script>
+    </body>
+    </html>
+  `);
 }
 
 // INIT
