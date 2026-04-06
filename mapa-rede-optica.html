@@ -1108,9 +1108,29 @@ const normCode=v=>String(v||'').trim().toUpperCase();
 const normText=v=>String(v||'').trim();
 const sciencePoint=(lat,lng)=>({type:'Point',coordinates:[lng,lat]});
 const cnSort=(a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR',{numeric:true});
-const mkD=(c,s=9)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:50%;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
-const mkSq=(c,s=8)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s}px;height:${s}px;border-radius:2px;background:${c};border:1.5px solid rgba(255,255,255,.45);box-shadow:0 1px 6px rgba(0,0,0,.9)"></div>`});
-const mkDia=(c,s=13)=>L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:`<div style="width:${s*.7}px;height:${s*.7}px;margin:${s*.15}px;background:${c};border:2px solid rgba(255,255,255,.6);transform:rotate(45deg);border-radius:2px;box-shadow:0 2px 8px rgba(0,0,0,.9)"></div>`});
+function mkSiteNode(c,s=9,{shape='dot',tone='normal'}={}){
+  const halo=tone==='critical'
+    ? `0 0 0 ${Math.max(5,Math.round(s*.55))}px rgba(232,68,85,.18),0 4px 14px rgba(232,68,85,.34)`
+    : tone==='warning'
+      ? `0 0 0 ${Math.max(4,Math.round(s*.45))}px rgba(255,182,72,.16),0 3px 12px rgba(255,182,72,.28)`
+      : `0 1px 6px rgba(0,0,0,.9)`;
+  const border=tone==='muted'?'rgba(255,255,255,.26)':(shape==='diamond'?'rgba(255,255,255,.6)':'rgba(255,255,255,.45)');
+  const opacity=tone==='muted'?'.48':'1';
+  const inner=tone==='critical'
+    ? `<div style="position:absolute;right:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#ff6b75;border:1.5px solid #fff"></div>`
+    : tone==='warning'
+      ? `<div style="position:absolute;right:-3px;top:-3px;width:8px;height:8px;border-radius:50%;background:#ffb648;border:1.5px solid #fff"></div>`
+      : '';
+  const body=shape==='diamond'
+    ? `<div style="position:relative;width:${s}px;height:${s}px;opacity:${opacity}"><div style="width:${s*.7}px;height:${s*.7}px;margin:${s*.15}px;background:${c};border:2px solid ${border};transform:rotate(45deg);border-radius:2px;box-shadow:${halo}"></div>${inner}</div>`
+    : shape==='square'
+      ? `<div style="position:relative;width:${s}px;height:${s}px;opacity:${opacity}"><div style="width:${s}px;height:${s}px;border-radius:2px;background:${c};border:1.5px solid ${border};box-shadow:${halo}"></div>${inner}</div>`
+      : `<div style="position:relative;width:${s}px;height:${s}px;opacity:${opacity}"><div style="width:${s}px;height:${s}px;border-radius:50%;background:${c};border:1.5px solid ${border};box-shadow:${halo}"></div>${inner}</div>`;
+  return L.divIcon({className:'',iconSize:[s,s],iconAnchor:[s/2,s/2],html:body});
+}
+const mkD=(c,s=9)=>mkSiteNode(c,s,{shape:'dot'});
+const mkSq=(c,s=8)=>mkSiteNode(c,s,{shape:'square'});
+const mkDia=(c,s=13)=>mkSiteNode(c,s,{shape:'diamond'});
 const mkLoc=()=>L.divIcon({className:'',iconSize:[18,18],iconAnchor:[9,9],html:'<div style="width:14px;height:14px;margin:2px;border-radius:50%;background:#4da6ff;border:2.5px solid #fff;box-shadow:0 0 0 5px rgba(77,166,255,.3),0 2px 8px rgba(0,0,0,.8)"></div>'});
 const codeFirstLabel=item=>{
   const codigo=normText(item?.codigo||item?.sigla);
@@ -1578,7 +1598,14 @@ function mkSyncIndicator(synced){
   return `<div style="position:absolute;top:-6px;right:-6px;width:12px;height:12px;background:var(--am);border:1px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#000;box-shadow:0 2px 4px rgba(0,0,0,.3)">!</div>`;
 }
 const mkDraftCaixa=(synced)=>L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="position:relative;width:22px;height:22px;border-radius:7px;background:#22d3ee;border:2px solid #fff;box-shadow:0 0 0 5px rgba(34,211,238,.16),0 6px 16px rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-size:11px;color:#04111d">✚${mkSyncIndicator(synced)}</div>`});
-const mkRomp=(synced)=>L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:rgba(232,68,85,.3);animation:pulse 1s infinite"></div><div style="position:absolute;inset:5px;border-radius:50%;background:#e84455;border:2px solid #fff;box-shadow:0 0 12px rgba(232,68,85,.9);display:flex;align-items:center;justify-content:center;font-size:10px">✕</div>${mkSyncIndicator(synced)}</div>`});
+const mkRomp=(status='aberta',synced=true)=>{
+  const st=String(status||'').toLowerCase();
+  const critical=!(st.includes('fech')||st.includes('resol'));
+  const color=critical?'#e84455':'#3ecf8e';
+  const halo=critical?'rgba(232,68,85,.3)':'rgba(62,207,142,.22)';
+  const symbol=critical?'✕':'✓';
+  return L.divIcon({className:'',iconSize:[26,26],iconAnchor:[13,13],html:`<div style="position:relative;width:26px;height:26px"><div style="position:absolute;inset:0;border-radius:50%;background:${halo};animation:${critical?'pulse 1s infinite':'none'}"></div><div style="position:absolute;inset:5px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 12px ${critical?'rgba(232,68,85,.9)':'rgba(62,207,142,.45)'};display:flex;align-items:center;justify-content:center;font-size:10px">${symbol}</div>${mkSyncIndicator(synced)}</div>`});
+};
 
 function parseGeom(g){
   if(!g)return null;
@@ -1706,6 +1733,24 @@ function renderFlags(){
     }));
     mk.addTo(flagLayer);
   });
+}
+function getSiteMapTone(site){
+  const op=getPointOperationalState(site.codigo||site.nome||'');
+  const status=String(op?.status||site.status||'').toLowerCase();
+  if(status.includes('quebrado')||status.includes('sem continuidade'))return 'critical';
+  if(status.includes('pend')||status.includes('mont')||status.includes('prev'))return 'warning';
+  if(status.includes('inativ')||status.includes('deslig')||status.includes('desativ'))return 'muted';
+  return 'normal';
+}
+function getSiteMarkerVisual(site){
+  const cv=camVis(site.camada,site.tipo);
+  const baseColor=COR[cv]||COR.outros;
+  const tone=getSiteMapTone(site);
+  const shape=cv==='backbone'?'diamond':((site.tipo==='caixa'||(site.tipo||'').toLowerCase().includes('armario'))?'square':'dot');
+  const sizeBase=cv==='backbone'?13:cv==='metro_alta'?11:cv==='metro_dist'?10:cv==='ERB'?8:7;
+  const size=tone==='critical'?sizeBase+3:(tone==='warning'?sizeBase+2:(tone==='muted'?Math.max(6,sizeBase-1):sizeBase));
+  const color=tone==='critical'?'#ff6b75':(tone==='warning'?'#ffb648':baseColor);
+  return {icon:mkSiteNode(color,size,{shape,tone}),tone,color};
 }
 function openFlagEditor(kind,id){
   const existing=getFlagForAsset(kind,id);
@@ -2037,7 +2082,7 @@ async function loadRompimentosNoMapa(){
   const incs=await fetch(`${SU}/rest/v1/incidentes?status=eq.aberto&lat_falha=not.is.null&select=*`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
   incs.forEach(i=>{
     if(!i.lat_falha||!i.lng_falha)return;
-    const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp(),zIndexOffset:5000})
+    const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp('aberta',true),zIndexOffset:5000})
       .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`);
     attachMarkerFieldActions(mk,()=>({
       title:`Rompimento ${normText(i.titulo)||'ativo'}`,
@@ -2125,19 +2170,19 @@ function renderSiteClusters(){
     const layerId = getSiteLayer(cv);
     if(VIS[layerId] !== false && isSiteVisible(s.id)) {
        const pt = PP(s.localizacao); if(!pt) return;
-       const cor = COR[cv]||COR.outros;
-       const sz = cv==='backbone'?13:cv==='metro_alta'?11:cv==='metro_dist'?10:cv==='ERB'?8:7;
-       const ic = cv==='backbone'?mkDia(cor):(s.tipo==='caixa'||(s.tipo||'').toLowerCase().includes('armario'))?mkSq(cor,sz):mkD(cor,sz);
-       const mk = L.marker(pt,{icon:ic}).on('click',e=>{
+       const visual=getSiteMarkerVisual(s);
+       const op=getPointOperationalState(s.codigo||s.nome||'');
+       const popupStatus=op?`<br><span style="color:${op.tone};font-weight:700">${esc(op.status)}</span>`:'';
+       const mk = L.marker(pt,{icon:visual.icon,zIndexOffset:visual.tone==='critical'?3400:(visual.tone==='warning'?3350:3200)}).on('click',e=>{
           L.DomEvent.stopPropagation(e);
           if(aplicarPontoSelecionado(s.codigo||s.nome||''))return;
           if(moveMode){moverSite(pt[0],pt[1],s.id,s.nome);return;}
           if(incMode){regFalha(pt[0],pt[1],s.nome);return;}
           showPanSite(s,pt);
-       });
+       }).bindPopup(`<b>${esc(codeFirstLabel(s))}</b><br>${esc(s.municipio||'')}/${esc(s.uf||'MG')}<br><span style="color:var(--t3)">${esc(s.tipo||'site')}</span>${popupStatus}`);
        attachMarkerFieldActions(mk,()=>mkSiteMenu(s,pt));
        visibleMarkers.push(mk);
-    }
+     }
   });
   siteClusterGroup.addLayers(visibleMarkers);
 }
@@ -3375,7 +3420,7 @@ async function plotarOTDR(){
   if(!lat){el.innerHTML='<div style="color:var(--rd);padding:8px">Não foi possível calcular — cabo sem geometria.</div>';return;}
   limparOTDR();otdrLayer=L.layerGroup().addTo(map);
   // Marcador de rompimento vermelho pulsante
-  L.marker([lat,lng],{icon:mkRomp(),zIndexOffset:4000})
+  L.marker([lat,lng],{icon:mkRomp('aberta',true),zIndexOffset:4000})
     .bindPopup(`<b>📡 Rompimento OTDR</b><br><b>Cabo:</b> ${esc(cabo.nome||'—')}<br><b>Distância:</b> ${dist}m (${Math.round(pct*100)}%)<br><b>Coords:</b> ${lat.toFixed(6)}, ${lng.toFixed(6)}${lanc?`<br><b>Cabo lançado:</b> ${lanc}m`:''}<br><b>Falha:</b> ${esc(desc)||'—'}`)
     .openPopup().addTo(otdrLayer);
   // Se tem cabo lançado, mostrar marcador de nova caixa
@@ -4782,7 +4827,7 @@ function renderInventarioDrafts(){
   });
   store.rupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
+      L.marker([rp.lat,rp.lng],{icon:mkRomp('aberta',!!rp._synced),zIndexOffset:4000})
         .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'—')}<br>${esc(rp.observacao||'')}`)
         .addTo(draftInvLayer);
       if(rp.metragem_lancada_m){
@@ -4880,7 +4925,7 @@ function renderInventarioDraftsV2(){
   });
   store.rupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(!!rp._synced),zIndexOffset:4000})
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp('aberta',!!rp._synced),zIndexOffset:4000})
         .bindPopup(`<b>Ruptura ${esc(rp.cabo_segmento||'-')}</b><br>OTDR: ${rp.distancia_otdr_m||0}m<br>Cabo lançado: ${rp.metragem_lancada_m||0}m<br>Nova caixa: ${esc(rp.nova_caixa||'-')}<br>${esc(rp.observacao||'')}`)
         .on('click',()=>showPanRupturaDraft(rp))
         .addTo(draftInvLayer);
@@ -4894,7 +4939,7 @@ function renderInventarioDraftsV2(){
   });
   officialRupturas.forEach(rp=>{
     if(rp.lat&&rp.lng){
-      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(true),zIndexOffset:3950})
+      const mk=L.marker([rp.lat,rp.lng],{icon:mkRomp(rp.status||'aberta',true),zIndexOffset:3950})
         .bindPopup(`<b>🚨 ${esc(rp.cabo_segmento||'Ruptura')}</b><br>OTDR: ${km(rp.distancia_otdr_m||0)}<br>Cabo lançado: ${km(rp.metragem_lancada_m||0)}<br>${esc(rp.status||'aberta')} • banco oficial`)
         .on('click',()=>showPanRupturaOficial(rp))
         .addTo(draftInvLayer);
@@ -5273,7 +5318,7 @@ async function revisarNoMapa(ta, siteRef, coords){
     if(coords && coords.includes(',')){
        const [lat, lng] = coords.split(',').map(Number);
        if(!isNaN(lat)){
-         L.marker([lat, lng], {icon: mkRomp(false), zIndexOffset: 5000})
+          L.marker([lat, lng], {icon: mkRomp('aberta', false), zIndexOffset: 5000})
           .bindPopup(`<b>Sugestão SIGITM: TA ${ta}</b><br>${siteRef}<br>Clique para confirmar local`)
           .addTo(map);
        }
