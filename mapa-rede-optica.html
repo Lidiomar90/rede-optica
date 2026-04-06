@@ -3107,6 +3107,11 @@ function showPanCabo(c,pts,lenCalc){
   const diff=c.comprimento?Math.abs(c.comprimento-lenCalc):null;
   const cableState=getCableOperationalState(c,lenCalc);
   const rel=cableState.rel;
+  const link=ensureCableStationLink(c,pts,true)||getCableLinkRecord(c.id)||{};
+  const bindings=getCableFiberBindings(c.id);
+  const plan=buildCableFiberPlan(c);
+  const safeId=String(c.id).replace(/'/g,"\\'");
+  const safeNome=esc(c.nome||'').replace(/'/g,"\\'");
   showPan(codeFirstLabel(c),[
     ['Tipo',c.tipo||'—'],['Camada',c.camada||'—'],
     ['Comprimento cad.',km(c.comprimento)],
@@ -3115,10 +3120,12 @@ function showPanCabo(c,pts,lenCalc){
     c.status&&['Status',c.status,TC(c.status)],
     c.observacao&&['Obs',c.observacao.substring(0,200)],
   ],[
-    {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${String(c.id).replace(/'/g,"\\'")}')`},
-    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${c.id}')`},
-    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
-    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
+    {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${safeId}')`},
+    sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${safeId}')`},
+    {l:'🔗 Estações',c:'b',fn:`sincronizarCaboEstacoes('${safeId}');showPanCabo(allC.find(x=>String(x.id)==='${safeId}'),PL(allC.find(x=>String(x.id)==='${safeId}')?.trajeto)||[],${lenCalc||0})`},
+    {l:'🧬 Fibras',c:'b',fn:`openCableFiberDiagram('${safeId}')`},
+    {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${safeId}','${safeNome}',${c.comprimento||0})`},
+    sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${safeId}')`},
   ].filter(Boolean));
   if(caboFlag){
     $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Flag operacional</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
@@ -3131,6 +3138,17 @@ function showPanCabo(c,pts,lenCalc){
     [`${rel.segs.length} segmento(s) local(is)`,rel.segs.length?'var(--gr)':'var(--am)'],
     [rel.rupts.length?`${rel.rupts.length} ruptura(s) associada(s)`:'sem ruptura local','var(--rd)'],
   ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${cableState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(cableState.status)}</b><br>${esc(cableState.detail)}</div></div>`;
+  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estações sugeridas</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+    [link.ponta_a_ref?`A ${link.ponta_a_ref}`:'A sem vínculo',link.ponta_a_ref?'var(--gr)':'var(--am)'],
+    [link.ponta_b_ref?`B ${link.ponta_b_ref}`:'B sem vínculo',link.ponta_b_ref?'var(--gr)':'var(--am)'],
+    ['auto proximidade','var(--bl)'],
+    [link.status||'pendente_confirmacao','var(--am)']
+  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55">Ponta A ${link.ponta_a_ref?`${esc(link.ponta_a_ref)}${link.ponta_a_dist_m?` • ${link.ponta_a_dist_m}m`:''}`:'não resolvida'}<br>Ponta B ${link.ponta_b_ref?`${esc(link.ponta_b_ref)}${link.ponta_b_dist_m?` • ${link.ponta_b_dist_m}m`:''}`:'não resolvida'}<br><span style="color:var(--t3)">Sugestão geométrica para correção/validação pela equipe de campo.</span></div></div>`;
+  $('pb').innerHTML+=`<div style="margin-top:10px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Diagrama óptico</div><div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([
+    [`${plan.total} fibra(s)`,'var(--bl)'],
+    [`${plan.tubos} tubo(s) loose`,'var(--bl)'],
+    [bindings.length?`${bindings.length} fibra(s) amarrada(s)`:'sem amarração','var(--gr)']
+  ])}</div><div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55">Clique em <b>🧬 Fibras</b> para abrir o diagrama por tubo loose, selecionar a fibra e amarrar a uma facilidade óptica/equipamento.</div></div>`;
   if(rel.segs.length){
     $('pb').innerHTML+=`<div style="margin-top:12px"><div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Segmentos locais ligados</div><div style="display:flex;flex-direction:column;gap:6px">${rel.segs.slice(0,8).map(s=>`<button class="pac" style="width:100%" onclick="jumpToSegmentDraft('${s.id}')">${esc(s.cabo||'Segmento')} • ${esc(s.ponto_a||'-')} → ${esc(s.ponto_b||'-')}</button>`).join('')}</div></div>`;
   }
