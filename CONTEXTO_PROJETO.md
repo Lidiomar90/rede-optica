@@ -591,3 +591,22 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
 - VS Code agora tambem tem tasks para:
   - monitorar
   - monitorar e publicar se seguro
+
+### Enxugamento da sidebar e recolhimento em `Sites`
+
+- a aba `Sites` agora permite recolher e expandir:
+  - por `CN / DDD`
+  - por cidade / localidade dentro do grupo
+- o estado dos grupos fica salvo no navegador
+- a listagem dos sites ficou menos repetitiva:
+  - removeu repeticao de `CN` e cidade no subtitulo de cada item
+  - manteve so origem e responsavel quando houver
+- o texto institucional do site foi encurtado para ficar mais objetivo:
+  - sidebar: `Mapa e inventário da rede`
+  - cabeçalho do mapa: `Rede, falhas e cadastro`
+- objetivo dessa rodada:
+  - reduzir ruido visual
+  - deixar a leitura mais proxima de operacao real
+  - aproximar o produto de ferramentas como GeoSite/Ozmap, que tendem a ser mais objetivas na tela principal
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`

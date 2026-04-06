@@ -142,6 +142,10 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .sbflt.on{display:flex}
 .gh{padding:8px 6px 5px;font-size:9px;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.18em;display:flex;justify-content:space-between}
 .gh span:last-child{background:rgba(255,255,255,.05);border-radius:999px;padding:2px 7px}
+.gh.click{cursor:pointer;align-items:center;gap:8px;padding:9px 6px 6px}
+.gh.city{padding-top:6px;font-size:10px;color:var(--cy);letter-spacing:.08em}
+.gh .ghl{display:flex;align-items:center;gap:8px;min-width:0}
+.gha{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);font-size:9px;color:var(--t3);flex-shrink:0}
 .si{padding:9px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:12px;transition:.08s;margin-bottom:4px}
 .si:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.06)}.si.on{background:rgba(72,168,255,.09);border-color:rgba(72,168,255,.18)}
 .sii{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -480,9 +484,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 <div class="pg on" id="pg-mapa">
   <div id="sb">
     <div id="sbhero">
-      <div class="sbk">Centro Operacional</div>
-      <div class="sbh">Malha óptica de Minas em tempo real</div>
-      <div class="sbp">Busca técnica, camadas por serviço e ações de campo no mesmo painel operacional.</div>
+      <div class="sbk">Centro de Operações</div>
+      <div class="sbh">Mapa e inventário da rede</div>
+      <div class="sbp">Sites, cabos, falhas e cadastro em uma tela só.</div>
       <div class="sbstats">
         <div class="sbst"><b id="ce2">—</b><span>Sites</span></div>
         <div class="sbst"><b id="cc2">—</b><span>Cabos</span></div>
@@ -523,9 +527,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
   <div id="mob-ov" onclick="closeSB()"></div>
   <div id="mw">
     <div id="maphead">
-      <div class="mhk">Mapa operacional</div>
-      <div class="mht">Rotas, falhas, OTDR e cadastro em uma única superfície</div>
-      <div class="mhs" id="mapsub">Projetado para operação de rede, não só visualização. Use o painel lateral para filtrar ativos e os controles à direita para ações de campo.</div>
+      <div class="mhk">Mapa</div>
+      <div class="mht">Rede, falhas e cadastro</div>
+      <div class="mhs" id="mapsub">Filtre ativos na lateral e execute ações de campo no mapa.</div>
       <div class="mmeta">
         <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
       </div>
@@ -1058,12 +1062,14 @@ const LAYERS=[
 const VIS={};
 LAYERS.forEach(l=>{VIS[l.id]=l.vis;l.sub.forEach(s=>VIS[s.id]=l.vis);});
 const SITEVIS={};
+const SITEGROUPS={};
 const LYR={};
 
 function camVis(c,t){const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();if(tl.includes('erb'))return'ERB';if(tl.includes('caixa')||tl.includes('armario'))return'caixa';if(cl in COR)return cl;return'outros';}
 function getSiteLayer(cv){return{backbone:'bb_site',metro_alta:'m4_equip',metro_dist:'m5_equip',ERB:'ac_erb',caixa:'ac_caixa',acesso:'ac_site',b2b:'b2b_site'}[cv]||'outros';}
 const PP=g=>g?.type==='Point'?[g.coordinates[1],g.coordinates[0]]:null;
 const PL=g=>g?.type==='LineString'?g.coordinates.map(c=>[c[1],c[0]]):null;
+const SITE_GROUP_PREF_KEY='redeoptica_site_groups_v1';
 const normCode=v=>String(v||'').trim().toUpperCase();
 const normText=v=>String(v||'').trim();
 const sciencePoint=(lat,lng)=>({type:'Point',coordinates:[lng,lat]});
@@ -2096,7 +2102,8 @@ function applyPreset(name){
   buildLayerPanel();applyVis();savePref();
 }
 function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));localStorage.setItem('_sv',JSON.stringify(SITEVIS));}
-function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}const ss=localStorage.getItem('_sv');if(ss){try{Object.assign(SITEVIS,JSON.parse(ss));}catch{}}}
+function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}const ss=localStorage.getItem('_sv');if(ss){try{Object.assign(SITEVIS,JSON.parse(ss));}catch{}}const sg=localStorage.getItem(SITE_GROUP_PREF_KEY);if(sg){try{Object.assign(SITEGROUPS,JSON.parse(sg));}catch{}}}
+function saveSiteGroupPref(){localStorage.setItem(SITE_GROUP_PREF_KEY,JSON.stringify(SITEGROUPS));}
 
 async function syncGraphRPC(){
   toast('Sincronizando grafos no banco...','in');
@@ -2338,6 +2345,14 @@ function setAllSites(on){
     renderSB($('si')?.value||'');
   }
 }
+function isSiteGroupOpen(key,defaultOpen=true){
+  return Object.prototype.hasOwnProperty.call(SITEGROUPS,key)?SITEGROUPS[key]!==false:defaultOpen;
+}
+function toggleSiteGroup(key){
+  SITEGROUPS[key]=!isSiteGroupOpen(key,true);
+  saveSiteGroupPref();
+  if(sbMode==='sites')renderSB($('si')?.value||'');
+}
 function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';renderSidebarFilters();if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){
   if(sbMode!=='camadas') renderSB(q);
@@ -2553,13 +2568,19 @@ function renderSBv2(q=''){
       Object.keys(byCn).sort(cnSort).forEach(cn=>{
         const localMap=byCn[cn];
         const totalCn=Object.values(localMap).reduce((acc,arr)=>acc+arr.length,0);
-        h+=`<div class="gh"><span>CN / DDD ${esc(cn)}</span><span>${totalCn}</span></div>`;
+        const cnKey=`cn:${cn}`;
+        const cnOpen=isSiteGroupOpen(cnKey,!q);
+        h+=`<div class="gh click" onclick="toggleSiteGroup('${String(cnKey).replace(/'/g,"\\'")}')"><div class="ghl"><span class="gha">${cnOpen?'▾':'▸'}</span><span>CN / DDD ${esc(cn)}</span></div><span>${totalCn}</span></div>`;
+        if(!cnOpen)return;
         Object.keys(localMap).sort((a,b)=>String(a||'').localeCompare(String(b||''),'pt-BR')).forEach(loc=>{
           const arr=localMap[loc].sort((a,b)=>codeFirstLabel(a).localeCompare(codeFirstLabel(b),'pt-BR'));
-          h+=`<div style="padding:6px 10px 4px;font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em">${esc(loc)} <span style="color:var(--t3);font-weight:700">(${arr.length})</span></div>`;
+          const locKey=`cn:${cn}|loc:${loc}`;
+          const locOpen=isSiteGroupOpen(locKey,!!q);
+          h+=`<div class="gh click city" onclick="toggleSiteGroup('${String(locKey).replace(/'/g,"\\'")}')"><div class="ghl"><span class="gha">${locOpen?'▾':'▸'}</span><span>${esc(loc)}</span></div><span>${arr.length}</span></div>`;
+          if(!locOpen)return;
           arr.slice(0,120).forEach(i=>{
             const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
-            const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
+            const sub=[i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase'),i.supervisor&&`Resp. ${i.supervisor}`].filter(Boolean).join(' • ');
             const flag=getFlagIndicatorHtml('site',i.id);
             const vis=isSiteVisible(i.id);
             h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="lg-ck ${vis?'on':''}" onclick="event.stopPropagation();toggleSiteVisible('${String(i.id).replace(/'/g,"\\'")}')" style="width:18px;height:18px;min-width:18px;border-color:${cor};${vis?'background:'+cor:''}">${vis?'✓':''}</div><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
@@ -3012,6 +3033,91 @@ FIM DO RELATÓRIO OPERACIONAL
   $('mbg').classList.add('show');
 }
 function moverIniciar(id,nome){closePan();moveMode=true;$('h-move').style.display='block';toast('Clique no novo local de '+nome,'wn');map.once('click',async e=>{moveMode=false;$('h-move').style.display='none';const{lat,lng}=e.latlng;const r=await fetch(`${SU}/rest/v1/sites?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({localizacao:`SRID=4326;POINT(${lng} ${lat})`})});if([200,204].includes(r.status)){toast('✓ Site movido!');loadMap();}else toast('Erro ao mover','er');});}
+
+// VIABILIDADE AUTOMÁTICA
+function sugerirViabilidadeAutomatica(lat, lng){
+  toast('Analisando viabilidade...', 'in');
+  const store = getInvStore();
+  const pontoClique = {lat, lng};
+  
+  // Encontra o Site/DGO/Caixa mais próximo
+  let proximoAtivo = null;
+  let menorDistancia = Infinity;
+  
+  // Busca em sites
+  allS.forEach(s => {
+    const pt = PP(s.localizacao);
+    if(!pt) return;
+    const d = map.distance(pontoClique, pt);
+    if(d < menorDistancia) {
+      menorDistancia = d;
+      proximoAtivo = {tipo: 'site', item: s, ponto: pt, distancia: d};
+    }
+  });
+  
+  // Busca em caixas oficiais
+  officialCaixas.forEach(cx => {
+    if(!cx._pt) return;
+    const d = map.distance(pontoClique, cx._pt);
+    if(d < menorDistancia) {
+      menorDistancia = d;
+      proximoAtivo = {tipo: 'caixa', item: cx, ponto: cx._pt, distancia: d};
+    }
+  });
+  
+  // Busca em DGOs
+  officialDgos.forEach(dg => {
+    const siteItem = allS.find(s => String(s.id) === String(dg.site_id));
+    if(!siteItem) return;
+    const pt = PP(siteItem.localizacao);
+    if(!pt) return;
+    const d = map.distance(pontoClique, pt);
+    if(d < menorDistancia) {
+      menorDistancia = d;
+      proximoAtivo = {tipo: 'dgo', item: dg, ponto: pt, distancia: d};
+    }
+  });
+  
+  if(!proximoAtivo) {
+    toast('Nenhum ativo próximo encontrado', 'wn');
+    return;
+  }
+  
+  // Calcula metragem estimada (distância geodésica * fator de sinuosidade)
+  const metragemEstimada = Math.round(menorDistancia * 1.15);
+  const tipoLabel = {site: 'Site', caixa: 'Caixa', dgo: 'DGO'}[proximoAtivo.tipo];
+  const nomeAtivo = proximoAtivo.item.codigo || proximoAtivo.item.nome || '—';
+  
+  $('mtt').textContent = '🔌 Sugestão de Viabilidade';
+  $('mbd').innerHTML = `
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:8px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--t1);margin-bottom:8px">Ativo Mais Próximo</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.6">
+        <div><b>${tipoLabel}:</b> ${esc(nomeAtivo)}</div>
+        <div><b>Distância:</b> ${menorDistancia.toFixed(0)}m</div>
+        <div><b>Metragem Estimada (cabo):</b> ${metragemEstimada}m</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(77,166,255,.1);font-size:10px;color:var(--t3)">
+          ℹ Metragem estimada inclui sinuosidade da via (~15%)
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="usarViabilidadeParaSegmento('${proximoAtivo.item.codigo || proximoAtivo.item.nome}', ${metragemEstimada})" style="flex:1">✓ Usar para Segmento</button>
+    </div>
+  `;
+  $('mbg').classList.add('show');
+}
+
+function usarViabilidadeParaSegmento(pontoDestino, metragem){
+  closeM();
+  goTab('cadastro', document.querySelector('.nt[onclick*="cadastro"]'));
+  const sgB = $('sg-b');
+  if(sgB) sgB.value = pontoDestino;
+  const sgMetr = $('sg-metr');
+  if(sgMetr) sgMetr.value = metragem;
+  toast(`✓ Ponto B = ${pontoDestino}, Metragem = ${metragem}m`, 'ok');
+}
 
 // RASTREAMENTO
 function abrirRastreamento(siteNome){
