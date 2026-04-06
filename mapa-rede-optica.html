@@ -5397,6 +5397,80 @@ function fmtTelegramLocation(item){
   return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
 }
 function escapeJsText(v=''){return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' ')}
+function getTelegramSnapshotKey(item){
+  return [String(item?.site_ref||'').toUpperCase(), String(item?.rack||'').toUpperCase(), String(item?.dgo||'').toUpperCase()].join('|');
+}
+function buildFiberMap(item){
+  const m=new Map();
+  const arr=Array.isArray(item?.fibers_preview)?item.fibers_preview:[];
+  arr.forEach(f=>m.set(String(f.fo), f));
+  return m;
+}
+function compareTelegramSnapshots(current, previous){
+  if(!previous)return null;
+  const cur=buildFiberMap(current), prev=buildFiberMap(previous);
+  let changed=0, becameBusy=0, becameFree=0, becameUnknown=0;
+  const touched=[];
+  const keys=new Set([...cur.keys(), ...prev.keys()]);
+  [...keys].sort((a,b)=>Number(a)-Number(b)).forEach(k=>{
+    const a=cur.get(k), b=prev.get(k);
+    const sa=a?.status||'', sb=b?.status||'';
+    const da=(a?.descricao||'').trim(), db=(b?.descricao||'').trim();
+    if(sa!==sb || da!==db){
+      changed++;
+      if(sb==='vaga' && sa==='ocupada') becameBusy++;
+      if(sb==='ocupada' && sa==='vaga') becameFree++;
+      if(sa==='sem_identificacao' && sb!=='sem_identificacao') becameUnknown++;
+      if(touched.length<6){
+        touched.push({
+          fo:k,
+          before: sb || 'ausente',
+          after: sa || 'ausente',
+          beforeDesc: db,
+          afterDesc: da
+        });
+      }
+    }
+  });
+  return {changed,becameBusy,becameFree,becameUnknown,touched};
+}
+function renderTelegramSnapshotPreview(item, previous){
+  const stats=item?.snapshot_stats||{};
+  const preview=Array.isArray(item?.fibers_preview)?item.fibers_preview:[];
+  const diff=compareTelegramSnapshots(item, previous);
+  const chips=[
+    `<span class="stg tok">ocupadas ${Number(stats.ocupadas||0)}</span>`,
+    `<span class="stg ${Number(stats.vagas||0)?'tok':'twn'}">vagas ${Number(stats.vagas||0)}</span>`,
+    `<span class="stg ${Number(stats.sem_identificacao||0)?'twn':'tok'}">sem id ${Number(stats.sem_identificacao||0)}</span>`,
+    `<span class="stg tok">total ${Number(stats.total||preview.length||0)}</span>`
+  ].join(' ');
+  const diffHtml=diff
+    ? `<div style="margin:8px 0;padding:8px;border-radius:8px;background:rgba(72,168,255,.08);border:1px solid rgba(72,168,255,.18)">
+         <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Mudanças vs último snapshot</div>
+         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+           <span class="stg ${diff.changed?'twn':'tok'}">mudanças ${diff.changed}</span>
+           <span class="stg ${diff.becameBusy?'twn':'tok'}">virou ocupada ${diff.becameBusy}</span>
+           <span class="stg ${diff.becameFree?'tok':'tok'}">virou vaga ${diff.becameFree}</span>
+           <span class="stg ${diff.becameUnknown?'twn':'tok'}">virou sem id ${diff.becameUnknown}</span>
+         </div>
+         ${diff.touched.map(t=>`<div style="font-size:10px;color:var(--t2);margin-bottom:4px"><b>FO ${esc(t.fo)}</b>: ${esc(t.before)} -> ${esc(t.after)}${t.afterDesc?` • ${esc(t.afterDesc).slice(0,40)}`:''}</div>`).join('') || '<div style="font-size:10px;color:var(--t3)">Sem mudança detectada nas fibras em preview.</div>'}
+       </div>`
+    : '';
+  const rows=preview.map(f=>{
+    const cls=f.status==='ocupada'?'tok':(f.status==='vaga'?'tok':'twn');
+    const label=f.status==='ocupada'?'ocupada':(f.status==='vaga'?'vaga':'sem id');
+    return `<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--t2);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span><b>FO ${esc(String(f.fo))}</b> <span class="stg ${cls}">${label}</span></span><span style="text-align:right;max-width:62%;color:var(--t3)">${esc(String(f.descricao||'')).slice(0,52)}</span></div>`;
+  }).join('');
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${chips}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Rack:</b> ${esc(item.rack||'—')}</div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:8px"><b>DGO:</b> ${esc(item.dgo||'—')} • <b>Site:</b> ${esc(item.site_ref||'—')}</div>
+    ${diffHtml}
+    <div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Preview das fibras</div>
+      ${rows}
+    </div>`;
+}
 async function abrirEsteiraTelegram(){
   $('sec-telegram').style.display='block';
   const el=$('telegram-lista');
@@ -5407,10 +5481,26 @@ async function abrirEsteiraTelegram(){
     const dados=await r.json();
     const decisions=loadTelegramDecisions();
     if(!dados.length){el.innerHTML='Nenhum item pendente do Telegram.';return;}
+    const snapshots=(dados||[])
+      .filter(x=>x.kind==='snapshot_dgo')
+      .sort((a,b)=>String(b.captured_at||'').localeCompare(String(a.captured_at||'')));
     el.innerHTML=dados.map(item=>{
       const decision=decisions[item.id]?.decision||'pendente';
       const dups=Array.isArray(item.duplicate_hints)?item.duplicate_hints:[];
+      const previousSnapshot=item.kind==='snapshot_dgo'
+        ? snapshots.find(x=>x.id!==item.id && getTelegramSnapshotKey(x)===getTelegramSnapshotKey(item) && String(x.captured_at||'')<String(item.captured_at||''))
+        : null;
       const dupHtml=dups.length?`<div style="margin-top:8px;padding:8px;border-radius:8px;background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.18)"><div style="font-size:10px;color:var(--am);font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Possível duplicidade</div>${dups.slice(0,3).map(d=>`<div style="font-size:11px;color:var(--t2);margin-bottom:5px"><b>${esc(d.descricao||d.fonte||'parecido')}</b>${d.score?` <span style="color:var(--am)">(${d.score})</span>`:''}${Array.isArray(d.motivos)&&d.motivos.length?`<br><span style="color:var(--t3)">${esc(d.motivos.join(' | '))}</span>`:''}</div>`).join('')}</div>`:'';
+      const detailHtml=item.kind==='snapshot_dgo'
+        ? renderTelegramSnapshotPreview(item, previousSnapshot)
+        : `
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Serviço:</b> ${esc(item.service_type||'indefinido')} • ${esc(item.camada||'indefinida')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>DGO/Porta:</b> ${esc(item.dgo||'—')} / ${esc(item.porta||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>FO/FL/BT:</b> ${esc(item.fo||'—')} • ${esc(item.fl||'—')} • ${esc(item.bt||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Interface:</b> ${esc(item.interface||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Distância:</b> ${esc(item.distance_raw||'—')}</div>
+        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Mapa:</b> ${esc(fmtTelegramLocation(item))}</div>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5"><b>Resumo:</b> ${esc((item.summary||'').slice(0,140))}</div>`;
       return `
       <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px">
         <div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;align-items:flex-start">
@@ -5420,13 +5510,7 @@ async function abrirEsteiraTelegram(){
           </div>
           <span class="stg ${telegramBadgeClass(decision)}">${telegramBadgeLabel(decision)}</span>
         </div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Serviço:</b> ${esc(item.service_type||'indefinido')} • ${esc(item.camada||'indefinida')}</div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>DGO/Porta:</b> ${esc(item.dgo||'—')} / ${esc(item.porta||'—')}</div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>FO/FL/BT:</b> ${esc(item.fo||'—')} • ${esc(item.fl||'—')} • ${esc(item.bt||'—')}</div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Interface:</b> ${esc(item.interface||'—')}</div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Distância:</b> ${esc(item.distance_raw||'—')}</div>
-        <div style="font-size:11px;color:var(--t2);margin-bottom:4px"><b>Mapa:</b> ${esc(fmtTelegramLocation(item))}</div>
-        <div style="font-size:10px;color:var(--t3);margin-bottom:8px;line-height:1.5"><b>Resumo:</b> ${esc((item.summary||'').slice(0,140))}</div>
+        ${detailHtml}
         ${dupHtml}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
           <button class="tb" onclick="revisarEventoTelegram('${escapeJsText(item.id)}')">👁 Revisar</button>
