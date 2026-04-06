@@ -139,6 +139,39 @@
         "cwd": "C:\\FIBRA CADASTRO"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: monitorar",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\MONITORAR-HUB-IAS.ps1",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IA Hub: monitorar e publicar se seguro",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\FIBRA CADASTRO\\MONITORAR-HUB-IAS.ps1",
+        "-PublicarSeSeguro",
+        "-AbrirPasta"
+      ],
+      "options": {
+        "cwd": "C:\\FIBRA CADASTRO"
+      },
+      "problemMatcher": []
     }
   ]
 }

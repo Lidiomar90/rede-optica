@@ -23,6 +23,10 @@ Este diretório funciona como centro operacional para múltiplas IAs no projeto 
 3. Colar as respostas em `respostas/` da sessão
 4. Consolidar:
    - `C:\FIBRA CADASTRO\CONSOLIDAR-RETORNOS-IAS.ps1 -Sessao "<pasta da sessão>"`
+5. Monitorar e resumir automaticamente:
+   - `C:\FIBRA CADASTRO\MONITORAR-HUB-IAS.ps1`
+6. Opcionalmente publicar se tudo estiver seguro:
+   - `C:\FIBRA CADASTRO\MONITORAR-HUB-IAS.ps1 -PublicarSeSeguro`
 
 ## Objetivo
 
@@ -32,3 +36,4 @@ Manter:
 - rastreabilidade
 - consolidação de decisões
 - continuidade operacional do projeto
+- e publicação automática com trava básica de segurança

@@ -575,3 +575,19 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - criar tarefa
   - foco mobile
   - foco banco e persistencia
+
+### Monitor automatico do hub
+
+- foi criado o monitor do hub:
+  - `MONITORAR-HUB-IAS.ps1`
+- atalho:
+  - `MONITORAR-HUB-IAS.bat`
+- o monitor faz:
+  - verifica respostas de Claude, Gemini, DeepSeek e Manus
+  - consolida automaticamente quando todas chegaram
+  - gera `08_RESUMO_AUTOMATICO.md` na sessao
+  - atualiza o status do manifesto da tarefa
+  - opcionalmente tenta publicar via `PUBLICAR-GIT.ps1` quando a rodada estiver apta
+- VS Code agora tambem tem tasks para:
+  - monitorar
+  - monitorar e publicar se seguro
