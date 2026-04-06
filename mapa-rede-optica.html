@@ -83,9 +83,10 @@ color:var(--t);font-family:'Manrope',sans-serif;transition:background .25s,color
 
 /* SIDEBAR */
 #sb{width:290px;background:linear-gradient(180deg,var(--glass),rgba(10,20,35,.94));border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;flex-shrink:0;z-index:400;transition:background .25s;backdrop-filter:blur(16px);box-shadow:18px 0 44px rgba(0,0,0,.18)}
-@media(max-width:680px){#sb{position:absolute;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .2s;box-shadow:8px 0 30px rgba(0,0,0,.5);width:min(84vw,320px)}}
+@media(max-width:680px){#sb{position:absolute;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:8px 0 30px rgba(0,0,0,.5);width:min(84vw,320px)}}
 #sb.open{transform:translateX(0)!important}
-#mob-ov{display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:350}
+#mob-ov{display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:350;transition:opacity .28s;cursor:pointer}
+#mob-ov.show{display:block}
 #sbhero{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,.06);background:
 linear-gradient(145deg,rgba(72,168,255,.16),transparent 48%),
 linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
@@ -213,7 +214,7 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 /* PAINEL — CORRIGIDO: z-index acima dos botões do mapa */
 #pan{position:absolute;z-index:500;background:var(--bg2);border:1px solid var(--bd2);overflow:hidden;display:none;box-shadow:0 4px 32px rgba(0,0,0,.6);animation:up .18s ease;transition:background .25s}
 @media(min-width:680px){#pan{bottom:10px;left:10px;width:290px;max-height:62vh;overflow-y:auto;border-radius:10px}}
-@media(max-width:679px){#pan{bottom:0;left:0;right:0;border-radius:14px 14px 0 0;max-height:72vh;overflow-y:auto}}
+@media(max-width:679px){#pan{bottom:0;left:0;right:0;border-radius:14px 14px 0 0;max-height:72vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,0px)}}
 #pan::-webkit-scrollbar{width:2px}
 #pan::-webkit-scrollbar-thumb{background:var(--bd2)}
 .ph{padding:13px 14px 9px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);z-index:2;display:flex;align-items:flex-start;gap:8px}
@@ -237,6 +238,31 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
 .romp-marker{animation:pulse 1s infinite}
 .trace-line{animation:flowDash 1.1s linear infinite}
 .otdr-line{animation:flowDash 1.8s linear infinite}
+
+/* BADGE MODO CAMPO */
+.fbtn.campo-on{background:rgba(69,208,140,.18);border-color:rgba(69,208,140,.3);color:var(--gr)}
+.fbtn.campo-on .fi::after{content:'●';font-size:7px;vertical-align:super;margin-left:1px;color:var(--gr)}
+#field-mode-chip.on{background:rgba(69,208,140,.16);border-color:rgba(69,208,140,.26);color:var(--gr)}
+
+/* INDICADOR DE REDE */
+#net-indicator{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:450;padding:5px 14px;border-radius:999px;font-size:10px;font-weight:800;display:none;pointer-events:none;backdrop-filter:blur(10px);white-space:nowrap}
+#net-indicator.offline{display:block;background:rgba(255,90,104,.18);border:1px solid rgba(255,90,104,.35);color:var(--rd)}
+#net-indicator.slow{display:block;background:rgba(255,182,72,.14);border:1px solid rgba(255,182,72,.3);color:var(--am)}
+#net-indicator.online-flash{display:block;background:rgba(69,208,140,.14);border:1px solid rgba(69,208,140,.28);color:var(--gr)}
+
+/* CACHE TIMESTAMP */
+#cache-ts{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);z-index:410;font-size:9px;color:var(--t3);background:rgba(9,18,31,.7);padding:3px 10px;border-radius:999px;pointer-events:none;display:none;white-space:nowrap}
+@media(min-width:681px){#cache-ts{display:none!important}}
+
+/* FILA DE SYNC */
+#sync-queue-badge{position:absolute;top:8px;right:56px;z-index:450;padding:4px 10px;border-radius:999px;font-size:9px;font-weight:800;background:rgba(255,182,72,.18);border:1px solid rgba(255,182,72,.3);color:var(--am);display:none;pointer-events:none;white-space:nowrap}
+#sync-queue-badge.show{display:block}
+
+/* DRAWBAR FIXO — não some com teclado virtual */
+@media(max-width:680px){
+  #drawbar{bottom:0;left:0;right:0;border-radius:0;transform:none;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));position:fixed}
+  #drawbar.show{display:flex}
+}
 
 /* PÁGINAS INTERNAS */
 .pgc{flex:1;overflow-y:auto;padding:14px}
@@ -506,6 +532,9 @@ linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
     </div>
     <div id="map"></div>
     <button id="mobb" class="mb" onclick="toggleSB()">☰</button>
+    <div id="net-indicator"></div>
+    <div id="cache-ts"></div>
+    <div id="sync-queue-badge"></div>
     <div id="h-med" class="hint">📏 Clique para medir • duplo clique para finalizar</div>
     <div id="h-draw" class="hint">🔌 Trace o cabo • duplo clique para salvar</div>
     <div id="h-inc" class="hint">🚨 Clique no local da falha</div>
@@ -1025,6 +1054,7 @@ const LAYERS=[
 ];
 const VIS={};
 LAYERS.forEach(l=>{VIS[l.id]=l.vis;l.sub.forEach(s=>VIS[s.id]=l.vis);});
+const SITEVIS={};
 const LYR={};
 
 function camVis(c,t){const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();if(tl.includes('erb'))return'ERB';if(tl.includes('caixa')||tl.includes('armario'))return'caixa';if(cl in COR)return cl;return'outros';}
@@ -1942,7 +1972,7 @@ function renderSiteClusters(){
   allS.forEach(s => {
     const cv = camVis(s.camada, s.tipo);
     const layerId = getSiteLayer(cv);
-    if(VIS[layerId] !== false) {
+    if(VIS[layerId] !== false && isSiteVisible(s.id)) {
        const pt = PP(s.localizacao); if(!pt) return;
        const cor = COR[cv]||COR.outros;
        const sz = cv==='backbone'?13:cv==='metro_alta'?11:cv==='metro_dist'?10:cv==='ERB'?8:7;
@@ -1970,8 +2000,8 @@ function applyPreset(name){
   if(name==='incidentes'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;}
   buildLayerPanel();applyVis();savePref();
 }
-function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));}
-function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}}
+function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));localStorage.setItem('_sv',JSON.stringify(SITEVIS));}
+function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}const ss=localStorage.getItem('_sv');if(ss){try{Object.assign(SITEVIS,JSON.parse(ss));}catch{}}}
 
 async function syncGraphRPC(){
   toast('Sincronizando grafos no banco...','in');
@@ -2152,6 +2182,13 @@ async function abrirAuditoriaRuptura(caboRef){
 function renderSidebarFilters(){
   const el=$('sbflt');
   if(!el)return;
+  if(sbMode==='sites'){
+    const total=allS.length;
+    const visiveis=allS.filter(s=>isSiteVisible(s.id)).length;
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Sites no mapa <span style="color:var(--cy)">${visiveis}/${total}</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="setAllSites(true)">Todos</button><button class="overlay-chip" onclick="setAllSites(false)">Nenhum</button></div></div>`;
+    el.classList.add('on');
+    return;
+  }
   if(sbMode!=='ativos'&&sbMode!=='continu'){
     el.classList.remove('on');
     el.innerHTML='';
@@ -2178,6 +2215,33 @@ function matchesSidebarStatus(status){
   if(sbStatusFilter==='pendente')return s.includes('pend')||s.includes('montagem')||s.includes('rascunho');
   if(sbStatusFilter==='confirmado')return s.includes('confirmado')||s.includes('registrada')||s.includes('ativo')||s.includes('pronto');
   return true;
+}
+function isSiteVisible(id){
+  return SITEVIS[String(id)]!==false;
+}
+function toggleSiteVisible(id,force){
+  const key=String(id);
+  const next=typeof force==='boolean'?force:!isSiteVisible(key);
+  SITEVIS[key]=next;
+  savePref();
+  renderSiteClusters();
+  if(sbMode==='sites'){
+    renderSidebarFilters();
+    renderSB($('si')?.value||'');
+  }
+}
+function setAllSites(on){
+  if(on){
+    Object.keys(SITEVIS).forEach(k=>delete SITEVIS[k]);
+  }else{
+    allS.forEach(s=>SITEVIS[String(s.id)]=false);
+  }
+  savePref();
+  renderSiteClusters();
+  if(sbMode==='sites'){
+    renderSidebarFilters();
+    renderSB($('si')?.value||'');
+  }
 }
 function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';renderSidebarFilters();if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){
@@ -2402,7 +2466,8 @@ function renderSBv2(q=''){
             const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
             const sub=[i.cn&&`CN ${i.cn}`,i.localidade||i.municipio,i.fonte==='science'?'Science':(i.fonte==='supabase+science'?'Supabase + Science':'Supabase')].filter(Boolean).join(' • ');
             const flag=getFlagIndicatorHtml('site',i.id);
-            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+            const vis=isSiteVisible(i.id);
+            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="lg-ck ${vis?'on':''}" onclick="event.stopPropagation();toggleSiteVisible('${String(i.id).replace(/'/g,"\\'")}')" style="width:18px;height:18px;min-width:18px;border-color:${cor};${vis?'background:'+cor:''}">${vis?'✓':''}</div><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
           });
           if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
         });
