@@ -521,3 +521,26 @@ python etl_telegram_rede_optica.py --rollback BATCH_ID
   - se `_kind === dgo_oficial`, ele nao cai no fluxo de edicao/assistente de rascunho
 - validacao:
   - JavaScript inline continua integro: `CHECK_OK`
+
+### Segmento oficial no mapa e na continuidade
+
+- `mapa-rede-optica.html` agora tambem consome a tabela `segmento_cabo`
+- dados oficiais sao normalizados no front em:
+  - `officialSegmentos`
+- os segmentos oficiais agora:
+  - aparecem no mapa com traçado proprio
+  - entram na aba lateral `Continu.`
+  - abrem painel proprio de banco oficial
+  - podem entrar em edicao direta pelo mesmo formulario de segmento
+- o menu contextual de segmento agora diferencia:
+  - rascunho local
+  - banco oficial
+- o fluxo de edicao oficial foi fechado:
+  - `editarSegmentoOficial`
+  - `redesenharSegmentoOficial`
+  - `salvarSegmento` com `PATCH` em `segmento_cabo`
+- objetivo dessa rodada:
+  - parar de deixar `segmento_cabo` oficial invisivel para a operacao de campo
+  - aproximar continuidade real do banco com o mapa operacional
+- validacao:
+  - JavaScript inline continua integro: `CHECK_OK`

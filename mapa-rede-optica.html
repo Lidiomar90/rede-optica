@@ -1731,11 +1731,11 @@ async function loadMap(){
   initMapObj();
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
-  allS=[];allC=[];scienceSites=[];officialCaixas=[];officialDgos=[];officialRupturas=[];fmap={};cableFx={};activeCableId=null;
+  allS=[];allC=[];scienceSites=[];officialCaixas=[];officialDgos=[];officialSegmentos=[];officialRupturas=[];fmap={};cableFx={};activeCableId=null;
   
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
-    let sites,cabos,science,caixasMapa,dgosMapa,rupturasMapa;
+    let sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa;
     try{
       const zoom = map.getZoom();
       let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
@@ -1748,12 +1748,13 @@ async function loadMap(){
         caboUrl += `&trajeto=ov.${bbox}`;
       }
 
-      [sites,cabos,science,caixasMapa,dgosMapa,rupturasMapa]=await Promise.all([
+      [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa]=await Promise.all([
         fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
         fetch(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/dgo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetch(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
       ]);
       saveMapCache(sites,cabos,science);
@@ -1766,6 +1767,7 @@ async function loadMap(){
       science=cache.science||[];
       caixasMapa=[];
       dgosMapa=[];
+      segmentosMapa=[];
       rupturasMapa=[];
       setOfflineState(true,'Sem rede estável. Carregando último cache local.');
     }
@@ -1774,6 +1776,7 @@ async function loadMap(){
     allC=Array.isArray(cabos)?cabos:[];
     officialCaixas=(Array.isArray(caixasMapa)?caixasMapa:[]).map(normalizeCaixaMapaRow).filter(x=>x._pt);
     officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
+    officialSegmentos=(Array.isArray(segmentosMapa)?segmentosMapa:[]).map(normalizeSegmentoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
     const totalSites=allS.length.toLocaleString('pt-BR');
     const totalCabos=allC.length.toLocaleString('pt-BR');
@@ -2056,6 +2059,78 @@ async function triggerGraphSync(){
   }
 }
 
+// AUDITORIA RÁPIDA
+async function abrirAuditoriaRef(ref){
+  toast('Auditando referência...','in');
+  const p=findDraftPoint(ref||'');
+  if(!p){toast('Referência não localizada','wn');return;}
+  
+  const issues=[];
+  const store=getInvStore();
+  
+  if(p.tipo==='caixa'){
+    const cx=p.item;
+    const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===String(cx.codigo||'').toUpperCase()||String(s.ponto_b||'').toUpperCase()===String(cx.codigo||'').toUpperCase());
+    if(!cx.vistoriada)issues.push('⚠ Caixa não vistoriada');
+    if(segs.length===0)issues.push('🔴 Caixa sem segmentos ligados');
+    if(segs.length===1)issues.push('🟠 Caixa com apenas 1 lado conectado');
+    if(!cx.lat||!cx.lng)issues.push('📍 Sem coordenadas');
+  }
+  
+  if(p.tipo==='dgo'){
+    const dg=p.item;
+    const segs=store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===String(dg.codigo||'').toUpperCase()||String(s.ponto_b||'').toUpperCase()===String(dg.codigo||'').toUpperCase());
+    if(segs.length===0)issues.push('🔴 DGO sem segmentos ligados');
+    if(segs.length===1)issues.push('🟠 DGO com apenas 1 lado conectado');
+    if(!dg.status||dg.status!=='ativo')issues.push('⚠ DGO com status pendente');
+  }
+  
+  if(p.tipo==='site'){
+    const st=p.item;
+    const dgos=store.dgos.filter(d=>String(d.site||'').toUpperCase()===String(st.codigo||'').toUpperCase());
+    if(dgos.length===0)issues.push('🟡 Site sem DGOs cadastrados');
+  }
+  
+  $('mtt').textContent='🤖 Auditoria: '+esc(ref);
+  $('mbd').innerHTML=`
+    <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      ${issues.length===0?'✅ Nenhum problema detectado':'🔍 '+issues.length+' problema(s) encontrado(s)'}
+    </div>
+    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--am);font-size:11px">${esc(i)}</div>`).join('')}</div>`:''}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="jumpToRef('${String(ref).replace(/'/g,"\\'")}')">📍 Ir para mapa</button>
+    </div>
+  `;
+  $('mbg').classList.add('show');
+}
+
+async function abrirAuditoriaRuptura(caboRef){
+  toast('Auditando ruptura...','in');
+  const store=getInvStore();
+  const rupts=store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(String(caboRef||'').toUpperCase()));
+  const segs=store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===String(caboRef||'').toUpperCase());
+  
+  const issues=[];
+  if(rupts.length===0)issues.push('ℹ Nenhuma ruptura registrada para este cabo');
+  if(segs.length===0)issues.push('🔴 Cabo sem segmentos cadastrados');
+  if(segs.some(s=>!s.ponto_a||!s.ponto_b))issues.push('🟠 Algum segmento sem pontos A/B definidos');
+  if(segs.some(s=>!s.geometria_pts||s.geometria_pts.length<2))issues.push('📍 Algum segmento sem geometria');
+  
+  $('mtt').textContent='🤖 Auditoria: Ruptura '+esc(caboRef);
+  $('mbd').innerHTML=`
+    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      ${rupts.length} ruptura(s) | ${segs.length} segmento(s) | ${issues.length} problema(s)
+    </div>
+    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--rd);font-size:11px">${esc(i)}</div>`).join('')}</div>`:''}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="abrirCaboPorReferencia('${String(caboRef).replace(/'/g,"\\'")}')">🧵 Ver cabo</button>
+    </div>
+  `;
+  $('mbg').classList.add('show');
+}
+
 // SIDEBAR
 function renderSidebarFilters(){
   const el=$('sbflt');
@@ -2192,17 +2267,30 @@ function renderSBv2(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
   if(sbMode==='continu'){
     const store=getInvStore();
-    const segs=store.segmentos.map(seg=>{
-      const st=getSegmentOperationalState(seg);
-      return {
-        kind:'segmento',
-        id:seg.id,
-        label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
-        sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
-        status:st.status,
-        cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
-      };
-    });
+    const segs=[
+      ...officialSegmentos.map(seg=>{
+        const st=getSegmentOperationalState(seg);
+        return {
+          kind:'segmento_oficial',
+          id:seg.id,
+          label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+          sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m),'banco oficial'].filter(Boolean).join(' • '),
+          status:st.status||seg.status||'ativo',
+          cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+        };
+      }),
+      ...store.segmentos.map(seg=>{
+        const st=getSegmentOperationalState(seg);
+        return {
+          kind:'segmento',
+          id:seg.id,
+          label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+          sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
+          status:st.status,
+          cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+        };
+      })
+    ];
     const rupts=[
       ...store.rupturas.map(rp=>({
         kind:'ruptura',
@@ -2225,6 +2313,7 @@ function renderSBv2(q=''){
     if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
     let h='';
     const groups=[
+      ['segmento_oficial','Segmentos oficiais','#64d8ff'],
       ['segmento','Segmentos físicos','#22d3ee'],
       ['ruptura','Rupturas / reparos','#e84455'],
       ['ruptura_oficial','Rupturas oficiais','#ff7a8c']
@@ -2234,8 +2323,9 @@ function renderSBv2(q=''){
       if(!arr.length)return;
       h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
       arr.forEach(i=>{
-        const id=kind==='segmento'?`seg-${i.id}`:(kind==='ruptura_oficial'?`rp-db-${i.id}`:`rp-${i.id}`);
-        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${kind==='segmento'?'ln':''}" style="background:${color}${kind==='segmento'?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
+        const id=kind==='segmento'?`seg-${i.id}`:(kind==='segmento_oficial'?`seg-db-${i.id}`:(kind==='ruptura_oficial'?`rp-db-${i.id}`:`rp-${i.id}`));
+        const lineKind=kind==='segmento'||kind==='segmento_oficial';
+        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${lineKind?'ln':''}" style="background:${color}${lineKind?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
       });
     });
     el.innerHTML=h;
@@ -3921,6 +4011,7 @@ async function salvarSegmento(){
     await pushToSupabase('segmento_cabo', dbPayload, 'sg-msg');
   }
   limpar('sg');
+  delete $('sg-msg').dataset.editId;
   if($('sg-edit-id'))$('sg-edit-id').value='';
 }
 async function salvarRuptura(){
@@ -4091,10 +4182,37 @@ function showPanSegmentoDraft(seg){
   $('pa').innerHTML=`<button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-a')">🎯 Reatribuir A</button><button class="pac b" onclick="redefinirPontoSegmento('${seg.id}','sg-b')">🎯 Reatribuir B</button><button class="pac g" onclick="editarSegmentoDraft('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoDraft('${seg.id}')">🧭 Redesenhar</button><button class="pac a" onclick="abrirNovaRupturaContextual('${String(seg.cabo||'').replace(/'/g,"\\'")}')">🚨 Nova ruptura</button>`;
   $('pan').style.display='block';
 }
+function showPanSegmentoOficial(seg){
+  if(mapPointTarget)return;
+  closePan();
+  const segState=getSegmentOperationalState(seg);
+  $('pt').textContent=`📏 ${seg.cabo||'Segmento oficial'}`;
+  $('pb').innerHTML=`
+    <div class="pr"><span class="pl">Origem</span><span class="pv">banco oficial</span></div>
+    <div class="pr"><span class="pl">Ponto A</span><span class="pv">${esc(seg.ponto_a||'—')}</span></div>
+    <div class="pr"><span class="pl">Ponto B</span><span class="pv">${esc(seg.ponto_b||'—')}</span></div>
+    <div class="pr"><span class="pl">Lançamento</span><span class="pv">${esc(seg.tipo_lancamento||'—')}</span></div>
+    <div class="pr"><span class="pl">Metragem</span><span class="pv">${km(seg.metragem_m)}</span></div>
+    <div class="pr"><span class="pl">Geometria</span><span class="pv">${Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?`${seg.geometria_pts.length} ponto(s)`:'trajeto não informado'}</span></div>
+    <div class="pr"><span class="pl">Fabricante</span><span class="pv">${esc(seg.fabricante||'—')}</span></div>
+    <div class="pr"><span class="pl">Modelo</span><span class="pv">${esc(seg.modelo||'—')}</span></div>
+    <div class="pr"><span class="pl">Lote</span><span class="pv">${esc(seg.lote||'—')}</span></div>
+    <div style="margin-top:10px">
+      <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Estado operacional</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${buildOperationalBadges([[segState.status,segState.tone]])}</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.55"><b style="color:${segState.tone};text-transform:uppercase;font-size:10px;letter-spacing:.08em">${esc(segState.status)}</b><br>${esc(segState.detail)}</div>
+    </div>
+    ${buildSegmentLinksHtml(seg)}
+    ${seg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(seg.observacao)}</div>`:''}
+  `;
+  $('pa').innerHTML=`<button class="pac g" onclick="editarSegmentoOficial('${seg.id}')">✏ Editar segmento</button><button class="pac a" onclick="redesenharSegmentoOficial('${seg.id}')">🧭 Redesenhar</button><button class="pac a" onclick="abrirNovaRupturaContextual('${String(seg.cabo||'').replace(/'/g,"\\'")}')">🚨 Nova ruptura</button><button class="pac g" onclick="toast('Segmento oficial carregado do banco','ok')">✓ Oficial</button>`;
+  $('pan').style.display='block';
+}
 function editarSegmentoDraft(id){
   const seg=getInvStore().segmentos.find(x=>x.id===id);
   if(!seg){toast('Segmento não encontrado','er');return;}
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  delete $('sg-msg').dataset.editId;
   if($('sg-edit-id'))$('sg-edit-id').value=seg.id;
   $('sg-cabo').value=seg.cabo||'';
   $('sg-a').value=seg.ponto_a||'';
@@ -4109,6 +4227,25 @@ function editarSegmentoDraft(id){
   msgField('sg-msg','Editando segmento existente. Salve para atualizar.','in');
   closePan();
 }
+function editarSegmentoOficial(id){
+  const seg=officialSegmentos.find(x=>String(x.id)===String(id));
+  if(!seg){toast('Segmento oficial não encontrado','er');return;}
+  goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+  if($('sg-edit-id'))$('sg-edit-id').value='';
+  $('sg-msg').dataset.editId=String(seg.id);
+  $('sg-cabo').value=seg.cabo||'';
+  $('sg-a').value=seg.ponto_a||'';
+  $('sg-b').value=seg.ponto_b||'';
+  $('sg-tipo').value=seg.tipo_lancamento||'aereo';
+  $('sg-metr').value=seg.metragem_m||'';
+  $('sg-fab').value=seg.fabricante||'';
+  $('sg-modelo').value=seg.modelo||'';
+  $('sg-lote').value=seg.lote||'';
+  $('sg-obs').value=seg.observacao||'';
+  $('sg-geo').value=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?JSON.stringify(seg.geometria_pts):'';
+  msgField('sg-msg','Editando segmento oficial. Salve para atualizar no banco.','in');
+  closePan();
+}
 function redefinirPontoSegmento(id,target){
   editarSegmentoDraft(id);
   armarSelecaoPonto(target);
@@ -4119,6 +4256,16 @@ function redesenharSegmentoDraft(id){
   let seed=[];
   try{
     const seg=getInvStore().segmentos.find(x=>x.id===id);
+    if(Array.isArray(seg?.geometria_pts))seed=seg.geometria_pts;
+  }catch{}
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+  startDraw(seed);
+}
+function redesenharSegmentoOficial(id){
+  editarSegmentoOficial(id);
+  let seed=[];
+  try{
+    const seg=officialSegmentos.find(x=>String(x.id)===String(id));
     if(Array.isArray(seg?.geometria_pts))seed=seg.geometria_pts;
   }catch{}
   goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
@@ -4258,6 +4405,24 @@ function renderInventarioDraftsV2(){
       }});
       const bounds=L.latLngBounds(path.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]));
       fmap['seg-'+seg.id]=()=>{map.fitBounds(bounds,{padding:[50,50],maxZoom:18});showPanSegmentoDraft(seg);};
+    }
+  });
+  officialSegmentos.forEach(seg=>{
+    const path=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2
+      ? seg.geometria_pts.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]).filter(p=>p&&p.length===2)
+      : null;
+    if(path&&path.length>=2){
+      addCableVisual(draftInvLayer,path,{color:seg.tipo_lancamento==='subterraneo'?'#6fa8ff':seg.tipo_lancamento==='misto'?'#ffb648':'#64d8ff',weight:4.8,opacity:0.92,dashArray:seg.tipo_lancamento==='subterraneo'?'4 6':seg.tipo_lancamento==='misto'?'9 5':'',className:'trace-line',popup:`<b>Segmento oficial ${esc(seg.cabo||'-')}</b><br>${esc(seg.ponto_a||'-')} -> ${esc(seg.ponto_b||'-')}<br>${esc(seg.tipo_lancamento||'-')} | ${km(seg.metragem_m)}<br>banco oficial`,click:()=>showPanSegmentoOficial(seg),dblclick:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        editarSegmentoOficial(seg.id);
+        toast('Edição rápida de segmento oficial','in');
+      },contextmenu:ev=>{
+        L.DomEvent.stopPropagation(ev);
+        const oe=ev.originalEvent||{};
+        openActionMenu({...mkSegmentoMenu(seg,path),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
+      }});
+      const bounds=L.latLngBounds(path.map(p=>Array.isArray(p)?[p[0],p[1]]:[p.lat,p.lng]));
+      fmap['seg-db-'+seg.id]=()=>{map.fitBounds(bounds,{padding:[50,50],maxZoom:18});showPanSegmentoOficial(seg);};
     }
   });
   store.rupturas.forEach(rp=>{
