@@ -1054,6 +1054,8 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
+const FIBER_COLORS_BR=['Azul','Laranja','Verde','Marrom','Cinza','Branco','Vermelho','Preto','Amarelo','Violeta','Rosa','Aqua'];
+const FIBER_COLOR_HEX={Azul:'#2563eb',Laranja:'#f97316',Verde:'#16a34a',Marrom:'#7c4a1d',Cinza:'#6b7280',Branco:'#e5e7eb',Vermelho:'#dc2626',Preto:'#111827',Amarelo:'#facc15',Violeta:'#9333ea',Rosa:'#ec4899',Aqua:'#06b6d4'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let latestIncidentes=[],incidentFocusLayer=null;
 let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
@@ -3905,7 +3907,15 @@ function limpar(pre){
 }
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
-function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
+const INV_DEFAULT={caixas:[],dgos:[],segmentos:[],rupturas:[],conexoes:[],pendencias:[],cabo_links:[],fibra_bindings:[]};
+function getInvStore(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(INV_KEY)||'{}');
+    const norm={...INV_DEFAULT,...raw};
+    Object.keys(INV_DEFAULT).forEach(k=>{if(!Array.isArray(norm[k]))norm[k]=[];});
+    return norm;
+  }catch{return JSON.parse(JSON.stringify(INV_DEFAULT));}
+}
 function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();updateSyncQueueBadge();}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
@@ -3945,6 +3955,187 @@ function limparInventarioRascunho(){
 }
 function getConexoesCaixa(codigo){return getInvStore().conexoes.filter(x=>(x.caixa_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
 function getConexoesDgo(codigo){return getInvStore().conexoes.filter(x=>(x.dgo_codigo||'').toUpperCase()===(codigo||'').toUpperCase());}
+function getCableLinkRecord(caboId){return getInvStore().cabo_links.find(x=>String(x.cabo_id||'')===String(caboId||''))||null;}
+function getCableFiberBindings(caboId){return getInvStore().fibra_bindings.filter(x=>String(x.cabo_id||'')===String(caboId||''));}
+function upsertCableLinkRecord(rec){
+  const store=getInvStore();
+  const idx=store.cabo_links.findIndex(x=>String(x.cabo_id||'')===String(rec.cabo_id||''));
+  const base=idx>=0?store.cabo_links[idx]:{id:`cabo_link_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,criado_em:new Date().toISOString()};
+  const next={...base,...rec,atualizado_em:new Date().toISOString()};
+  if(idx>=0)store.cabo_links[idx]=next; else store.cabo_links.push(next);
+  saveInvStore(store);
+  return next;
+}
+function upsertFiberBinding(rec){
+  const store=getInvStore();
+  const idx=store.fibra_bindings.findIndex(x=>String(x.cabo_id||'')===String(rec.cabo_id||'')&&Number(x.tubo)===Number(rec.tubo)&&Number(x.fibra)===Number(rec.fibra));
+  const base=idx>=0?store.fibra_bindings[idx]:{id:`fibra_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,criado_em:new Date().toISOString()};
+  const next={...base,...rec,atualizado_em:new Date().toISOString()};
+  if(idx>=0)store.fibra_bindings[idx]=next; else store.fibra_bindings.push(next);
+  saveInvStore(store);
+  return next;
+}
+function inferCableFiberCount(c){
+  const txt=[c?.nome,c?.codigo,c?.observacao].filter(Boolean).join(' ').toUpperCase();
+  const m=txt.match(/(\d{1,3})\s*(?:FO|FIBRAS?|F)\b/);
+  const qtd=Number(m?.[1]||0);
+  if(qtd>=2&&qtd<=288)return qtd;
+  return 12;
+}
+function buildCableFiberPlan(c){
+  const total=inferCableFiberCount(c);
+  const tubos=Math.max(1,Math.ceil(total/12));
+  const plan=[];
+  let current=1;
+  for(let t=1;t<=tubos;t++){
+    const corTubo=FIBER_COLORS_BR[(t-1)%FIBER_COLORS_BR.length];
+    const fibras=[];
+    for(let i=1;i<=12&&current<=total;i++,current++){
+      const corFibra=FIBER_COLORS_BR[(i-1)%FIBER_COLORS_BR.length];
+      fibras.push({numero:current,ordemTubo:i,cor:corFibra,hex:FIBER_COLOR_HEX[corFibra]});
+    }
+    plan.push({tubo:t,cor:corTubo,hex:FIBER_COLOR_HEX[corTubo],fibras});
+  }
+  return {total,tubos,plan};
+}
+function getStationLabel(site){
+  return site?codeFirstLabel(site):'—';
+}
+function buildCableStationSuggestion(c,pts,maxDist=320){
+  const path=Array.isArray(pts)&&pts.length>=2?pts:(PL(c?.trajeto)||[]);
+  if(path.length<2)return null;
+  const a=nearestSiteTo(path[0][0],path[0][1],maxDist);
+  const b=nearestSiteTo(path[path.length-1][0],path[path.length-1][1],maxDist);
+  return {
+    cabo_id:c.id,
+    cabo_nome:c.nome||c.codigo||String(c.id||''),
+    ponta_a_ref:a?.site?.codigo||a?.site?.nome||null,
+    ponta_b_ref:b?.site?.codigo||b?.site?.nome||null,
+    ponta_a_dist_m:a?Math.round(a.dist):null,
+    ponta_b_dist_m:b?Math.round(b.dist):null,
+    origem:'auto_proximidade',
+    status:'pendente_confirmacao',
+    observacao:'Sugestão criada automaticamente por proximidade geométrica. Confirmar/corrigir em campo.'
+  };
+}
+function ensureCableStationLink(c,pts,persist=true){
+  const current=getCableLinkRecord(c?.id);
+  if(current&&current.ponta_a_ref&&current.ponta_b_ref)return current;
+  const suggestion=buildCableStationSuggestion(c,pts);
+  if(!suggestion)return current||null;
+  return persist?upsertCableLinkRecord(suggestion):suggestion;
+}
+function sincronizarCaboEstacoes(caboId,quiet=false){
+  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
+  if(!c){if(!quiet)toast('Cabo não localizado','wn');return null;}
+  const pts=PL(c.trajeto)||[];
+  const rec=buildCableStationSuggestion(c,pts);
+  if(!rec){if(!quiet)toast('Cabo sem geometria suficiente para vincular estações','wn');return null;}
+  const saved=upsertCableLinkRecord(rec);
+  if(!quiet){
+    const okA=rec.ponta_a_ref?`A ${rec.ponta_a_ref}`:'A sem estação';
+    const okB=rec.ponta_b_ref?`B ${rec.ponta_b_ref}`:'B sem estação';
+    toast(`Vínculo sugerido: ${okA} • ${okB}`,(rec.ponta_a_ref&&rec.ponta_b_ref)?'ok':'wn');
+  }
+  return saved;
+}
+function openFiberBindingEditor(caboId,tubo,fibra){
+  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
+  if(!c){toast('Cabo não localizado','wn');return;}
+  const plan=buildCableFiberPlan(c);
+  const tube=plan.plan.find(x=>x.tubo===Number(tubo));
+  const fiber=tube?.fibras.find(x=>x.numero===Number(fibra));
+  if(!tube||!fiber){toast('Fibra não localizada no diagrama','wn');return;}
+  const link=getCableLinkRecord(caboId)||ensureCableStationLink(c,PL(c.trajeto)||[],false)||{};
+  const bind=getCableFiberBindings(caboId).find(x=>Number(x.tubo)===Number(tubo)&&Number(x.fibra)===Number(fibra))||{};
+  $('mtt').textContent=`Amarração óptica — ${c.nome||c.codigo||'cabo'}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      <b>Tubo ${tube.tubo}</b> • ${tube.cor} • <b>Fibra ${fiber.numero}</b> (${fiber.cor}).<br>
+      Use este vínculo para amarrar a fibra a uma facilidade óptica/equipamento. Confirmar em campo antes de consolidar.
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Ponta / estação</label><select id="fb-side"><option value="A"${bind.side==='A'?' selected':''}>A — ${esc(link.ponta_a_ref||'não resolvida')}</option><option value="B"${bind.side==='B'?' selected':''}>B — ${esc(link.ponta_b_ref||'não resolvida')}</option></select></div>
+      <div class="mfg"><label>Facilidade óptica</label><input id="fb-fac" value="${esc(bind.facilidade||'')}" placeholder="Bandeja 01 / Splitter 1:8 / DGO 02"></div>
+    </div>
+    <div class="mfgr">
+      <div class="mfg"><label>Equipamento</label><input id="fb-eq" value="${esc(bind.equipamento||'')}" placeholder="OLT / DWDM / Switch / DIO"></div>
+      <div class="mfg"><label>Porta / posição</label><input id="fb-porta" value="${esc(bind.porta||'')}" placeholder="PON 1-1 / FO 03 / Porta 12"></div>
+    </div>
+    <div class="mfg"><label>Observação</label><textarea id="fb-obs" placeholder="Descreva a terminação, jumpers, reserva técnica ou necessidade de correção de campo.">${esc(bind.observacao||'')}</textarea></div>
+    <div id="fb-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn2 s" onclick="closeM()">Cancelar</button>
+      <button class="btn2 p" onclick="salvarAmarracaoFibra('${String(caboId).replace(/'/g,"\\'")}',${tube.tubo},${fiber.numero},'${fiber.cor}','${tube.cor}')">💾 Amarrar fibra</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
+function salvarAmarracaoFibra(caboId,tubo,fibra,corFibra,corTubo){
+  const rec=upsertFiberBinding({
+    cabo_id:caboId,
+    tubo:Number(tubo),
+    fibra:Number(fibra),
+    cor_fibra:corFibra,
+    cor_tubo:corTubo,
+    side:$('fb-side')?.value||'A',
+    facilidade:gv('fb-fac'),
+    equipamento:gv('fb-eq'),
+    porta:gv('fb-porta'),
+    observacao:gv('fb-obs'),
+    status:'pendente_confirmacao'
+  });
+  msgField('fb-msg','Amarração óptica salva como pendente de confirmação.','ok');
+  setTimeout(()=>{
+    closeM();
+    const c=allC.find(x=>String(x.id||'')===String(caboId||''));
+    if(c)openCableFiberDiagram(caboId);
+  },350);
+  return rec;
+}
+function openCableFiberDiagram(caboId){
+  const c=allC.find(x=>String(x.id||'')===String(caboId||''));
+  if(!c){toast('Cabo não localizado','wn');return;}
+  const plan=buildCableFiberPlan(c);
+  const link=getCableLinkRecord(caboId)||ensureCableStationLink(c,PL(c.trajeto)||[],false)||{};
+  const bindings=getCableFiberBindings(caboId);
+  const linkedCount=bindings.filter(x=>x.facilidade||x.equipamento||x.porta).length;
+  $('mtt').textContent=`Diagrama óptico — ${c.nome||c.codigo||'cabo'}`;
+  $('mbd').innerHTML=`
+    <div style="background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.24);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      Pré-diagrama operacional com padrão brasileiro de cores. As estações nas pontas foram sugeridas automaticamente por proximidade e precisam de confirmação/correção da equipe de campo.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:12px">
+      <div class="audit-card in"><div class="title">Ponta A</div><div class="detail">${esc(link.ponta_a_ref||'não resolvida')}${link.ponta_a_dist_m?` • ${link.ponta_a_dist_m}m`:''}</div></div>
+      <div class="audit-card in"><div class="title">Ponta B</div><div class="detail">${esc(link.ponta_b_ref||'não resolvida')}${link.ponta_b_dist_m?` • ${link.ponta_b_dist_m}m`:''}</div></div>
+      <div class="audit-card ok"><div class="title">Capacidade</div><div class="detail">${plan.total} fibra(s) • ${plan.tubos} tubo(s) loose</div></div>
+      <div class="audit-card ${linkedCount?'ok':'wn'}"><div class="title">Amarrações</div><div class="detail">${linkedCount} fibra(s) já vinculada(s) a facilidade/equipamento</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="sincronizarCaboEstacoes('${String(caboId).replace(/'/g,"\\'")}');openCableFiberDiagram('${String(caboId).replace(/'/g,"\\'")}')">🔗 Recalcular estações</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${plan.plan.map(t=>`
+        <div style="border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:800;color:var(--t)">Tubo ${t.tubo}</div>
+            <div style="display:inline-flex;align-items:center;gap:8px;font-size:10px;color:var(--t2)"><span style="width:10px;height:10px;border-radius:999px;background:${t.hex};border:1px solid rgba(255,255,255,.25)"></span>${t.cor}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px">
+            ${t.fibras.map(f=>{
+              const bind=bindings.find(x=>Number(x.tubo)===t.tubo&&Number(x.fibra)===f.numero);
+              return `<button class="pac ${bind?'g':'b'}" style="justify-content:flex-start;text-align:left;min-height:44px" onclick="openFiberBindingEditor('${String(caboId).replace(/'/g,"\\'")}',${t.tubo},${f.numero})">
+                <span style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
+                  <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:999px;background:${f.hex};border:1px solid rgba(255,255,255,.25)"></span>F${f.numero} • ${f.cor}</span>
+                  <span style="font-size:9px;color:var(--t3)">${bind?(bind.facilidade||bind.equipamento||bind.porta||'vinculada'):'livre / sem amarração'}</span>
+                </span>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  $('mbg').classList.add('show');
+}
 function findDraftPoint(ref){
   const key=(ref||'').toUpperCase().trim();
   if(!key)return null;
