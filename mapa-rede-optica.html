@@ -2402,6 +2402,93 @@ function abrirDgoNoSite(siteRef){
   msgField('dg-msg',`Site ${siteRef||'—'} aplicado ao novo DGO.`,'ok');
   toast('Cadastro de DGO contextualizado pelo site','ok');
 }
+
+async function listarDgosDoSite(siteId, siteRef){
+  toast('Carregando DGOs do site...','in');
+  try {
+    const res = await fetch(`${SU}/rest/v1/dgo?site_id=eq.${siteId}&select=*`, {headers:RH});
+    if(!res.ok) throw new Error('Erro ao carregar DGOs');
+    const dgos = await res.json();
+    
+    $('mtt').textContent = `DGOs do Site: ${siteRef}`;
+    let h = `<div style="margin-bottom:12px"><button class="btn2 p" style="width:100%" onclick="abrirDgoNoSite('${siteRef.replace(/'/g,"\\'")}')">+ Novo DGO</button></div>`;
+    
+    if(!dgos.length){
+      h += '<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum DGO cadastrado neste site</div>';
+    } else {
+      h += dgos.map(d => `
+        <div class="item" style="margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--bd)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--t)">${esc(d.codigo)}</div>
+              <div style="font-size:11px;color:var(--t2)">${esc(d.nome || 'Sem nome')}</div>
+            </div>
+            <span class="stg ${TC(d.status)}">${d.status}</span>
+          </div>
+          <div style="margin-top:6px;font-size:10px;color:var(--t3)">
+            ${[d.rack && `Rack: ${d.rack}`, d.fila && `Fila: ${d.fila}`, d.bastidor && `Bastidor: ${d.bastidor}`].filter(Boolean).join(' • ')}
+          </div>
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <button class="tb" style="flex:1;padding:4px" onclick="editarDgoOficial('${d.id}')">✏️ Editar</button>
+            <button class="tb r" style="flex:1;padding:4px" onclick="excluirDgoOficial('${d.id}','${siteId}','${siteRef.replace(/'/g,"\\'")}')">🗑 Excluir</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    $('mbd').innerHTML = h;
+    $('mbg').classList.add('show');
+  } catch(err) {
+    toast(err.message, 'er');
+  }
+}
+
+async function editarDgoOficial(id){
+  toast('Carregando dados do DGO...','in');
+  try {
+    const res = await fetch(`${SU}/rest/v1/dgo?id=eq.${id}&select=*`, {headers:RH});
+    const dgo = (await res.json())[0];
+    if(!dgo) throw new Error('DGO não encontrado');
+    
+    // Reaproveita o formulário de cadastro mas prepara para edição
+    goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
+    $('dg-codigo').value = dgo.codigo || '';
+    $('dg-nome').value = dgo.nome || '';
+    $('dg-site').value = dgo.site_id || ''; // Idealmente o nome do site, mas o ID serve se o campo for UUID
+    $('dg-rack').value = dgo.rack || '';
+    $('dg-fila').value = dgo.fila || '';
+    $('dg-bastidor').value = dgo.bastidor || '';
+    $('dg-modelo').value = dgo.modelo || '';
+    $('dg-fab').value = dgo.fabricante || '';
+    $('dg-status').value = dgo.status || 'ativo';
+    $('dg-obs').value = dgo.observacao || '';
+    
+    // Adiciona um marcador de edição
+    $('dg-msg').innerHTML = `<span style="color:var(--am)">Editando DGO oficial (ID: ${id})</span>`;
+    $('dg-msg').dataset.editId = id;
+    
+    closeM();
+    toast('Dados carregados para edição','ok');
+  } catch(err) {
+    toast(err.message, 'er');
+  }
+}
+
+async function excluirDgoOficial(id, siteId, siteRef){
+  if(!confirm('Tem certeza que deseja excluir este DGO permanentemente?')) return;
+  toast('Excluindo DGO...','in');
+  try {
+    const res = await fetch(`${SU}/rest/v1/dgo?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: RH
+    });
+    if(!res.ok) throw new Error('Erro ao excluir DGO');
+    toast('DGO excluído com sucesso','ok');
+    listarDgosDoSite(siteId, siteRef);
+  } catch(err) {
+    toast(err.message, 'er');
+  }
+}
 function abrirCaixaContextual(ref='',lat=null,lng=null){
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
   if(lat!==null&&lng!==null){$('cx-lat').value=Number(lat).toFixed(6);$('cx-lng').value=Number(lng).toFixed(6);}
@@ -2478,6 +2565,7 @@ function showPanSite(s,pt){
     sessao.perfil!=='leitura'&&canEdit&&{l:'Editar',c:'g',fn:`editarSite('${s.id}')`},
     {l:siteFlag?'🚩 Editar flag':'🚩 Marcar',c:siteFlag?'a':'b',fn:`openFlagEditor('site','${String(s.id).replace(/'/g,"\\'")}')`},
     {l:'Novo DGO',c:'b',fn:`abrirDgoNoSite('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')`},
+    {l:'Listar DGOs',c:'b',fn:`listarDgosDoSite('${s.id}','${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}')`},
     {l:'Nova caixa',c:'b',fn:`abrirCaixaContextual('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}',${pt[0]},${pt[1]})`},
     {l:'Ponto A',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-a')`},
     {l:'Ponto B',c:'b',fn:`usarComoPontoSegmento('${esc(s.codigo||s.nome||'').replace(/'/g,"\\'")}','sg-b')`},
