@@ -984,7 +984,7 @@ function aplicarTema(){
 // ═══════════════════════════════════════════
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
-let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
@@ -1108,6 +1108,26 @@ function normalizeDgoRow(row){
     fabricante:row.fabricante||'',
     status:row.status||'ativo',
     observacao:row.observacao||row.obs||'',
+  };
+}
+function normalizeSegmentoRow(row){
+  const path=PL(row.trajeto)||PL(row.geometria)||PL(row.geom)||[];
+  return {
+    ...row,
+    _kind:'segmento_oficial',
+    id:String(row.id||row.codigo||row.cabo||crypto.randomUUID()),
+    cabo:row.cabo||row.codigo||row.nome||'Segmento oficial',
+    ponto_a:row.ponto_a||row.ponto_a_ref||row.origem||'',
+    ponto_b:row.ponto_b||row.ponto_b_ref||row.destino||'',
+    tipo_lancamento:row.tipo_lancamento||row.tipo||'aereo',
+    metragem_m:Number(row.metragem_m||row.comprimento_m||row.comprimento||0),
+    fabricante:row.fabricante||'',
+    modelo:row.modelo||'',
+    lote:row.lote||'',
+    observacao:row.observacao||row.obs||'',
+    trajeto:row.trajeto||row.geometria||row.geom||null,
+    geometria_pts:Array.isArray(path)&&path.length>=2?path.map(p=>[Number(p[0]),Number(p[1])]):null,
+    status:row.status||'ativo'
   };
 }
 function normalizeRupturaMapaRow(row){
@@ -1347,15 +1367,16 @@ function mkCaboMenu(c,p2,lenCalc){
   };
 }
 function mkSegmentoMenu(seg,path){
+  const isOfficial=seg?._kind==='segmento_oficial';
   const center=path&&path.length?path[Math.floor(path.length/2)]:map.getCenter();
   const latlng=Array.isArray(center)?{lat:center[0],lng:center[1]}:center;
   return {
     title:`Segmento ${normText(seg.cabo)||'Rascunho'}`,
-    subtitle:`${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}`,
+    subtitle:`${esc(seg.ponto_a||'—')} → ${esc(seg.ponto_b||'—')}<br>${esc(seg.tipo_lancamento||'—')} | ${km(seg.metragem_m)}${isOfficial?'<br>banco oficial':''}`,
     actions:[
-      {label:'📋 Ver detalhes',action:()=>showPanSegmentoDraft(seg)},
-      {label:'✏️ Editar segmento',action:()=>editarSegmentoDraft(seg.id)},
-      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharSegmentoDraft(seg.id)},
+      {label:'📋 Ver detalhes',action:()=>isOfficial?showPanSegmentoOficial(seg):showPanSegmentoDraft(seg)},
+      {label:'✏️ Editar segmento',action:()=>isOfficial?editarSegmentoOficial(seg.id):editarSegmentoDraft(seg.id)},
+      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>isOfficial?redesenharSegmentoOficial(seg.id):redesenharSegmentoDraft(seg.id)},
       {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(seg,latlng.lat,latlng.lng)},
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
     ]
@@ -2017,7 +2038,22 @@ async function syncLocalDrafts(){
   saveInvStore(store);
   if(total===0) toast('Nada novo para sincronizar.','in');
   else toast(`✓ Sincronizados ${ok} de ${total} itens.` , ok===total?'ok':'wn');
-  if(ok > 0) loadMap();
+  if(ok > 0) {
+    await triggerGraphSync();
+  }
+}
+
+async function triggerGraphSync(){
+  try {
+    const r1 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos`, {method:'POST', headers:RH}).catch(()=>({ok:false}));
+    const r2 = await fetch(`${SU}/rest/v1/rpc/fn_sync_edges_from_cabos_dgo`, {method:'POST', headers:RH}).catch(()=>({ok:false}));
+    const r3 = await fetch(`${SU}/rest/v1/rpc/fn_sync_network_edges`, {method:'POST', headers:RH}).catch(()=>({ok:false}));
+    if(r1.ok || r2.ok || r3.ok) {
+      setTimeout(()=>loadMap(), 800);
+    }
+  } catch(e) {
+    console.warn('Sincronizacao de grafo falhou:', e);
+  }
 }
 
 // SIDEBAR
