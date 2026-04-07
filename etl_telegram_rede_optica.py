@@ -235,7 +235,8 @@ class DB:
         if cod.startswith("MG") and len(cod) > 4:
             aliases.add(cod[2:])
         if cod.endswith("MG") and len(cod) > 4:
-            aliases.add(cod[:-2])
+            aliases.add(cod[:-2])          # SAGMG → SAG
+            aliases.add("MG" + cod[:-2])   # SAGMG → MGSAG
         return {a for a in aliases if a and a not in SIGLA_STOPWORDS}
 
     def _registrar_site(self, registro: dict):

@@ -1,7 +1,7 @@
 ﻿# Resumo Automatico do Hub
 
 Sessao: C:\FIBRA CADASTRO\ia_hub\sessoes\sessao_multi_ia_20260405_234505
-Gerado em: 07/04/2026 10:20:53
+Gerado em: 07/04/2026 16:11:03
 
 ## Respostas detectadas
 - Claude: placeholder
@@ -11,7 +11,7 @@ Gerado em: 07/04/2026 10:20:53
 - Kiro: sem_arquivo
 
 ## Leitura de execucao
-- Idade da sessao em minutos: 2074
+- Idade da sessao em minutos: 2425
 - Estado geral da sessao: placeholders_sem_execucao_real
 - Placeholder sem resposta real detectado: sim
 

@@ -2005,6 +2005,8 @@ async function loadMap(){
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
     let sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa;
+    let siteCountHeader = 0;
+    let caboCountHeader = 0;
     try{
       clearTimeout(netSlowTimer);
       netSlowTimer=setTimeout(()=>setNetworkIndicator('slow','Rede lenta...'),1800);
@@ -2026,8 +2028,7 @@ async function loadMap(){
 
       const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
       const caboCountUrl = caboUrl.replace(/limit=\d+/,'limit=1');
-      let siteCountHeader = 0;
-      let caboCountHeader = 0;
+      const _mapLoadTimeout=setTimeout(()=>{throw new Error('Timeout 30s: servidor não respondeu');},30000);
       [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader]=await Promise.all([
         fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
@@ -2040,7 +2041,8 @@ async function loadMap(){
         fetch(caboCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
-      saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});
+      clearTimeout(_mapLoadTimeout);
+      try{saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});}catch(cacheErr){console.warn('Cache local indisponível (storage cheio):',cacheErr.message);}
       updateCacheTimestamp(new Date().toISOString());
       setOfflineState(false);
     }catch(netErr){
@@ -2267,8 +2269,7 @@ async function syncLocalDrafts(){
       localizacao: cx.lat && cx.lng ? `SRID=4326;POINT(${cx.lng} ${cx.lat})` : null,
       observacao: cx.observacao
     };
-    const res = await fetch(`${SU}/rest/v1/caixa_emenda`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
-    if(res.ok){ cx._synced = true; ok++; }
+    try{const res=await fetch(`${SU}/rest/v1/caixa_emenda`,{method:'POST',headers:{...WH,'Prefer':'return=minimal'},body:JSON.stringify(payload)});if(res.ok){cx._synced=true;ok++;}}catch(e){console.warn('Sync caixa falhou:',e.message);}
   }
 
   // Sincronizar DGOs
@@ -2282,8 +2283,7 @@ async function syncLocalDrafts(){
         modelo: dg.modelo, fabricante: dg.fabricante, status: dg.status,
         observacao: dg.observacao
       };
-      const res = await fetch(`${SU}/rest/v1/dgo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
-      if(res.ok){ dg._synced = true; ok++; }
+      try{const res=await fetch(`${SU}/rest/v1/dgo`,{method:'POST',headers:{...WH,'Prefer':'return=minimal'},body:JSON.stringify(payload)});if(res.ok){dg._synced=true;ok++;}}catch(e){console.warn('Sync dgo falhou:',e.message);}
     }
   }
 
@@ -2301,8 +2301,7 @@ async function syncLocalDrafts(){
       fabricante: seg.fabricante, modelo: seg.modelo, lote: seg.lote,
       trajeto: trajeto, observacao: seg.observacao
     };
-    const res = await fetch(`${SU}/rest/v1/segmento_cabo`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
-    if(res.ok){ seg._synced = true; ok++; }
+    try{const res=await fetch(`${SU}/rest/v1/segmento_cabo`,{method:'POST',headers:{...WH,'Prefer':'return=minimal'},body:JSON.stringify(payload)});if(res.ok){seg._synced=true;ok++;}}catch(e){console.warn('Sync seg falhou:',e.message);}
   }
 
   // Sincronizar Rupturas
@@ -2318,8 +2317,7 @@ async function syncLocalDrafts(){
       observacao: rp.observacao,
       data_hora: rp.data_hora || new Date().toISOString()
     };
-    const res = await fetch(`${SU}/rest/v1/evento_ruptura`, {method:'POST', headers:{...WH,'Prefer':'return=minimal'}, body:JSON.stringify(payload)});
-    if(res.ok){ rp._synced = true; ok++; }
+    try{const res=await fetch(`${SU}/rest/v1/evento_ruptura`,{method:'POST',headers:{...WH,'Prefer':'return=minimal'},body:JSON.stringify(payload)});if(res.ok){rp._synced=true;ok++;}}catch(e){console.warn('Sync ruptura falhou:',e.message);}
   }
 
   saveInvStore(store);
@@ -3540,7 +3538,7 @@ Causa Provável: ${causa || 'Rompimento'}
 Observação: ${obs || 'Sem observações adicionais'}
 
 📋 CADEIA DE EMENDAS (AUDITORIA)
-${auditarTrechoFalha(site, lat, lng).map(cx => `[${cx.ordem}] CX ${cx.codigo} | Dist: ${cx.distancia} | Vis: ${cx.status}`).join('\n') || 'Nenhuma caixa detectada no trecho.'}
+${(auditarTrechoFalha(site, lat, lng)||[]).map(cx => `[${cx.ordem}] CX ${cx.codigo} | Dist: ${cx.distancia} | Vis: ${cx.status}`).join('\n') || 'Nenhuma caixa detectada no trecho.'}
 
 ⚠️ RECOMENDAÇÃO DE CAMPO
 - Verificar integridade da caixa anterior e posterior.
@@ -4235,7 +4233,7 @@ function limpar(pre){
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
-function saveInvStore(store){localStorage.setItem(INV_KEY,JSON.stringify(store));renderInventarioResumo();updateSyncQueueBadge();}
+function saveInvStore(store){try{localStorage.setItem(INV_KEY,JSON.stringify(store));}catch(e){console.warn('Cache inv cheio:',e.message);}renderInventarioResumo();updateSyncQueueBadge();}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
   const store=getInvStore();
@@ -5629,8 +5627,10 @@ function redesenharCaboOficial(id){
 // EXCLUIR
 async function del(tbl,id){
   if(!confirm('Excluir permanentemente? Esta ação não pode ser desfeita.'))return;
-  const r=await fetch(`${SU}/rest/v1/${tbl}?id=eq.${id}`,{method:'DELETE',headers:WH});
-  if([200,204].includes(r.status)){toast('Excluído!');closePan();loadMap();}else toast('Erro ao excluir','er');
+  try{
+    const r=await fetch(`${SU}/rest/v1/${tbl}?id=eq.${id}`,{method:'DELETE',headers:WH});
+    if([200,204].includes(r.status)){toast('Excluído!');closePan();loadMap();}else toast('Erro ao excluir: '+r.status,'er');
+  }catch(err){toast('Erro de conexão ao excluir: '+err.message,'er');}
 }
 
 // MODAL
@@ -6321,4 +6321,168 @@ async function publicarTelegramAprovadosStaging(){
       const rows = await publishedResp.json();
       (rows||[]).forEach(r=>already.add(`${r.chat_id}::${r.message_id}`));
     }
-    const aprovados = (fila||[]).filter
+    const aprovados = (fila||[]).filter(item=>decisions[item.id]?.decision==='aprovado');
+    if(!aprovados.length){
+      toast('Não há itens Telegram aprovados para publicar','wn');
+      return;
+    }
+    const payload = aprovados
+      .filter(item=>!already.has(`${item.chat_id}::${item.message_id}`))
+      .map(item=>{
+        const decisionMeta=decisions[item.id]||{};
+        const supervisorData=decisionMeta.supervisor_data||{};
+        return ({
+        origem: item.source||'telegram_bot',
+        chat_id: String(item.chat_id||''),
+        chat_titulo: item.chat_title||'',
+        message_id: Number(item.message_id||0),
+        remetente: item.sender||'',
+        capturado_em: item.captured_at||new Date().toISOString(),
+        resumo: item.summary||'',
+        texto_bruto: item.raw_text||'',
+        endpoint_pair: item.endpoint_pair||'',
+        ponta_a: item.ponta_a||'',
+        ponta_b: item.ponta_b||'',
+        service_type: item.service_type||'',
+        camada: item.camada||'',
+        site_ref: item.site_ref||'',
+        dgo: item.dgo||'',
+        porta: item.porta||'',
+        fo: item.fo||'',
+        fl: item.fl||'',
+        bt: item.bt||'',
+        interface: item.interface||'',
+        interface_pair: item.interface_pair||'',
+        distancia_raw: item.distance_raw||'',
+        distancia_m: item.distance_m||null,
+        latitude: item?.location?.lat ?? null,
+        longitude: item?.location?.lng ?? null,
+        maps_link: item?.location?.maps_link || '',
+        endereco_ref: item?.location?.address || '',
+        confianca: Number(item.confidence||0),
+        duplicate_hints: item.duplicate_hints||[],
+        supervisor_decisao: 'aprovado',
+        supervisor_nome: sessao?.nome || sessao?.email || 'supervisor_local',
+        supervisor_observacao: supervisorData.observacao_supervisor || 'Aprovado no painel local do supervisor.',
+        supervisor_complemento: supervisorData,
+        status_fluxo: 'aprovado_supervisor',
+        payload: {
+          ...item,
+          interface_pair: item.interface_pair||'',
+          supervisor_complemento: supervisorData,
+          supervisor_decision_meta: decisionMeta
+        },
+        publicado_do_painel: true,
+        publicado_em: new Date().toISOString()
+      })});
+    if(!payload.length){
+      toast('Todos os aprovados já parecem publicados no staging','ok');
+      return;
+    }
+    const res = await fetch(`${SU}/rest/v1/stg_telegram_facilidades`,{
+      method:'POST',
+      headers:{...WH,'Prefer':'return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(res.ok){
+      const rows = await res.json().catch(()=>[]);
+      toast(`Telegram staging atualizado com ${rows.length||payload.length} item(ns)`,'ok');
+      return;
+    }
+    const err = await res.json().catch(()=>({}));
+    toast(`Falha ao publicar Telegram: ${err.message||err.details||res.status}`,'er');
+  }catch(err){
+    toast(`Erro ao publicar Telegram: ${err.message||err}`,'er');
+  }
+}
+
+function estimarTempoReparo(causa, numCaixas){
+  let base = 120;
+  const causas = {
+    'rompimento': 180,
+    'vandalismo': 240,
+    'alta_atenuacao': 90,
+    'degradacao': 60,
+    'falha_equip': 45
+  };
+  base += (causas[causa.toLowerCase()] || 120);
+  base += (numCaixas * 40);
+  return Math.round(base / 60);
+}
+
+function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
+  const cadeia = auditarTrechoFalha(siteRef, lat, lng);
+  const tempoEst = estimarTempoReparo(causa, cadeia.length);
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <html>
+    <head>
+      <title>Relatório de Intervenção - TA ${ta}</title>
+      <style>
+        body { font-family: sans-serif; padding: 40px; color: #333; }
+        .h { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .sec { margin-top: 25px; }
+        .t { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+        th { background: #f5f5f5; }
+        .sla-warn { color: red; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="h">
+        <div><h1>Rede Óptica MG</h1><p>Relatório de Auditoria de Trecho</p></div>
+        <div style="text-align:right"><p><b>TA:</b> ${ta}</p><p>Data: ${new Date().toLocaleDateString()}</p></div>
+      </div>
+      <div class="sec">
+        <div class="t">Dados do Evento</div>
+        <p><b>Causa:</b> ${causa} | <b>Estação de Origem:</b> ${siteRef}</p>
+        <p><b>Coordenadas da Falha:</b> ${lat}, ${lng}</p>
+        <p><b>Observação:</b> ${obs}</p>
+      </div>
+      <div class="sec">
+        <div class="t">Estimativa de Reparo</div>
+        <p>Tempo estimado: <b>${tempoEst} horas</b> 
+        ${tempoEst > 5 ? '<span class="sla-warn">(Risco de estouro de SLA de 5h)</span>' : '<span style="color:green">(Dentro do SLA)</span>'}
+        </p>
+      </div>
+      <div class="sec">
+        <div class="t">Cadeia de Emendas para Vistoria</div>
+        <table>
+          <thead><tr><th>Ordem</th><th>Código da Caixa</th><th>Distância da Estação</th><th>Status Vistoria</th></tr></thead>
+          <tbody>
+            ${cadeia.map(c => `<tr><td>${c.ordem}</td><td>${c.codigo}</td><td>${c.distancia}</td><td>${c.status === '✓' ? 'OK' : 'PENDENTE'}</td></tr>`).join('')}
+            <tr><td>-</td><td><b>PONTO DA FALHA</b></td><td>-</td><td>ALVO</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sec" style="margin-top:50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 10px; color: #999;">
+        Documento gerado automaticamente pelo Sistema de Cadastro de Fibra MG.
+      </div>
+      <script>window.print();<\/script>
+    </body>
+    </html>
+  `);
+}
+
+// INIT
+$('le').addEventListener('keydown',e=>{if(e.key==='Enter')$('lp').focus();});
+$('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+loadPref();aplicarTema();
+renderInventarioResumo();
+if(checkSessao()){iniciarApp();}else{$('le').focus();}
+window.addEventListener('resize',()=>{
+  clearTimeout(window.__uiResizeTimer);
+  window.__uiResizeTimer=setTimeout(()=>{
+    applyResponsiveLayout();
+    if(map)map.invalidateSize(false);
+  },120);
+});
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
+  });
+}
+</script>
+</body>
+</html>

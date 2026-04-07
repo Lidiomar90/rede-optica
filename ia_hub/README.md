@@ -1,39 +1,86 @@
-# IA Hub
+# IA Hub — Rede Óptica MG
 
-Este diretório funciona como centro operacional para múltiplas IAs no projeto Rede Óptica MG.
+Centro operacional para múltiplas IAs no projeto Rede Óptica MG.
 
-## Estrutura
+---
 
-- `inbox/`
-  - avisos e chamadas de nova tarefa
-- `fila/`
-  - uma pasta por tarefa gerada
-- `sessoes/`
-  - sessões completas criadas pelo orquestrador multi-IA
-- `estado/`
-  - estado resumido do hub
-- `logs/`
-  - logs de execução
+## Modo Autônomo (NOVO — recomendado)
 
-## Fluxo
+O `worker_autonomo.py` processa tarefas da fila **automaticamente**, sem copiar/colar em interfaces web.
 
-1. Rodar:
-   - `C:\FIBRA CADASTRO\ORQUESTRAR-EXECUCAO-IAS.ps1`
-2. Enviar os arquivos de entrada para Claude, Gemini, DeepSeek e Manus
-3. Colar as respostas em `respostas/` da sessão
+### Iniciar
+
+```
+C:\FIBRA CADASTRO\INICIAR-WORKER-AUTONOMO.bat
+```
+
+Escolha o modo:
+- `1` — processa uma vez e sai
+- `2` — loop a cada 60 segundos (recomendado)
+- `5` — agenda no Windows para iniciar com o computador
+
+### Pré-requisito: chaves de API
+
+Crie o arquivo `C:\FIBRA CADASTRO\privado\chaves_ia.env` com pelo menos uma chave:
+
+```
+DEEPSEEK_KEY=sk-...              # pago, mais rápido
+OPENROUTER_KEY=sk-or-v1-...     # gratuito (deepseek-r1:free)
+OPENAI_KEY=sk-...               # pago, fallback
+```
+
+### Como adicionar uma tarefa
+
+Crie um arquivo `.md` em `fila/` com o prompt desejado. Exemplo:
+
+```
+fila/minha_tarefa.md
+```
+Conteúdo: qualquer pergunta ou instrução técnica em português.
+
+O worker vai processar e salvar a resposta em:
+```
+inbox/inbox_minha_tarefa.md
+```
+
+### Estado do worker
+
+Acesse `hub_state.json` para ver estatísticas:
+- `ultima_execucao` — quando rodou pela última vez
+- `total_processado` — total de tarefas processadas
+- `backend` / `modelo` — qual IA está sendo usada
+
+---
+
+## Estrutura de pastas
+
+| Pasta | Conteúdo |
+|-------|----------|
+| `fila/` | Tarefas pendentes (`.md` simples ou pastas de sessão com `manifest.json`) |
+| `inbox/` | Respostas geradas pela IA |
+| `sessoes/` | Sessões completas criadas pelo orquestrador multi-IA |
+| `estado/` | Estado resumido do hub |
+| `logs/` | Logs de execução do worker |
+| `alerts/` | Alertas gerados pelo monitoramento |
+
+---
+
+## Fluxo manual (alternativo)
+
+1. Gerar pacotes de contexto:
+   - `ORQUESTRAR-EXECUCAO-IAS.ps1`
+2. Enviar arquivos para Claude, Gemini, DeepSeek, etc.
+3. Colar respostas em `respostas/` da sessão
 4. Consolidar:
-   - `C:\FIBRA CADASTRO\CONSOLIDAR-RETORNOS-IAS.ps1 -Sessao "<pasta da sessão>"`
-5. Monitorar e resumir automaticamente:
-   - `C:\FIBRA CADASTRO\MONITORAR-HUB-IAS.ps1`
-6. Opcionalmente publicar se tudo estiver seguro:
-   - `C:\FIBRA CADASTRO\MONITORAR-HUB-IAS.ps1 -PublicarSeSeguro`
+   - `CONSOLIDAR-RETORNOS-IAS.ps1 -Sessao "<pasta>"`
+5. Monitorar:
+   - `MONITORAR-HUB-IAS.ps1`
+
+---
 
 ## Objetivo
 
-Manter:
-- contexto único
-- papéis claros por IA
-- rastreabilidade
-- consolidação de decisões
-- continuidade operacional do projeto
-- e publicação automática com trava básica de segurança
+- Contexto único entre todos os agentes
+- Papéis claros por IA (análise, validação, implementação, revisão)
+- Rastreabilidade de decisões via manifest.json
+- Operação autônoma sem intervenção manual
