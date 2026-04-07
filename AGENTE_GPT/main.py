@@ -1,6 +1,11 @@
-from openai import OpenAI
+"""
+Agente IA — ETL Rede Óptica MG
+Usa Chat Completions API (compatível com OpenAI, OpenRouter e DeepSeek).
+"""
 import json
-from config import OPENAI_API_KEY, MODEL
+import sys
+from openai import OpenAI
+from config import API_KEY, API_BASE, MODEL, BACKEND, EXTRA_HEADERS
 from tools_etl import (
     find_latest_result_json,
     run_pilot,
@@ -11,121 +16,179 @@ from tools_etl import (
     read_latest_report,
 )
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# ── Validação de configuração ──────────────────────────────────────────────
+if not API_KEY:
+    print("[ERRO] Nenhuma chave de API configurada.")
+    print("       Edite: privado\\chaves_ia.env")
+    print("       Adicione uma das chaves:")
+    print("         OPENROUTER_KEY=sk-or-v1-...")
+    print("         DEEPSEEK_KEY=sk-...")
+    print("         OPENAI_KEY=sk-...")
+    sys.exit(1)
 
+print(f"[INFO] Backend: {BACKEND.upper()}  |  Modelo: {MODEL}")
+
+# ── Cliente OpenAI-compatível ──────────────────────────────────────────────
+client = OpenAI(
+    api_key=API_KEY,
+    base_url=API_BASE,
+    default_headers=EXTRA_HEADERS,
+)
+
+# ── Definição das ferramentas (função → schema) ────────────────────────────
 TOOLS = [
     {
         "type": "function",
-        "name": "find_latest_result_json",
-        "description": "Localiza o result.json mais recente do Telegram.",
-        "parameters": {"type": "object", "properties": {}, "required": []},
-    },
-    {
-        "type": "function",
-        "name": "run_pilot",
-        "description": "Executa o piloto do ETL.",
-        "parameters": {"type": "object", "properties": {}, "required": []},
-    },
-    {
-        "type": "function",
-        "name": "run_dry_run",
-        "description": "Executa dry-run do ETL usando o JSON informado.",
-        "parameters": {
-            "type": "object",
-            "properties": {"json_path": {"type": "string"}},
-            "required": ["json_path"],
+        "function": {
+            "name": "find_latest_result_json",
+            "description": "Localiza o result.json mais recente do Telegram.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
         "type": "function",
-        "name": "run_commit",
-        "description": "Executa commit do ETL usando o JSON informado. Só usar após aprovação humana.",
-        "parameters": {
-            "type": "object",
-            "properties": {"json_path": {"type": "string"}},
-            "required": ["json_path"],
+        "function": {
+            "name": "run_pilot",
+            "description": "Executa o piloto do ETL (modo teste, sem gravar no banco).",
+            "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
     {
         "type": "function",
-        "name": "promote_batch",
-        "description": "Promove um batch para produção. Só usar após aprovação humana.",
-        "parameters": {
-            "type": "object",
-            "properties": {"batch_id": {"type": "string"}},
-            "required": ["batch_id"],
+        "function": {
+            "name": "run_dry_run",
+            "description": "Executa dry-run do ETL usando o JSON informado.",
+            "parameters": {
+                "type": "object",
+                "properties": {"json_path": {"type": "string", "description": "Caminho do result.json"}},
+                "required": ["json_path"],
+            },
         },
     },
     {
         "type": "function",
-        "name": "rollback_batch",
-        "description": "Faz rollback de um batch. Só usar após aprovação humana.",
-        "parameters": {
-            "type": "object",
-            "properties": {"batch_id": {"type": "string"}},
-            "required": ["batch_id"],
+        "function": {
+            "name": "run_commit",
+            "description": "Executa commit do ETL. APENAS após aprovação explícita do usuário.",
+            "parameters": {
+                "type": "object",
+                "properties": {"json_path": {"type": "string"}},
+                "required": ["json_path"],
+            },
         },
     },
     {
         "type": "function",
-        "name": "read_latest_report",
-        "description": "Lê o último relatório TXT/CSV gerado pelo ETL.",
-        "parameters": {"type": "object", "properties": {}, "required": []},
+        "function": {
+            "name": "promote_batch",
+            "description": "Promove batch para produção. APENAS após aprovação explícita do usuário.",
+            "parameters": {
+                "type": "object",
+                "properties": {"batch_id": {"type": "string"}},
+                "required": ["batch_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rollback_batch",
+            "description": "Faz rollback de batch. APENAS após aprovação explícita do usuário.",
+            "parameters": {
+                "type": "object",
+                "properties": {"batch_id": {"type": "string"}},
+                "required": ["batch_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_latest_report",
+            "description": "Lê o último relatório TXT/CSV gerado pelo ETL.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
     },
 ]
 
+
 def dispatch(name: str, args: dict):
-    if name == "find_latest_result_json":
-        return find_latest_result_json()
-    if name == "run_pilot":
-        return run_pilot()
-    if name == "run_dry_run":
-        return run_dry_run(args["json_path"])
-    if name == "run_commit":
-        return run_commit(args["json_path"])
-    if name == "promote_batch":
-        return promote_batch(args["batch_id"])
-    if name == "rollback_batch":
-        return rollback_batch(args["batch_id"])
-    if name == "read_latest_report":
-        return read_latest_report()
-    raise ValueError(f"Tool desconhecida: {name}")
+    """Executa a ferramenta solicitada pelo agente."""
+    mapping = {
+        "find_latest_result_json": lambda: find_latest_result_json(),
+        "run_pilot":               lambda: run_pilot(),
+        "run_dry_run":             lambda: run_dry_run(args["json_path"]),
+        "run_commit":              lambda: run_commit(args["json_path"]),
+        "promote_batch":           lambda: promote_batch(args["batch_id"]),
+        "rollback_batch":          lambda: rollback_batch(args["batch_id"]),
+        "read_latest_report":      lambda: read_latest_report(),
+    }
+    if name not in mapping:
+        raise ValueError(f"Ferramenta desconhecida: {name}")
+    return mapping[name]()
+
 
 def main():
-    user_goal = (
-        "Operar o ETL Telegram da Rede Óptica MG de forma segura. "
-        "Sempre faça: localizar JSON, rodar piloto, rodar dry-run, ler relatório. "
-        "NUNCA execute commit, promote ou rollback sem pedir aprovação explícita ao usuário."
-    )
+    mensagens = [
+        {
+            "role": "system",
+            "content": (
+                "Você é um agente ETL da Rede Óptica MG. "
+                "Seu objetivo é operar o ETL do Telegram de forma segura e eficiente. "
+                "Fluxo padrão: 1) localizar JSON, 2) rodar piloto, 3) rodar dry-run, 4) ler relatório. "
+                "NUNCA execute commit, promote ou rollback sem pedir aprovação explícita ao usuário. "
+                "Responda sempre em português brasileiro."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                "Inicie o fluxo ETL: localize o JSON do Telegram, rode o piloto, "
+                "execute o dry-run e me mostre o relatório. "
+                "Aguarde minha aprovação antes de qualquer operação de escrita."
+            ),
+        },
+    ]
 
-    response = client.responses.create(
-        model=MODEL,
-        input=user_goal,
-        tools=TOOLS,
-    )
+    max_iteracoes = 10
+    for iteracao in range(max_iteracoes):
+        print(f"\n[Iteração {iteracao + 1}]", flush=True)
 
-    while True:
-        tool_calls = [item for item in response.output if item.type == "function_call"]
-        if not tool_calls:
-            print(response.output_text)
+        resposta = client.chat.completions.create(
+            model=MODEL,
+            messages=mensagens,
+            tools=TOOLS,
+            tool_choice="auto",
+        )
+
+        msg = resposta.choices[0].message
+        mensagens.append(msg.model_dump(exclude_unset=True))
+
+        # Sem tool_calls → agente concluiu
+        if not msg.tool_calls:
+            print("\n── Resposta final do agente ──")
+            print(msg.content or "(sem texto)")
             break
 
-        tool_outputs = []
-        for call in tool_calls:
-            args = json.loads(call.arguments or "{}")
-            result = dispatch(call.name, args)
-            tool_outputs.append({
-                "type": "function_call_output",
-                "call_id": call.call_id,
-                "output": json.dumps(result, ensure_ascii=False),
-            })
+        # Processa cada tool_call
+        for tc in msg.tool_calls:
+            nome = tc.function.name
+            args = json.loads(tc.function.arguments or "{}")
+            print(f"  → Ferramenta: {nome}({args})", flush=True)
 
-        response = client.responses.create(
-            model=MODEL,
-            previous_response_id=response.id,
-            input=tool_outputs,
-            tools=TOOLS,
-        )
+            try:
+                resultado = dispatch(nome, args)
+            except Exception as e:
+                resultado = {"erro": str(e)}
+
+            mensagens.append({
+                "role":         "tool",
+                "tool_call_id": tc.id,
+                "content":      json.dumps(resultado, ensure_ascii=False)[:8000],
+            })
+    else:
+        print("\n[AVISO] Limite de iterações atingido.")
+
 
 if __name__ == "__main__":
     main()

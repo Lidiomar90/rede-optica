@@ -3668,20 +3668,28 @@ function abrirRastreamento(siteNome){
 async function findNodeId(ref){
   const key=String(ref||'').trim().toUpperCase();
   if(!key)return null;
+  // 1. Tenta encontrar site local com ID real do banco (não science-)
   const localSite=allS.find(s=>[s.codigo,s.nome].some(v=>String(v||'').trim().toUpperCase()===key));
-  if(localSite?.id){
-    const exactSigla=encodeURIComponent(`sigla.eq.${String(localSite.codigo||key).trim()}`);
-    const exactNome=encodeURIComponent(`nome.eq.${String(localSite.nome||'').trim()}`);
-    const exactRes=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(${exactSigla},${exactNome})&limit=1`,{headers:RH}).catch(()=>null);
-    if(exactRes?.ok){
-      const exactData=await exactRes.json();
-      if(exactData?.[0]?.id)return exactData[0].id;
+  if(localSite?.id && String(localSite.id).indexOf('science-')!==0){
+    // Tenta exato pelo ativo_id para ser infalível
+    const rAtivo=await fetch(`${SU}/rest/v1/network_nodes?select=id&ativo_id=eq.${localSite.id}&limit=1`,{headers:RH}).catch(()=>null);
+    if(rAtivo?.ok){
+      const dAtivo=await rAtivo.json();
+      if(dAtivo?.[0]?.id)return dAtivo[0].id;
     }
   }
+  // 2. Fallback: busca por sigla exata
+  const exactSigla=encodeURIComponent(`sigla.eq.${String(localSite?.codigo||key).trim()}`);
+  const rExact=await fetch(`${SU}/rest/v1/network_nodes?select=id&or=(${exactSigla})&limit=1`,{headers:RH}).catch(()=>null);
+  if(rExact?.ok){
+    const dExact=await rExact.json();
+    if(dExact?.[0]?.id)return dExact[0].id;
+  }
+  // 3. Fallback fuzzy: busca por sigla ou nome parciais
   const safeKey=key.replace(/[%*,()]/g,'').trim();
   if(!safeKey)return null;
   const orExpr=encodeURIComponent(`sigla.ilike.*${safeKey}*,nome.ilike.*${safeKey}*`);
-  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id,sigla,nome&or=(${orExpr})&limit=1`,{headers:RH});
+  const r=await fetch(`${SU}/rest/v1/network_nodes?select=id&or=(${orExpr})&limit=1`,{headers:RH});
   if(!r.ok)return null;
   const d=await r.json();
   return d?.[0]?.id || null;
@@ -3690,7 +3698,19 @@ function normalizeTraceGeometry(raw){
   if(!raw)return null;
   let geom=raw;
   if(typeof geom==='string'){
-    try{geom=JSON.parse(geom);}catch{return null;}
+    try{geom=JSON.parse(geom);}catch{
+      // Se não for JSON, pode ser EWKT (SRID=4326;LINESTRING(...))
+      if(geom.includes('LINESTRING')){
+        const match = geom.match(/\((.*)\)/);
+        if(match){
+          return match[1].split(',').map(pair => {
+            const [lng, lat] = pair.trim().split(' ');
+            return [Number(lat), Number(lng)];
+          });
+        }
+      }
+      return null;
+    }
   }
   if(geom?.type==='Feature')geom=geom.geometry||null;
   if(!geom?.type)return null;
@@ -4804,10 +4824,12 @@ async function pushToSupabase(tbl, payload, msgId){
       return true;
     } else {
       const err = await r.json();
+      console.error(`Erro ao salvar em ${tbl}:`, err, payload);
       msgField(msgId, '⚠ Erro nuvem: ' + (err.message || r.status));
       return false;
     }
   } catch (e) {
+    console.error(`Exceção ao sincronizar ${tbl}:`, e);
     msgField(msgId, '⚠ Sem conexão para sincronizar agora.');
     return false;
   }
