@@ -2009,14 +2009,18 @@ async function loadMap(){
       clearTimeout(netSlowTimer);
       netSlowTimer=setTimeout(()=>setNetworkIndicator('slow','Rede lenta...'),1800);
       const zoom = map.getZoom();
-      let siteUrl = `${SU}/rest/v1/sites?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao&localizacao=not.is.null&limit=60000`;
+      // vw_sites_mapa: retorna localizacao como GeoJSON (json), lat e lng como números.
+      // Evita o HTTP 500 do PostgREST ao tentar serializar geometry raw.
+      let siteUrl = `${SU}/rest/v1/vw_sites_mapa?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao,lat,lng&limit=60000`;
       let caboUrl = `${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`;
-      
-      // Otimização BBOX: Carrega apenas o que está na tela se o zoom for alto (>12)
-      // Para zoom baixo, carrega tudo (backbone) para manter a visão macro
+
+      // Otimização BBOX: filtra por lat/lng range (view retorna JSON, não geometry)
       if(zoom > 12){
+        const b = map.getBounds();
+        const S=b.getSouth().toFixed(6),N=b.getNorth().toFixed(6);
+        const W=b.getWest().toFixed(6), E=b.getEast().toFixed(6);
+        siteUrl += `&lat=gte.${S}&lat=lte.${N}&lng=gte.${W}&lng=lte.${E}`;
         const bbox = getBBoxString();
-        siteUrl += `&localizacao=ov.${bbox}`;
         caboUrl += `&trajeto=ov.${bbox}`;
       }
 
@@ -3724,7 +3728,7 @@ function goTab(tab,el){
 
 // INCIDENTES
 async function loadIncidentes(){
-  const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,criado_em.desc&limit=50`,{headers:RH});
+  const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,atualizado_em.desc&limit=50`,{headers:RH});
   const incs=r.ok?await r.json():[];
   const ab=incs.filter(i=>i.status!=='resolvido').length;
   const badge=$('ibadge');badge.style.display=ab>0?'inline':'none';if(ab>0)badge.textContent=ab;
@@ -4326,6 +4330,34 @@ function auditarTrechoFalha(siteRef, latFalha, lngFalha){
   }));
 }
 
+async function vistoriarAtivoNaCadeia(codigo, taId){
+  if(!confirm(`Confirmar vistoria técnica na caixa ${codigo}?`)) return;
+  
+  const store = getInvStore();
+  const cx = store.caixas.find(c => c.codigo === codigo);
+  if(cx) {
+    cx.vistoriada = true;
+    cx.data_vistoria = new Date().toISOString();
+    cx._synced = false;
+    saveInvStore(store);
+  }
+  
+  toast(`Vistoria registrada em ${codigo}. Sincronizando...`,'ok');
+  
+  const payload = {
+    referencia_ta: taId,
+    ativo_codigo: codigo,
+    usuario: sessao.usuario||'técnico',
+    data_hora: new Date().toISOString(),
+    status: 'vistoriado'
+  };
+  
+  await pushToSupabase('log_auditoria_campo', payload, 'pan-msg');
+  
+  const rp = store.rupturas.find(r => r.cabo_segmento === taId);
+  if(rp) showPanRupturaDraft(rp);
+}
+
 function showPanRupturaDraft(rp){
   closePan();
   const rel=getCableDraftRelations(rp.cabo_segmento||'');
@@ -4342,18 +4374,24 @@ function showPanRupturaDraft(rp){
      if(siteRef){
         const cadeia = auditarTrechoFalha(siteRef, rp.lat, rp.lng);
         const tempoEst = estimarTempoReparo(causa, cadeia.length);
+        const vistoriadas = cadeia.filter(c => c.status === '✓').length;
+        const progresso = Math.round((vistoriadas / (cadeia.length || 1)) * 100);
         
         if(Array.isArray(cadeia)){
            htmlCadeia = `
              <div style="margin-top:15px;border-top:1px solid var(--bd);padding-top:12px">
-               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                 <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em">Cadeia de emendas no trecho</div>
+               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                 <div style="font-size:10px;color:var(--cy);font-weight:800;text-transform:uppercase;letter-spacing:.12em">Auditoria de Trecho (${progresso}%)</div>
                  <div style="font-size:10px;color:${tempoEst > 5 ? 'var(--rd)' : 'var(--gr)'};font-weight:800">ETA: ${tempoEst}h</div>
                </div>
+               
+               <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-bottom:15px;overflow:hidden">
+                 <div style="width:${progresso}%;height:100%;background:var(--gr);box-shadow:0 0 8px var(--gr)"></div>
+               </div>
+
                <div style="display:flex;flex-direction:column;gap:0;position:relative;padding-left:15px">
                  <div style="position:absolute;left:4px;top:5px;bottom:10px;width:2px;background:linear-gradient(180deg, var(--gr), var(--rd))"></div>
                  
-                 <!-- Estação -->
                  <div style="position:relative;margin-bottom:12px">
                    <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--gr);border:2px solid var(--bg)"></div>
                    <div style="font-size:11px;color:var(--t)"><b>Estação ${siteRef}</b></div>
@@ -4362,12 +4400,15 @@ function showPanRupturaDraft(rp){
 
                  ${cadeia.map(cx => `
                    <div style="position:relative;margin-bottom:12px">
-                     <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:2px;background:var(--bl);border:2px solid var(--bg)"></div>
+                     <div style="position:absolute;left:-15px;top:3px;width:10px;height:10px;border-radius:2px;background:${cx.status === '✓'?'var(--gr)':'var(--bl)'};border:2px solid var(--bg)"></div>
                      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                       <div style="font-size:11px;color:var(--t2)">Caixa <b>${cx.codigo}</b></div>
-                       <a href="javascript:void(0)" onclick="jumpToRef('${cx.codigo}')" style="font-size:9px;color:var(--bl);text-decoration:none">👁 mapa</a>
+                       <div style="font-size:11px;color:${cx.status === '✓'?'var(--gr)':'var(--t2)'}">Caixa <b>${cx.codigo}</b> ${cx.status === '✓'?'✓':''}</div>
+                       <div style="display:flex;gap:8px">
+                         <a href="javascript:void(0)" onclick="jumpToRef('${cx.codigo}')" style="font-size:9px;color:var(--bl);text-decoration:none">👁 mapa</a>
+                         ${cx.status !== '✓' ? `<a href="javascript:void(0)" onclick="vistoriarAtivoNaCadeia('${cx.codigo}', '${rp.cabo_segmento}')" style="font-size:9px;color:var(--gr);text-decoration:none;font-weight:700">✓ check</a>` : ''}
+                       </div>
                      </div>
-                     <div style="font-size:9px;color:var(--t3)">Dist: ${cx.distancia} | Vis: ${cx.status}</div>
+                     <div style="font-size:9px;color:var(--t3)">Dist: ${cx.distancia} | Vis: ${cx.status==='✓'?'Ok':'Pendente'}</div>
                    </div>
                  `).join('')}
 
@@ -4376,7 +4417,7 @@ function showPanRupturaDraft(rp){
                    <div style="font-size:11px;color:var(--rd);font-weight:800">ALVO DA FALHA</div>
                  </div>
                </div>
-               <button class="tb g" style="width:100%;margin-top:12px;padding:8px" onclick="gerarRelatorioAsBuilt('${rp.cabo_segmento}','${siteRef}',${rp.lat},${rp.lng},'${causa}','${rp.observacao||''}')">📄 Gerar Relatório de Intervenção</button>
+               <button class="tb g" style="width:100%;margin-top:12px;padding:8px" onclick="gerarRelatorioAsBuilt('${rp.cabo_segmento}','${siteRef}',${rp.lat},${rp.lng},'${causa}','${rp.observacao||''}')">📄 Imprimir Relatório Operacional</button>
              </div>
            `;
         }
@@ -4384,6 +4425,7 @@ function showPanRupturaDraft(rp){
   }
 
   $('pb').innerHTML=`
+    <div id="pan-msg"></div>
     <div class="pr"><span class="pl">Cabo / segmento</span><span class="pv">${esc(rp.cabo_segmento||'—')}</span></div>
     <div class="pr"><span class="pl">Causa provável</span><span class="pv">${esc(causa)}</span></div>
     <div class="pr"><span class="pl">OTDR</span><span class="pv">${km(rp.distancia_otdr_m||0)}</span></div>
@@ -5555,28 +5597,96 @@ async function abrirEsteiraSigitm(){
   }
 }
 
-async function revisarNoMapa(ta, siteRef, coords){
-  goTab('mapa', document.querySelector('.nt[onclick*="mapa"]'));
-  toast(`Revisando TA ${ta} próxima ao site ${siteRef}`,'in');
-  
-  // Tenta localizar o site para centrar
-  const site = allS.find(s => s.codigo === siteRef || s.nome.includes(siteRef));
-  if(site && site.localizacao){
-    const pt = PP(site.localizacao);
-    map.setView(pt, 15);
-    
-    // Simula marcador da falha (se tiver coord na base brutos)
-    if(coords && coords.includes(',')){
-       const [lat, lng] = coords.split(',').map(Number);
-       if(!isNaN(lat)){
-          L.marker([lat, lng], {icon: mkRomp('aberta', false), zIndexOffset: 5000})
-          .bindPopup(`<b>Sugestão SIGITM: TA ${ta}</b><br>${siteRef}<br>Clique para confirmar local`)
-          .addTo(map);
-       }
+function snapPontoAoCabo(lat, lng, caboId){
+  const cabo = allC.find(c => c.id === caboId);
+  if(!cabo) return;
+  const pts = PL(cabo.trajeto);
+  if(!pts) return;
+
+  let minD = 999999;
+  let bestPt = [lat, lng];
+
+  pts.forEach(p => {
+    const d = map.distance(p, [lat, lng]);
+    if(d < minD){ minD = d; bestPt = p; }
+  });
+
+  toast(`Ponto ajustado para o cabo ${cabo.nome} (ajuste de ${minD.toFixed(1)}m)`,'ok');
+
+  const popup = map._popup;
+  if(popup){
+    const content = popup.getContent();
+    const taMatch = content.match(/TA\s*([^\s<]+)/);
+    if(taMatch) {
+       fetch('./sigitm_pendentes.json',{cache:'no-store'}).then(r=>r.json()).then(dados => {
+         const item = dados.find(d => d.numero_ta === taMatch[1]);
+         if(item) revisarNoMapa(item.numero_ta, item.site_afetado, `${bestPt[0]},${bestPt[1]}`, item.causa_falha, item.detalhes);
+       });
     }
   }
 }
 
+async function revisarNoMapa(ta, siteRef, coords, causa, detalhes){
+  goTab('mapa', document.querySelector('.nt[onclick*="mapa"]'));
+
+  const site = allS.find(s => s.codigo === siteRef || (s.nome && s.nome.includes(siteRef)));
+  let targetPt = null;
+  let caboSugerido = null;
+
+  if(coords && coords.includes(',') && !coords.includes('nan')){
+     const [lat, lng] = coords.split(',').map(Number);
+     if(!isNaN(lat) && !isNaN(lng)) targetPt = [lat, lng];
+  }
+
+  limparRast(); rastLayer = L.layerGroup().addTo(map);
+
+  if(site && site.localizacao){
+    const ptSite = PP(site.localizacao);
+    if(!targetPt) targetPt = ptSite;
+
+    const cabosDoSite = allC.filter(c => {
+       const pts = PL(c.trajeto);
+       return pts && (map.distance(pts[0], ptSite) < 60 || map.distance(pts[pts.length-1], ptSite) < 60);
+    });
+
+    if(targetPt && cabosDoSite.length > 0){
+       let minDist = 999999;
+       cabosDoSite.forEach(c => {
+          const pts = PL(c.trajeto);
+          pts.forEach(p => {
+             const d = map.distance(p, targetPt);
+             if(d < minDist) { minDist = d; caboSugerido = c; }
+          });
+       });
+    }
+    L.polyline([ptSite, targetPt], {color: 'var(--am)', weight: 2, dashArray: '5,10', opacity: 0.5}).addTo(rastLayer);
+  }
+
+  if(targetPt){
+    map.setView(targetPt, 16);
+    const mk = L.marker(targetPt, {icon: mkRomp('aberta', false), zIndexOffset: 5000}).addTo(rastLayer);
+
+    let snapBtn = "";
+    if(caboSugerido) {
+       L.polyline(PL(caboSugerido.trajeto), {color: 'var(--bl)', weight: 10, opacity: 0.3}).addTo(rastLayer);
+       snapBtn = `<button class="btn2 s" style="margin-bottom:8px; font-size:10px" onclick="snapPontoAoCabo(${targetPt[0]},${targetPt[1]},'${caboSugerido.id}')">🧲 Ajustar para o cabo</button>`;
+    }
+
+    mk.bindPopup(`
+      <div style="min-width:200px">
+        <b style="color:var(--rd)">Sugestão SIGITM: TA ${ta}</b><br>
+        <small style="color:var(--t3)">Causa: ${causa}</small><br>
+        <div style="margin:8px 0; padding:6px; background:var(--bg3); border-radius:6px; font-size:10px">
+          ${caboSugerido ? `🔗 Provável cabo: <b>${caboSugerido.nome}</b>` : '⚠ Nenhum cabo identificado automaticamente'}
+        </div>
+        ${snapBtn}
+        <button class="btn2 p" style="width:100%" onclick="validarEventoSigitm('${ta}','${siteRef}','${targetPt[0]},${targetPt[1]}','${causa}','${detalhes}')">✅ Aprovar neste local</button>
+      </div>
+    `).openPopup();
+  } else {
+    toast('TA sem localização. Clique no mapa para definir o ponto.','wn');
+  }
+}
 async function validarEventoSigitm(ta){
   if(!confirm(`Deseja aprovar e publicar a TA ${ta} no inventário oficial?`)) return;
   // Aqui faríamos o POST para o Supabase oficial
@@ -6163,46 +6273,4 @@ function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
       <div class="sec">
         <div class="t">Estimativa de Reparo</div>
         <p>Tempo estimado: <b>${tempoEst} horas</b> 
-        ${tempoEst > 5 ? '<span class="sla-warn">(Risco de estouro de SLA de 5h)</span>' : '<span style="color:green">(Dentro do SLA)</span>'}
-        </p>
-      </div>
-      <div class="sec">
-        <div class="t">Cadeia de Emendas para Vistoria</div>
-        <table>
-          <thead><tr><th>Ordem</th><th>Código da Caixa</th><th>Distância da Estação</th><th>Status Vistoria</th></tr></thead>
-          <tbody>
-            ${cadeia.map(c => `<tr><td>${c.ordem}</td><td>${c.codigo}</td><td>${c.distancia}</td><td>${c.status === '✓' ? 'OK' : 'PENDENTE'}</td></tr>`).join('')}
-            <tr><td>-</td><td><b>PONTO DA FALHA</b></td><td>-</td><td>ALVO</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="sec" style="margin-top:50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 10px; color: #999;">
-        Documento gerado automaticamente pelo Sistema de Cadastro de Fibra MG.
-      </div>
-      <script>window.print();<\/script>
-    </body>
-    </html>
-  `);
-}
-
-// INIT
-$('le').addEventListener('keydown',e=>{if(e.key==='Enter')$('lp').focus();});
-$('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
-loadPref();aplicarTema();
-renderInventarioResumo();
-if(checkSessao()){iniciarApp();}else{$('le').focus();}
-window.addEventListener('resize',()=>{
-  clearTimeout(window.__uiResizeTimer);
-  window.__uiResizeTimer=setTimeout(()=>{
-    applyResponsiveLayout();
-    if(map)map.invalidateSize(false);
-  },120);
-});
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
-  });
-}
-</script>
-</body>
-</html>
+        ${tempoEst > 5 ? '<span class="sla-wa
