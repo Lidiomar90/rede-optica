@@ -458,9 +458,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
     <div class="lerr" id="lerr"></div>
     <button class="lhint-btn" onclick="toggleHint()">? Esqueceu a senha</button>
     <div class="lhint" id="lhint">
-      Contate o administrador do sistema.<br>
-      <b>lidiomar@redeop.com.br</b> (admin)<br>
-      Senha padrão: <b>rede2026</b>
+      Entre em contato com o administrador do sistema para redefinir seu acesso.
     </div>
   </div>
 </div>
@@ -2014,16 +2012,16 @@ async function loadMap(){
       // vw_sites_mapa: retorna localizacao como GeoJSON (json), lat e lng como números.
       // Evita o HTTP 500 do PostgREST ao tentar serializar geometry raw.
       let siteUrl = `${SU}/rest/v1/vw_sites_mapa?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao,lat,lng&limit=60000`;
-      let caboUrl = `${SU}/rest/v1/cabos?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&trajeto=not.is.null&limit=10000`;
+      // vw_cabos_mapa: trajeto como JSON GeoJSON — evita HTTP 500 no PostgREST (geometry raw)
+      let caboUrl = `${SU}/rest/v1/vw_cabos_mapa?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&limit=10000`;
 
-      // Otimização BBOX: filtra por lat/lng range (view retorna JSON, não geometry)
+      // Otimização BBOX para sites: filtra por lat/lng range (view retorna lat/lng numérico)
+      // Cabos: sem filtro bbox — view retorna trajeto como JSON (não geometry), limit=10000
       if(zoom > 12){
         const b = map.getBounds();
         const S=b.getSouth().toFixed(6),N=b.getNorth().toFixed(6);
         const W=b.getWest().toFixed(6), E=b.getEast().toFixed(6);
         siteUrl += `&lat=gte.${S}&lat=lte.${N}&lng=gte.${W}&lng=lte.${E}`;
-        const bbox = getBBoxString();
-        caboUrl += `&trajeto=ov.${bbox}`;
       }
 
       const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
@@ -5648,9 +5646,9 @@ function openM(tipo,id,lat,lng,dpts,dlen,siteRef){
     <div class="mfg"><label>E-mail *</label><input id="fu-em" type="email" placeholder="joao@redeop.com.br"></div>
     <div class="mfgr">
       <div class="mfg"><label>Perfil</label><select id="fu-pf"><option>colaborador</option><option>supervisor</option><option>leitura</option><option>admin</option></select></div>
-      <div class="mfg"><label>Senha inicial</label><input id="fu-pw" type="password" value="rede2026"></div>
+      <div class="mfg"><label>Senha inicial</label><input id="fu-pw" type="password" placeholder="Senha inicial" value="rede2026"></div>
     </div>
-    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2);margin-bottom:10px">Senha padrão: <b style="color:var(--am)">rede2026</b> — orientar trocar no primeiro acesso.</div>
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2);margin-bottom:10px">Senha padrão preenchida — oriente o colaborador a trocar no primeiro acesso.</div>
     <div id="fu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
     <div style="display:flex;gap:8px;margin-top:8px"><button class="btn2 s" onclick="closeM()">Cancelar</button><button class="btn2 p" onclick="salvarUsuarioM()">✓ Criar</button></div>`;
   }else if(tipo==='cabo'&&!id){
@@ -6294,126 +6292,4 @@ async function publicarTelegramAprovadosStaging(){
       const rows = await publishedResp.json();
       (rows||[]).forEach(r=>already.add(`${r.chat_id}::${r.message_id}`));
     }
-    const aprovados = (fila||[]).filter(item=>decisions[item.id]?.decision==='aprovado');
-    if(!aprovados.length){
-      toast('Não há itens Telegram aprovados para publicar','wn');
-      return;
-    }
-    const payload = aprovados
-      .filter(item=>!already.has(`${item.chat_id}::${item.message_id}`))
-      .map(item=>{
-        const decisionMeta=decisions[item.id]||{};
-        const supervisorData=decisionMeta.supervisor_data||{};
-        return ({
-        origem: item.source||'telegram_bot',
-        chat_id: String(item.chat_id||''),
-        chat_titulo: item.chat_title||'',
-        message_id: Number(item.message_id||0),
-        remetente: item.sender||'',
-        capturado_em: item.captured_at||new Date().toISOString(),
-        resumo: item.summary||'',
-        texto_bruto: item.raw_text||'',
-        endpoint_pair: item.endpoint_pair||'',
-        ponta_a: item.ponta_a||'',
-        ponta_b: item.ponta_b||'',
-        service_type: item.service_type||'',
-        camada: item.camada||'',
-        site_ref: item.site_ref||'',
-        dgo: item.dgo||'',
-        porta: item.porta||'',
-        fo: item.fo||'',
-        fl: item.fl||'',
-        bt: item.bt||'',
-        interface: item.interface||'',
-        interface_pair: item.interface_pair||'',
-        distancia_raw: item.distance_raw||'',
-        distancia_m: item.distance_m||null,
-        latitude: item?.location?.lat ?? null,
-        longitude: item?.location?.lng ?? null,
-        maps_link: item?.location?.maps_link || '',
-        endereco_ref: item?.location?.address || '',
-        confianca: Number(item.confidence||0),
-        duplicate_hints: item.duplicate_hints||[],
-        supervisor_decisao: 'aprovado',
-        supervisor_nome: sessao?.nome || sessao?.email || 'supervisor_local',
-        supervisor_observacao: supervisorData.observacao_supervisor || 'Aprovado no painel local do supervisor.',
-        supervisor_complemento: supervisorData,
-        status_fluxo: 'aprovado_supervisor',
-        payload: {
-          ...item,
-          interface_pair: item.interface_pair||'',
-          supervisor_complemento: supervisorData,
-          supervisor_decision_meta: decisionMeta
-        },
-        publicado_do_painel: true,
-        publicado_em: new Date().toISOString()
-      })});
-    if(!payload.length){
-      toast('Todos os aprovados já parecem publicados no staging','ok');
-      return;
-    }
-    const res = await fetch(`${SU}/rest/v1/stg_telegram_facilidades`,{
-      method:'POST',
-      headers:{...WH,'Prefer':'return=representation'},
-      body:JSON.stringify(payload)
-    });
-    if(res.ok){
-      const rows = await res.json().catch(()=>[]);
-      toast(`Telegram staging atualizado com ${rows.length||payload.length} item(ns)`,'ok');
-      return;
-    }
-    const err = await res.json().catch(()=>({}));
-    toast(`Falha ao publicar Telegram: ${err.message||err.details||res.status}`,'er');
-  }catch(err){
-    toast(`Erro ao publicar Telegram: ${err.message||err}`,'er');
-  }
-}
-
-function estimarTempoReparo(causa, numCaixas){
-  let base = 120; // 2h base para deslocamento e análise
-  const causas = {
-    'rompimento': 180,
-    'vandalismo': 240,
-    'alta_atenuacao': 90,
-    'degradacao': 60,
-    'falha_equip': 45
-  };
-  base += (causas[causa.toLowerCase()] || 120);
-  base += (numCaixas * 40); // 40 min por caixa para abrir, testar e fechar
-  return Math.round(base / 60);
-}
-
-function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
-  const cadeia = auditarTrechoFalha(siteRef, lat, lng);
-  const tempoEst = estimarTempoReparo(causa, cadeia.length);
-  const win = window.open('', '_blank');
-  win.document.write(`
-    <html>
-    <head>
-      <title>Relatório de Intervenção - TA ${ta}</title>
-      <style>
-        body { font-family: sans-serif; padding: 40px; color: #333; }
-        .h { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; }
-        .sec { margin-top: 25px; }
-        .t { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 8px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
-        th { background: #f5f5f5; }
-        .sla-warn { color: red; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="h">
-        <div><h1>Rede Óptica MG</h1><p>Relatório de Auditoria de Trecho</p></div>
-        <div style="text-align:right"><p><b>TA:</b> ${ta}</p><p>Data: ${new Date().toLocaleDateString()}</p></div>
-      </div>
-      <div class="sec">
-        <div class="t">Dados do Evento</div>
-        <p><b>Causa:</b> ${causa} | <b>Estação de Origem:</b> ${siteRef}</p>
-        <p><b>Coordenadas da Falha:</b> ${lat}, ${lng}</p>
-        <p><b>Observação:</b> ${obs}</p>
-      </div>
-      <div class="sec">
-        <div class="t">Estimativa de Reparo</div>
-        <p>Tempo estimado: <b>${tempoEst} horas</b> 
-        ${tempoEst > 5 ? '<span class="sla-wa
+    const aprovados = (fila||[]).filter
