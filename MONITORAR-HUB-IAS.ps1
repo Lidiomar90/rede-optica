@@ -106,6 +106,29 @@ function Get-SessionExecutionState {
     return "sem_resposta_detectada"
 }
 
+function Raise-PlaceholderAlert {
+    param(
+        [string]$Sessao,
+        [string]$Estado,
+        [array]$Faltando
+    )
+    $alertDir = Join-Path $HUB "alerts"
+    if (-not (Test-Path $alertDir)) {
+        New-Item -ItemType Directory -Path $alertDir -Force | Out-Null
+    }
+    $alertPath = Join-Path $alertDir ("placeholder_" + (Get-Date -Format "yyyyMMdd_HHmmss") + ".md")
+    $texto = @"
+# Alert placeholder
+
+Sessao: $Sessao  
+Estado detectado: $Estado  
+Faltando: $($faltando -join ', ')  
+Gerado em: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
+"@
+    Set-Content -Path $alertPath -Value $texto -Encoding UTF8
+    Write-Log "Placeholder alert registrado em $alertPath" "WARN"
+}
+
 function Test-JsHtml {
     $script = @'
 const fs=require("fs");
@@ -226,17 +249,20 @@ if ($ManifestTask) {
     $manifestPath = Join-Path $ManifestTask.FullName "manifest.json"
     if (Test-Path $manifestPath) {
         $manifest = Get-Content -Path $manifestPath -Raw | ConvertFrom-Json
-        $manifest.status = $sessionExecutionState
-        $manifest | Add-Member -NotePropertyName monitoramento -NotePropertyValue ([ordered]@{
-            atualizado_em = (Get-Date).ToString("o")
-            sessao_idade_min = $sessionAgeMinutes
-            respostas_reais = $prontas.Count
-            respostas_faltando = $faltando.Count
-            placeholders = @($responseStates | Where-Object { $_.estado -eq 'placeholder' }).Count
-        }) -Force
-        $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8
-    }
-}
+                $manifest.status = $sessionExecutionState
+                $manifest | Add-Member -NotePropertyName monitoramento -NotePropertyValue ([ordered]@{
+                    atualizado_em = (Get-Date).ToString("o")
+                    sessao_idade_min = $sessionAgeMinutes
+                    respostas_reais = $prontas.Count
+                    respostas_faltando = $faltando.Count
+                    placeholders = @($responseStates | Where-Object { $_.estado -eq 'placeholder' }).Count
+                }) -Force
+                $manifest | ConvertTo-Json -Depth 8 | Set-Content -Path $manifestPath -Encoding UTF8
+            }
+        }
+        if ($sessionExecutionState -eq "placeholders_sem_execucao_real") {
+            Raise-PlaceholderAlert -Sessao $SessaoPath -Estado $sessionExecutionState -Faltando $faltando
+        }
 
 Write-Host ""
 Write-Host "======================================"

@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-06 (sessao 10.4 — busca operacional unificada)
+**Atualizado em:** 2026-04-06 (sessao 10.6 — busca operacional mais leve no mobile)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,8 +10,19 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-06 — sessoes 9, 10, 10.1, 10.2, 10.3 e 10.4 (front/mobile/tracer/auditoria/telegram/busca) + sessoes 7 e 8 (banco/tracer)
+**Data:** 2026-04-06 — sessoes 9, 10, 10.1, 10.2, 10.3, 10.4, 10.5 e 10.6 (front/mobile/tracer/auditoria/telegram/busca/deduplicacao) + sessoes 7 e 8 (banco/tracer)
 **O que foi feito:**
+
+### Sessao 10.6 — Busca operacional mais leve no mobile
+0. A busca da sidebar em `Camadas` deixou de recalcular tudo a cada tecla: agora roda com debounce curto, reduzindo travamento percebido quando a massa de sites/cabos/ativos oficiais ja esta carregada no front.
+1. O matching passou a ignorar acentos e aceitar tokens fora de ordem, o que melhora consultas operacionais como `dgo sag`, `ruptura sag` ou `caixa vistoriar` sem depender da frase inteira na mesma ordem.
+2. Os resultados agora sobem por relevancia, exibem badge de tipo e, no mobile, fecham a sidebar antes de abrir o painel tecnico quando o destino nao passa por `focI()`.
+3. Validacao desta rodada: parse JS via `node` e `git diff --check`; ainda falta validar em browser real se o debounce e o ranking aliviam a busca com massa real no Android/iOS.
+
+### Sessao 10.5 — Deduplicacao operacional segura
+0. As relacoes que alimentam `auditoria`, resumo operacional e navegação contextual deixaram de apenas concatenar `rascunho + banco`: agora `segmentos` e `rupturas` passam por uma deduplicacao semantica por cabo/pontas/posicao/status.
+1. Quando existir o mesmo item nas duas origens, o front passa a preferir o rascunho local mais recente para navegação e contagem, evitando inflar `sem continuidade`, `com ruptura` ou listas de atalhos so porque o ativo apareceu duplicado.
+2. Validacao executada por parse JS via `node`; ainda falta validacao manual no browser para confirmar que a deduplicacao nao esconde casos realmente distintos com o mesmo cabo.
 
 ### Sessao 10.4 — Busca operacional mais direta
 0. `execBuscaGlobal()` deixou de ficar restrita a `site`, `cabo` e `caixa` em rascunho: agora a busca principal tambem encontra `caixa`, `DGO`, `segmento` e `ruptura`, cobrindo tanto rascunho local quanto dados oficiais ja carregados no mapa.
@@ -97,10 +108,10 @@
 - Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
 - Codex: validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari, incluindo fade do overlay e conflito com scroll vertical da lista lateral
 - Codex: validar modal generico e formularios em Android real/iOS Safari, especialmente auditoria, conexao DGO e edicao de ativos
-- Codex: validar busca global no browser com massa real para `DGO`, `caixa`, `segmento` e `ruptura`, ajustando ranking se o operador ainda precisar "caçar" item na lista
+- Codex: validar busca global no browser com massa real para `DGO`, `caixa`, `segmento` e `ruptura`, agora incluindo debounce curto, matching sem acento/tokens e ranking por relevancia para ajustar pesos se o operador ainda precisar "caçar" item na lista
 - Codex: unificar futuro da aba `Incidentes` com `evento_ruptura`/`vw_rupturas_abertas` para evitar dupla origem (`incidentes` legado + rupturas oficiais)
 - Codex: validar esteira Telegram em browser real, incluindo ordenacao de `complemento pendente`, resumo da fila e reaproveitamento de sugestoes no fluxo aprovar/complementar
-- Gemini/Claude: revisar se a auditoria agora mistura corretamente rascunho + banco sem inflar contagens quando houver cabo/segmento duplicado nas duas origens
+- Gemini/Claude: revisar se a nova deduplicacao semantica de `segmentos` e `rupturas` nao colapsa casos distintos com mesmo cabo/OTDR e se a prioridade do rascunho local faz sentido operacionalmente
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---
@@ -242,7 +253,7 @@
 
 | Arquivo | Estado | Observacao |
 |---------|--------|------------|
-| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa `fn_tracer_bfs`; drawer mobile abre/fecha por gesto; modal e formularios mobile ajustados para safe area e 1 coluna; esteira Telegram prioriza itens com complemento pendente. |
+| `mapa-rede-optica.html` | Ativo | Mapa principal. Tracer A→B usa `fn_tracer_bfs`; drawer mobile abre/fecha por gesto; modal e formularios mobile ajustados para safe area e 1 coluna; esteira Telegram prioriza itens com complemento pendente; busca global agora usa debounce curto, matching sem acento e ranking por relevancia. |
 | `dashboard.html` | Ativo | Dashboard de metricas. |
 | `ia-assistente.html` | Ativo | Interface IA. |
 | `auditoria-revisao.html` | Ativo | Auditoria de cadastro. |

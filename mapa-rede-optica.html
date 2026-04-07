@@ -1062,6 +1062,8 @@ const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
 let globalSearchActions={};
+let sidebarSearchTimer=null;
+let sidebarSearchToken=0;
 let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
@@ -2567,8 +2569,71 @@ function toggleSiteGroup(key){
 }
 function sbTab(m,el){sbMode=m;document.querySelectorAll('.stt').forEach(b=>b.classList.remove('on'));el.classList.add('on');$('lc').style.display=m==='camadas'?'':'none';$('sbl').style.display=m!=='camadas'?'block':'none';renderSidebarFilters();if(m!=='camadas')renderSB($('si').value);}
 function filterSB(q){
-  if(sbMode!=='camadas') renderSB(q);
-  else execBuscaGlobal(q);
+  clearTimeout(sidebarSearchTimer);
+  const term=String(q||'');
+  if(sbMode!=='camadas'){
+    renderSB(term);
+    return;
+  }
+  const el=$('sbl');
+  if(!term || term.length<2){
+    sidebarSearchToken++;
+    if(el)el.style.display='none';
+    execBuscaGlobal(term);
+    return;
+  }
+  if(el){
+    el.style.display='block';
+    el.innerHTML='<div style="padding:14px 16px;color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.12em">Buscando...</div>';
+  }
+  const token=++sidebarSearchToken;
+  const wait=term.length>=4?70:120;
+  sidebarSearchTimer=setTimeout(()=>{
+    if(token!==sidebarSearchToken)return;
+    execBuscaGlobal(term);
+  },wait);
+}
+
+function normalizeSearchText(v=''){
+  return String(v||'').toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,' ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .trim();
+}
+function buildSearchMeta(label,sub,...parts){
+  const labelNorm=normalizeSearchText(label);
+  const subNorm=normalizeSearchText(sub);
+  const haystack=[labelNorm,subNorm,...parts.map(normalizeSearchText)].filter(Boolean).join(' ').trim();
+  return {labelNorm,subNorm,haystack};
+}
+function getSearchTokens(q=''){
+  const norm=normalizeSearchText(q);
+  return {norm,tokens:norm.split(/\s+/).filter(Boolean)};
+}
+function matchSearchMeta(meta,search){
+  if(!search.norm)return false;
+  if(meta.labelNorm.includes(search.norm) || meta.subNorm.includes(search.norm) || meta.haystack.includes(search.norm))return true;
+  return search.tokens.length>0 && search.tokens.every(token=>meta.haystack.includes(token));
+}
+function rankSearchMeta(meta,search){
+  let score=0;
+  const joined=search.norm;
+  const labelWords=meta.labelNorm.split(' ').filter(Boolean);
+  if(meta.labelNorm===joined)score+=180;
+  else if(meta.labelNorm.startsWith(joined))score+=130;
+  else if(meta.labelNorm.includes(joined))score+=95;
+  if(meta.subNorm.startsWith(joined))score+=28;
+  else if(meta.subNorm.includes(joined))score+=14;
+  if(meta.haystack.startsWith(joined))score+=36;
+  search.tokens.forEach(token=>{
+    if(meta.labelNorm===token)score+=28;
+    else if(labelWords.includes(token))score+=18;
+    else if(meta.labelNorm.startsWith(token))score+=12;
+    if(meta.subNorm.includes(token))score+=5;
+    if(meta.haystack.includes(token))score+=4;
+  });
+  return score - Math.min(meta.labelNorm.length,48)/120;
 }
 
 function execBuscaGlobal(q){
@@ -2579,10 +2644,9 @@ function execBuscaGlobal(q){
   }
   
   el.style.display='block';
-  q = q.toLowerCase();
+  const search=getSearchTokens(q);
   const res = [];
   globalSearchActions={};
-  const safeText=v=>String(v||'').toLowerCase();
   const addRes=(item)=>{
     if(!item || !item.id || !item.label || typeof item.action!=='function')return;
     const key=`${item.tipo}-${item.id}`;
@@ -2595,32 +2659,39 @@ function execBuscaGlobal(q){
     return nLat!==null && nLng!==null ? [nLat,nLng] : null;
   };
   const getSitePoint=site=>PP(site?.localizacao)||pointFromLatLng(site?.lat,site?.lng);
-  const buildHaystack=(...parts)=>parts.map(safeText).join(' ');
   
   // Sites
   allS.forEach(s => {
     const pt=getSitePoint(s);
-    if(!buildHaystack(s.codigo,s.nome,s.municipio,s.localidade,s.cn,s.supervisor).includes(q))return;
+    const label=s.codigo||s.nome||'Site';
+    const sub=s.municipio||'site';
+    const meta=buildSearchMeta(label,sub,s.nome,s.localidade,s.cn,s.supervisor);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'site',
-      label:s.codigo||s.nome,
-      sub:s.municipio||'site',
+      label,
+      sub,
       id:s.id,
       cor:'var(--gr)',
       pt,
+      score:rankSearchMeta(meta,search)+14,
       action:()=>focI(`s-${s.id}`)
     });
   });
   
   // Cabos
   allC.forEach(c => {
-    if(!buildHaystack(c.nome,c.codigo,c.tipo,c.status).includes(q))return;
+    const label=c.nome||c.codigo||'Cabo';
+    const sub=c.tipo||'cabo';
+    const meta=buildSearchMeta(label,sub,c.codigo,c.status);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'cabo',
-      label:c.nome||c.codigo||'Cabo',
-      sub:c.tipo||'cabo',
+      label,
+      sub,
       id:c.id,
       cor:'var(--bl)',
+      score:rankSearchMeta(meta,search)+8,
       action:()=>focI(`c-${c.id}`)
     });
   });
@@ -2629,28 +2700,36 @@ function execBuscaGlobal(q){
   const store = getInvStore();
   store.caixas.forEach(cx => {
     const pt=pointFromLatLng(cx.lat,cx.lng);
-    if(!buildHaystack(cx.codigo,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.observacao).includes(q))return;
+    const label=cx.codigo||cx.nome||'Caixa';
+    const sub='rascunho caixa';
+    const meta=buildSearchMeta(label,sub,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.observacao);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'caixa',
-      label:cx.codigo||cx.nome||'Caixa',
-      sub:'rascunho caixa',
+      label,
+      sub,
       id:cx.id,
       cor:'var(--cy)',
       pt,
+      score:rankSearchMeta(meta,search)+11,
       action:()=>showPanCaixaDraft(cx)
     });
   });
 
   officialCaixas.forEach(cx => {
     const pt=pointFromLatLng(cx.lat,cx.lng);
-    if(!buildHaystack(cx.codigo,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.site_codigo).includes(q))return;
+    const label=cx.codigo||cx.nome||'Caixa oficial';
+    const sub='caixa oficial';
+    const meta=buildSearchMeta(label,sub,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.site_codigo);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'caixa',
-      label:cx.codigo||cx.nome||'Caixa oficial',
-      sub:'caixa oficial',
+      label,
+      sub,
       id:`of-${cx.id}`,
       cor:'var(--cy)',
       pt,
+      score:rankSearchMeta(meta,search)+10,
       action:()=>showPanCaixaOficial(cx)
     });
   });
@@ -2658,14 +2737,18 @@ function execBuscaGlobal(q){
   store.dgos.forEach(dg => {
     const site=findDraftPoint(dg.site||'');
     const pt=pointFromLatLng(site?.lat,site?.lng);
-    if(!buildHaystack(dg.codigo,dg.nome,dg.site,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status,dg.observacao).includes(q))return;
+    const label=dg.codigo||dg.nome||'DGO';
+    const sub=`DGO rascunho${dg.site?` • ${dg.site}`:''}`;
+    const meta=buildSearchMeta(label,sub,dg.nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status,dg.observacao);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'dgo',
-      label:dg.codigo||dg.nome||'DGO',
-      sub:`DGO rascunho${dg.site?` • ${dg.site}`:''}`,
+      label,
+      sub,
       id:dg.id,
       cor:'#f59e0b',
       pt,
+      score:rankSearchMeta(meta,search)+12,
       action:()=>showPanDgoDraft(dg)
     });
   });
@@ -2673,14 +2756,18 @@ function execBuscaGlobal(q){
   officialDgos.forEach(dg => {
     const site=resolveOfficialDgoSite(dg);
     const pt=pointFromLatLng(site?.lat,site?.lng);
-    if(!buildHaystack(dg.codigo,dg.nome,dg.site,dg.site_codigo,dg.site_nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status).includes(q))return;
+    const label=dg.codigo||dg.nome||'DGO oficial';
+    const sub=`DGO oficial${dg.site_codigo?` • ${dg.site_codigo}`:''}`;
+    const meta=buildSearchMeta(label,sub,dg.nome,dg.site,dg.site_nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'dgo',
-      label:dg.codigo||dg.nome||'DGO oficial',
-      sub:`DGO oficial${dg.site_codigo?` • ${dg.site_codigo}`:''}`,
+      label,
+      sub,
       id:`of-${dg.id}`,
       cor:'#f59e0b',
       pt,
+      score:rankSearchMeta(meta,search)+11,
       action:()=>showPanDgoOficial(dg)
     });
   });
@@ -2688,14 +2775,18 @@ function execBuscaGlobal(q){
   store.segmentos.forEach(seg => {
     const pts=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length?seg.geometria_pts:null;
     const pt=pts ? midPointOfLine(pts) : null;
-    if(!buildHaystack(seg.cabo,seg.ponto_a,seg.ponto_b,seg.tipo_lancamento,seg.fabricante,seg.lote,seg.status,seg.observacao).includes(q))return;
+    const label=seg.cabo||'Segmento';
+    const sub=`rascunho • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`;
+    const meta=buildSearchMeta(label,sub,seg.codigo,seg.nome,seg.tipo_lancamento,seg.fabricante,seg.lote,seg.status,seg.observacao);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'segmento',
-      label:seg.cabo||'Segmento',
-      sub:`rascunho • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`,
+      label,
+      sub,
       id:seg.id,
       cor:'#22c55e',
       pt,
+      score:rankSearchMeta(meta,search)+9,
       action:()=>showPanSegmentoDraft(seg)
     });
   });
@@ -2703,42 +2794,54 @@ function execBuscaGlobal(q){
   officialSegmentos.forEach(seg => {
     const pts=parseGeom(seg.geom)||parseGeom(seg.geometria);
     const pt=pts ? midPointOfLine(pts) : pointFromLatLng(seg.lat,seg.lng);
-    if(!buildHaystack(seg.cabo,seg.codigo,seg.nome,seg.ponto_a,seg.ponto_b,seg.tipo_lancamento,seg.fabricante,seg.status,seg.observacao).includes(q))return;
+    const label=seg.cabo||seg.codigo||'Segmento oficial';
+    const sub=`oficial • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`;
+    const meta=buildSearchMeta(label,sub,seg.nome,seg.tipo_lancamento,seg.fabricante,seg.status,seg.observacao);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'segmento',
-      label:seg.cabo||seg.codigo||'Segmento oficial',
-      sub:`oficial • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`,
+      label,
+      sub,
       id:`of-${seg.id}`,
       cor:'#22c55e',
       pt,
+      score:rankSearchMeta(meta,search)+8,
       action:()=>showPanSegmentoOficial(seg)
     });
   });
 
   store.rupturas.forEach(rp => {
     const pt=pointFromLatLng(rp.lat,rp.lng);
-    if(!buildHaystack(rp.cabo_segmento,rp.codigo,rp.tipo_reparo,rp.status,rp.nova_caixa,rp.observacao).includes(q))return;
+    const label=rp.cabo_segmento||rp.codigo||'Ruptura';
+    const sub=`rascunho • ${rp.status||rp.tipo_reparo||'ruptura'}`;
+    const meta=buildSearchMeta(label,sub,rp.codigo,rp.tipo_reparo,rp.nova_caixa,rp.observacao);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'ruptura',
-      label:rp.cabo_segmento||rp.codigo||'Ruptura',
-      sub:`rascunho • ${rp.status||rp.tipo_reparo||'ruptura'}`,
+      label,
+      sub,
       id:rp.id,
       cor:'#ff5a68',
       pt,
+      score:rankSearchMeta(meta,search)+9,
       action:()=>showPanRupturaDraft(rp)
     });
   });
 
   officialRupturas.forEach(rp => {
     const pt=pointFromLatLng(rp.lat,rp.lng);
-    if(!buildHaystack(rp.cabo_segmento,rp.codigo,rp.tipo_reparo,rp.status,rp.nova_caixa,rp.causa).includes(q))return;
+    const label=rp.cabo_segmento||rp.codigo||'Ruptura oficial';
+    const sub=`oficial • ${rp.status||rp.tipo_reparo||'ruptura'}`;
+    const meta=buildSearchMeta(label,sub,rp.codigo,rp.tipo_reparo,rp.nova_caixa,rp.causa);
+    if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'ruptura',
-      label:rp.cabo_segmento||rp.codigo||'Ruptura oficial',
-      sub:`oficial • ${rp.status||rp.tipo_reparo||'ruptura'}`,
+      label,
+      sub,
       id:`of-${rp.id}`,
       cor:'#ff5a68',
       pt,
+      score:rankSearchMeta(meta,search)+8,
       action:()=>showPanRupturaOficial(rp)
     });
   });
@@ -2747,6 +2850,7 @@ function execBuscaGlobal(q){
     el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado global</div>';
     return;
   }
+  res.sort((a,b)=>(b.score||0)-(a.score||0) || String(a.label||'').localeCompare(String(b.label||''),'pt-BR'));
 
   el.innerHTML=`<div class="gh"><span>RESULTADOS DA BUSCA</span><span>${res.length}</span></div>` + 
     res.slice(0,50).map(r => `
@@ -2754,12 +2858,14 @@ function execBuscaGlobal(q){
         <div class="sii" style="background:${r.cor||'var(--cy)'}"></div>
         <div class="sin">${esc(r.label)}</div>
         <div class="sis">${esc(r.sub)}</div>
+        <div class="stg ${r.tipo==='ruptura'?'ter':r.tipo==='site'?'tok':'twn'}">${esc(r.tipo)}</div>
       </div>
     `).join('');
 }
 function globalSearchOpen(key){
   const hit=globalSearchActions[key];
   if(typeof hit==='function'){
+    if(isMobileUI())closeSB();
     hit();
     return;
   }
@@ -3040,6 +3146,43 @@ function getSegmentOperationalState(seg){
   }
   return {status:'pronto para campo',tone:'var(--gr)',detail:'Segmento com pontas definidas e geometria disponível para navegação.'};
 }
+function normalizeRelationText(v){
+  return String(v||'').trim().toUpperCase();
+}
+function buildSegmentRelationKey(seg){
+  if(!seg)return '';
+  const cabo=normalizeRelationText(seg.cabo||seg.codigo||seg.nome);
+  const pontoA=normalizeRelationText(seg.ponto_a);
+  const pontoB=normalizeRelationText(seg.ponto_b);
+  const ab=[pontoA,pontoB].filter(Boolean).sort();
+  const tipo=normalizeRelationText(seg.tipo_lancamento||seg.tipo);
+  return ['SEG',cabo,ab.join('|'),tipo].filter(Boolean).join('::');
+}
+function buildRupturaRelationKey(rp){
+  if(!rp)return '';
+  const cabo=normalizeRelationText(rp.cabo_segmento||rp.codigo||rp.nome);
+  const pos=[Number(rp.distancia_otdr_m||0),Number(rp.metragem_lancada_m||0)].map(v=>Number.isFinite(v)?Math.round(v):0).join('|');
+  const status=normalizeRelationText(rp.status||rp.tipo_reparo||rp.causa);
+  return ['RUP',cabo,pos,status].filter(Boolean).join('::');
+}
+function preferOperationalItem(current,next){
+  if(!current)return next;
+  if(!next)return current;
+  const currentIsDraft=!String(current._kind||'').includes('_oficial');
+  const nextIsDraft=!String(next._kind||'').includes('_oficial');
+  if(currentIsDraft!==nextIsDraft)return nextIsDraft?next:current;
+  const currentUpdated=new Date(current.atualizado_em||current.criado_em||0).getTime()||0;
+  const nextUpdated=new Date(next.atualizado_em||next.criado_em||0).getTime()||0;
+  return nextUpdated>currentUpdated?next:current;
+}
+function dedupeOperationalItems(items,keyFn){
+  const map=new Map();
+  (items||[]).forEach(item=>{
+    const semanticKey=keyFn(item)||`${item?._kind||item?.tipo||'item'}::${item?.id||Math.random()}`;
+    map.set(semanticKey,preferOperationalItem(map.get(semanticKey),item));
+  });
+  return [...map.values()];
+}
 function operationalSummaryHtml(ref){
   const sum=getPointSummary(ref);
   if(!sum)return '';
@@ -3056,10 +3199,10 @@ function getRelatedSegmentsByRef(ref){
   const key=String(ref||'').toUpperCase().trim();
   if(!key)return [];
   const store=getInvStore();
-  return [
+  return dedupeOperationalItems([
     ...store.segmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key),
     ...officialSegmentos.filter(s=>String(s.ponto_a||'').toUpperCase()===key||String(s.ponto_b||'').toUpperCase()===key)
-  ];
+  ],buildSegmentRelationKey);
 }
 function getDgosBySiteRef(ref){
   const key=String(ref||'').toUpperCase().trim();
@@ -3073,14 +3216,14 @@ function getDgosBySiteRef(ref){
 function getCableRelations(name){
   const store=getInvStore();
   const key=String(name||'').toUpperCase();
-  const segs=[
+  const segs=dedupeOperationalItems([
     ...store.segmentos.filter(s=>String(s.cabo||'').toUpperCase()===key),
     ...officialSegmentos.filter(s=>String(s.cabo||'').toUpperCase()===key)
-  ];
-  const rupts=[
+  ],buildSegmentRelationKey);
+  const rupts=dedupeOperationalItems([
     ...store.rupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key)),
     ...officialRupturas.filter(r=>String(r.cabo_segmento||'').toUpperCase().includes(key))
-  ];
+  ],buildRupturaRelationKey);
   return {segs,rupts};
 }
 function getCableDraftRelations(name){
