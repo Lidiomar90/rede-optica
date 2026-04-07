@@ -4887,12 +4887,19 @@ async function salvarDgo(){
     msgField('dg-msg','✓ DGO salvo em rascunho local.','ok');
     
     // Tenta persistir no banco (tabela dgo)
-    // Precisa do site_id (UUID)
-    const site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
+    let site = allS.find(s=>s.codigo===siteRef || s.nome===siteRef);
+    if(site && String(site.id).indexOf('science-')===0){
+      msgField('dg-msg', 'Buscando site no banco...', 'in');
+      const rSite = await fetch(`${SU}/rest/v1/sites?codigo=eq.${site.codigo}&select=id`, {headers:RH});
+      if(rSite.ok){
+        const dSite = await rSite.json();
+        if(dSite?.[0]) site = { ...site, id: dSite[0].id };
+      }
+    }
+
     if(site && site.id && String(site.id).indexOf('science-')!==0){
       const dbPayload = {
         codigo: payload.codigo,
-        nome: payload.nome,
         site_id: site.id,
         rack: payload.rack,
         fila: payload.fila,
