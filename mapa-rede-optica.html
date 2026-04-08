@@ -1044,6 +1044,9 @@ async function authUpdateUsuario(id,reg){
 // ═══════════════════════════════════════════
 let sessao=null;
 let userBackendState={status:'desconhecido',message:'',source:''};
+let userBackendProbeAt=0;
+let userBackendProbeInflight=null;
+const USER_BACKEND_PROBE_COOLDOWN_MS=20000;
 function setUserBackendState(status,message='',source=''){
   userBackendState={status:status||'desconhecido',message:message||'',source:source||''};
   const el=$('user-health');
@@ -1082,7 +1085,14 @@ function openUsuariosRepairGuide(){
   $('mbg').classList.add('show');
 }
 async function probeUserBackend(force=false){
-  if(!force && userBackendState.status==='ok')return true;
+  const now=Date.now();
+  if(userBackendProbeInflight)return userBackendProbeInflight;
+  if(!force){
+    if(userBackendState.status==='ok')return true;
+    if((now-userBackendProbeAt)<USER_BACKEND_PROBE_COOLDOWN_MS)return userBackendState.status==='ok';
+  }
+  userBackendProbeAt=now;
+  userBackendProbeInflight=(async()=>{
   const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:'__probe__@redeop.local',email:'__probe__@redeop.local'});
   if(rpc.ok){
     setUserBackendState('ok','',`rpc:${rpc.fn}`);
@@ -1104,6 +1114,12 @@ async function probeUserBackend(force=false){
   }catch(err){
     setUserBackendState('erro',getFriendlyErrorMessage(err,'Falha ao consultar usuários.'),'rest:usuarios');
     return false;
+  }
+  })();
+  try{
+    return await userBackendProbeInflight;
+  }finally{
+    userBackendProbeInflight=null;
   }
 }
 function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
@@ -1204,6 +1220,8 @@ let drawTarget='segmento';
 let fieldMode=localStorage.getItem('_field_mode')==='1';
 let mapFocus=localStorage.getItem('redeoptica_map_focus_v1')==='1';
 let mobileToolsExpanded=false;
+let allInc=[];
+const incidentMarkers={};
 const LEGEND_PREF_KEY='redeoptica_legenda_mobile_v1';
 const LONG_PRESS_MS=320;
 const MOBILE_VIEWPORT_OFFSET_MIN=120;
@@ -1605,10 +1623,11 @@ function getLayerPresetMap(name){
   if(name==='campo'){setKeys(['acesso','ac_site','ac_caixa','ac_erb','cab_dist','cab_drop']);return base;}
   if(name==='transporte'){setKeys(['backbone','bb_site','metro_alta','m4_equip','metro_dist','m5_equip','cab_bb','cab_dist']);return base;}
   if(name==='incidentes'){setKeys(['acesso','ac_site','ac_caixa','cab_bb','cab_dist']);return base;}
+  if(name==='criticos'){setKeys(['backbone','bb_site','acesso','ac_site','ac_caixa','cab_bb','cab_dist']);return base;}
   return base;
 }
 function getCurrentPreset(){
-  const names=['limpo','campo','transporte','incidentes'];
+  const names=['limpo','campo','transporte','incidentes','criticos'];
   for(const n of names){
     const p=getLayerPresetMap(n);
     const same=Object.keys(VIS).every(k=>!!VIS[k]===!!p[k]);
@@ -2082,6 +2101,33 @@ function highlightCable(id){
   fx.line.setStyle({weight:fx.baseWeight+2.2,opacity:1,color:fx.baseColor});
   fx.halo.setStyle({weight:fx.baseWeight+7,opacity:.42,color:fx.baseColor});
 }
+function guessIncidentCable(inc){
+  if(!inc)return null;
+  const raw=`${inc.titulo||''} ${inc.descricao||''} ${inc.site_afetado||''}`.toLowerCase();
+  return allC.find(c=>{
+    const nome=String(c.nome||'').toLowerCase();
+    return nome && raw.includes(nome);
+  })||null;
+}
+function focusIncidentMap(incId){
+  const inc=allInc.find(x=>String(x.id)===String(incId));
+  if(!inc){toast('Incidente não encontrado','wn');return;}
+  applyPreset('criticos');
+  if(Number.isFinite(Number(inc.lat_falha))&&Number.isFinite(Number(inc.lng_falha))){
+    map.setView([Number(inc.lat_falha),Number(inc.lng_falha)],16);
+  }
+  const mk=incidentMarkers[String(inc.id)];
+  if(mk)mk.openPopup();
+  const cabo=guessIncidentCable(inc);
+  if(cabo){
+    highlightCable(cabo.id);
+    if(cableFx[cabo.id]?.line){
+      try{map.fitBounds(cableFx[cabo.id].line.getBounds(),{padding:[70,70],maxZoom:16});}catch{}
+    }
+  }
+  toast(cabo?'Incidente e cabo relacionado destacados':'Incidente destacado no mapa','ok');
+  goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
+}
 function armarSelecaoPonto(inputId){
   mapPointTarget=inputId;
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
@@ -2288,17 +2334,20 @@ async function loadMap(){
 // Carregar rompimentos ativos no mapa com marcador vermelho
 async function loadRompimentosNoMapa(){
   if(!rompLayer)return;rompLayer.clearLayers();
+  Object.keys(incidentMarkers).forEach(k=>delete incidentMarkers[k]);
   const incs=await fetch(`${SU}/rest/v1/incidentes?status=eq.aberto&lat_falha=not.is.null&select=*`,{headers:RH}).then(r=>r.json()).catch(()=>[]);
   incs.forEach(i=>{
     if(!i.lat_falha||!i.lng_falha)return;
     const mk=L.marker([i.lat_falha,i.lng_falha],{icon:mkRomp('aberta',true),zIndexOffset:5000})
       .bindPopup(`<b>🚨 ${i.titulo||'Rompimento'}</b><br>${i.site_afetado||''}<br>Aberto: ${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}<br>SLA: ${i.sla_horas||5}h`);
+    incidentMarkers[String(i.id)]=mk;
     attachMarkerFieldActions(mk,()=>({
       title:`Rompimento ${normText(i.titulo)||'ativo'}`,
       subtitle:`${esc(i.site_afetado||'—')}<br>${new Date(i.abertura_em||i.criado_em||Date.now()).toLocaleString('pt-BR')}`,
       actions:[
         {label:'📋 Abrir popup',action:()=>mk.openPopup()},
         {label:'📍 Centralizar no mapa',action:()=>map.setView([i.lat_falha,i.lng_falha],17)},
+        {label:'🚨 Foco crítico',action:()=>focusIncidentMap(i.id)},
         {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(Number(i.lat_falha),Number(i.lng_falha))},
       ]
     }));
@@ -2342,6 +2391,7 @@ function renderPresetRow(){
     ['campo','Campo'],
     ['transporte','Transporte'],
     ['incidentes','Incidentes'],
+    ['criticos','Críticos'],
   ];
   el.innerHTML=presets.map(([id,label])=>`<button class="preset-chip ${current===id?'on':''}" onclick="applyPreset('${id}')">${label}</button>`).join('');
 }
@@ -2403,6 +2453,7 @@ function applyPreset(name){
   if(name==='campo'){OVIS.ov_draft=true;OVIS.ov_pending=true;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
   if(name==='transporte'){OVIS.ov_draft=false;OVIS.ov_pending=false;OVIS.ov_romp=true;OVIS.ov_suggest=false;}
   if(name==='incidentes'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;}
+  if(name==='criticos'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;applyMapFocus(true,true);}
   buildLayerPanel();applyVis();savePref();
 }
 function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));localStorage.setItem('_sv',JSON.stringify(SITEVIS));}
@@ -4053,9 +4104,12 @@ function goTab(tab,el){
 async function loadIncidentes(){
   const r=await fetch(`${SU}/rest/v1/incidentes?select=*&order=abertura_em.desc,atualizado_em.desc&limit=50`,{headers:RH});
   const incs=r.ok?await r.json():[];
+  allInc=Array.isArray(incs)?incs:[];
   const ab=incs.filter(i=>i.status!=='resolvido').length;
   const badge=$('ibadge');badge.style.display=ab>0?'inline':'none';if(ab>0)badge.textContent=ab;
   $('inc-list').innerHTML=incs.length?incs.map(i=>{
+    const relCable=guessIncidentCable(i);
+    const relCableName=String(relCable?.nome||'').replace(/'/g,"\\'");
     const dt=i.abertura_em||i.criado_em||new Date().toISOString();
     const h=(Date.now()-new Date(dt))/3600000;
     const sla=i.sla_horas||5;const pct=Math.min(h/sla*100,100);
@@ -4068,7 +4122,11 @@ async function loadIncidentes(){
     <div class="lcsb">${i.site_afetado?`<span>📍 ${esc(i.site_afetado)}</span>`:''}
     <span>⏱ ${h.toFixed(1)}h/${sla}h SLA</span>${i.responsavel?`<span>👤 ${esc(i.responsavel)}</span>`:''}</div>
     <div class="sla-bar"><div class="sla-p" style="width:${pct}%;background:${cor}"></div></div>
-    ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<div style="margin-top:8px;display:flex;gap:6px">
+    <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      <button onclick="focusIncidentMap('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--bl);background:transparent;color:var(--bl);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">📍 Ver no mapa</button>
+      ${relCable?`<button onclick="abrirCaboPorReferencia('${relCableName}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">🧵 Ver cabo</button>`:''}
+    </div>
+    ${i.status!=='resolvido'&&sessao.perfil!=='leitura'?`<div style="margin-top:6px;display:flex;gap:6px">
       <button onclick="resolverInc('${i.id}')" style="flex:1;padding:6px;border-radius:5px;border:1px solid var(--gr);background:transparent;color:var(--gr);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✓ Resolver</button>
     </div>`:''}
     </div>`;
