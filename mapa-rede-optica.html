@@ -2085,6 +2085,10 @@ function mergeSitesData(baseSites,scienceList){
   });
   return merged;
 }
+function getScienceDrivenSitesCount(){
+  if(Array.isArray(scienceSites) && scienceSites.length) return scienceSites.length;
+  return allS.length;
+}
 function resetCableSelection(){
   activeCableId=null;
   Object.values(cableFx).forEach(v=>{
@@ -2329,7 +2333,7 @@ async function loadMap(){
     officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
     officialSegmentos=(Array.isArray(segmentosMapa)?segmentosMapa:[]).map(normalizeSegmentoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
-    const totalSites=(siteCountHeader||allS.length).toLocaleString('pt-BR');
+    const totalSites=getScienceDrivenSitesCount().toLocaleString('pt-BR');
     const totalCabos=(caboCountHeader||allC.length).toLocaleString('pt-BR');
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
@@ -4486,8 +4490,9 @@ function renderAuditUI(issues){
   $('aud-score').textContent=score;
   $('aud-score').style.color=scoreTone;
   $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
+  const scienceDrivenSites=getScienceDrivenSitesCount();
   $('aud-resumo').innerHTML=[
-    auditCard('Sites totais no mapa',`${allS.length.toLocaleString('pt-BR')} carregados | ${merged.toLocaleString('pt-BR')} com enriquecimento Science`,'ok'),
+    auditCard('Sites da Science',`${scienceDrivenSites.toLocaleString('pt-BR')} na base oficial | ${merged.toLocaleString('pt-BR')} com enriquecimento no mapa`,'ok'),
     auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
     auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
     auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
