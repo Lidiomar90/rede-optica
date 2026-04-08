@@ -879,8 +879,12 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
   <div class="pgc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <b style="font-size:13px">Colaboradores</b>
-      <button class="tb g" onclick="openM('usuario')">+ Novo colaborador</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="tb b" onclick="openUsuariosRepairGuide()">Diagnóstico</button>
+        <button class="tb g" onclick="openM('usuario')">+ Novo colaborador</button>
+      </div>
     </div>
+    <div id="user-health" style="display:none;margin-bottom:10px"></div>
     <div id="user-list"></div>
   </div>
 </div>
@@ -971,20 +975,33 @@ async function authFetchUsuario(email){
   const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email,email});
   if(rpc.ok){
     const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
-    if(data&&typeof data==='object')return{ok:true,user:data,source:`rpc:${rpc.fn}`};
+    if(data&&typeof data==='object'){
+      setUserBackendState('ok','',`rpc:${rpc.fn}`);
+      return{ok:true,user:data,source:`rpc:${rpc.fn}`};
+    }
+    setUserBackendState('erro','Resposta inválida da RPC de login.',`rpc:${rpc.fn}`);
     return{ok:false,error:'Resposta inválida da RPC de login.',source:`rpc:${rpc.fn}`};
   }
-  if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
+  if(!rpc.missing){
+    const errMsg=describeApiError(rpc.error,rpc.status);
+    setUserBackendState('erro',errMsg,`rpc:${rpc.fn}`);
+    return{ok:false,error:errMsg,source:`rpc:${rpc.fn}`};
+  }
   try{
     const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
     if(!r.ok){
       const err=await readJsonSafe(r);
-      return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+      const errMsg=describeApiError(err,r.status);
+      setUserBackendState('erro',errMsg,'rest:usuarios');
+      return{ok:false,error:errMsg,source:'rest:usuarios'};
     }
     const lista=await r.json();
+    setUserBackendState('ok','', 'rest:usuarios');
     return{ok:true,user:lista?.[0]||null,source:'rest:usuarios'};
   }catch(err){
-    return{ok:false,error:getFriendlyErrorMessage(err,'Falha ao consultar usuários.'),source:'rest:usuarios'};
+    const errMsg=getFriendlyErrorMessage(err,'Falha ao consultar usuários.');
+    setUserBackendState('erro',errMsg,'rest:usuarios');
+    return{ok:false,error:errMsg,source:'rest:usuarios'};
   }
 }
 async function authTouchUsuario(id){
@@ -1026,6 +1043,44 @@ async function authUpdateUsuario(id,reg){
 // LOGIN — senha oculta por padrão, sem hint visível
 // ═══════════════════════════════════════════
 let sessao=null;
+let userBackendState={status:'desconhecido',message:'',source:''};
+function setUserBackendState(status,message='',source=''){
+  userBackendState={status:status||'desconhecido',message:message||'',source:source||''};
+  const el=$('user-health');
+  if(!el)return;
+  if(status==='ok'){
+    el.style.display='block';
+    el.innerHTML=`<div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2)">Módulo de usuários pronto. Fonte: ${esc(source||'desconhecida')}.</div>`;
+    return;
+  }
+  if(status==='erro'){
+    el.style.display='block';
+    el.innerHTML=`<div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.22);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.6"><b style="color:var(--rd)">Usuários com falha de backend.</b><br>${esc(message||'Falha não identificada.')}<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="tb b" onclick="openUsuariosRepairGuide()">Ver correção</button><button class="tb g" onclick="loadUsuarios()">Tentar novamente</button></div></div>`;
+    return;
+  }
+  el.style.display='none';
+  el.innerHTML='';
+}
+function openUsuariosRepairGuide(){
+  const sqlPath='C:\\FIBRA CADASTRO\\CORRECAO_USUARIOS_RLS_RPC.sql';
+  const msg=userBackendState.message||'Módulo de usuários ainda depende da correção de RPC/policy no Supabase.';
+  $('mtt').textContent='Diagnóstico de usuários';
+  $('mbd').innerHTML=`
+    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.22);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--t2);line-height:1.7">
+      <div><b style="color:var(--rd)">Status:</b> ${esc(msg)}</div>
+      <div style="margin-top:6px"><b>Fonte:</b> ${esc(userBackendState.source||'não detectada')}</div>
+    </div>
+    <div class="mfg" style="margin-top:12px">
+      <label>SQL pronto para aplicar no banco</label>
+      <textarea readonly style="min-height:74px">${sqlPath}</textarea>
+    </div>
+    <div style="background:rgba(77,166,255,.08);border:1px solid rgba(77,166,255,.2);border-radius:8px;padding:12px 14px;font-size:11px;color:var(--t2);line-height:1.7">Aplicar esse SQL no Supabase deve criar as RPCs esperadas pelo front e liberar o fluxo de login, criação e atualização de colaboradores.</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn2 p" onclick="navigator.clipboard.writeText('${sqlPath.replace(/\\/g,'\\\\')}');toast('Caminho do SQL copiado','ok')">📋 Copiar caminho</button>
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+    </div>`;
+  $('mbg').classList.add('show');
+}
 function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
 function toggleHint(){const h=$('lhint');h.style.display=h.style.display==='block'?'none':'block';}
 
@@ -4020,13 +4075,18 @@ async function loadUsuarios(){
   let loadErr='';
   try{
     const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:RH});
-    if(r.ok)us=await r.json();
+    if(r.ok){
+      us=await r.json();
+      setUserBackendState('ok','','rest:usuarios');
+    }
     else{
       const err=await readJsonSafe(r);
       loadErr=describeApiError(err,r.status);
+      setUserBackendState('erro',loadErr,'rest:usuarios');
     }
   }catch(err){
     loadErr=getFriendlyErrorMessage(err,'Falha ao carregar colaboradores.');
+    setUserBackendState('erro',loadErr,'rest:usuarios');
   }
   const PC={admin:'tp',supervisor:'tb2',colaborador:'tg',leitura:'ta'};
   $('user-list').innerHTML=loadErr
@@ -4053,11 +4113,15 @@ async function editarUsuario(id){
     us=r.ok?await r.json():[];
     if(!r.ok){
       const err=await readJsonSafe(r);
-      toast(describeApiError(err,r.status),'er');
+      const msg=describeApiError(err,r.status);
+      setUserBackendState('erro',msg,'rest:usuarios');
+      toast(msg,'er');
       return;
     }
   }catch(err){
-    toast(getFriendlyErrorMessage(err,'Falha ao abrir colaborador.'),'er');
+    const msg=getFriendlyErrorMessage(err,'Falha ao abrir colaborador.');
+    setUserBackendState('erro',msg,'rest:usuarios');
+    toast(msg,'er');
     return;
   }
   if(!us.length)return;
@@ -4088,11 +4152,11 @@ async function salvarUsuarioEdit(id){
   if(senha)reg.senha_texto=senha;
   const rs=await authUpdateUsuario(id,reg);
   if(rs.ok){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
-  else{msg.textContent='Erro ao salvar: '+formatUserWriteError(rs.error||'falha desconhecida');msg.style.color='var(--rd)';}
+  else{const pretty=formatUserWriteError(rs.error||'falha desconhecida');setUserBackendState('erro',pretty,rs.source||'usuarios');msg.textContent='Erro ao salvar: '+pretty;msg.style.color='var(--rd)';}
 }
 async function toggleUsuario(id,ativo){
   const rs=await authUpdateUsuario(id,{ativo});
-  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast(formatUserWriteError(rs.error||'Erro ao atualizar usuário'),'er');
+  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else{const pretty=formatUserWriteError(rs.error||'Erro ao atualizar usuário');setUserBackendState('erro',pretty,rs.source||'usuarios');toast(pretty,'er');}
 }
 
 function auditCard(title,detail,tone='in'){
@@ -4263,6 +4327,7 @@ function collectAuditIssues(){
   if(store.dgos.length && dgoResolved<store.dgos.length)issues.push({severity:'alto',domain:'dgo',kind:'continuidade',title:'DGOs sem site resolvido',detail:`Só ${dgoResolved} de ${store.dgos.length} DGO(s) conseguem localizar o site de referência.`,action:'Padronizar código do site no cadastro do DGO.',fn:'openFirstDgoUnresolved()',fnLabel:'Abrir primeiro DGO pendente'});
   const dgoPend=store.pendencias.filter(p=>String(p.tipo||'').startsWith('dgo_')).length;
   if(dgoPend)issues.push({severity:'medio',domain:'dgo',kind:'continuidade',title:'Pendências de DGO abertas',detail:`Há ${dgoPend} pendência(s) de DGO em aberto.`,action:'Revisar continuidade antes de consolidar.',fn:'openFirstDgoPendencia()',fnLabel:'Abrir primeira pendência de DGO'});
+  if(userBackendState.status==='erro')issues.push({severity:'alto',domain:'usuarios',kind:'dados',title:'Módulo de usuários indisponível',detail:userBackendState.message||'O backend de usuários falhou nas últimas tentativas.',action:'Aplicar o SQL de correção de usuários/RLS no Supabase.',fn:'openUsuariosRepairGuide()',fnLabel:'Abrir correção de usuários'});
   if(activeVis>6)issues.push({severity:'medio',domain:'performance',kind:'campo',title:'Muitas camadas ligadas ao mesmo tempo',detail:`Existem ${activeVis} flags de visualização ativas. Isso pode pesar o uso em campo e confundir a leitura.`,action:'Desligar o que não estiver em uso e salvar a preferência local.',fn:'activateFieldPreset()',fnLabel:'Ativar preset de campo'});
   if(!cacheReady)issues.push({severity:'medio',domain:'offline',kind:'campo',title:'Sem cache offline do mapa',detail:'Ainda não existe snapshot local dos dados principais para uso em campo sem rede.',action:'Abrir o mapa com rede ao menos uma vez para gerar cache offline.'});
   if(!issues.length)issues.push({severity:'baixo',domain:'mapa',kind:'campo',title:'Sem bloqueios críticos detectados',detail:'Os testes locais não encontraram erro que impeça a operação básica do mapa.',action:'Pode seguir para teste manual e publicação incremental.'});
@@ -5830,7 +5895,7 @@ async function salvarUsuarioM(){
   const reg={nome,email,senha_texto:senha,perfil,ativo:true};
   const rs=await authCreateUsuario(reg);
   if(rs.ok){toast('✓ Usuário criado!');closeM();loadUsuarios();}
-  else{const m=$('fu-msg');m.textContent='Erro: '+formatUserWriteError(rs.error||'E-mail já cadastrado ou permissão insuficiente');m.style.color='var(--rd)';}
+  else{const pretty=formatUserWriteError(rs.error||'E-mail já cadastrado ou permissão insuficiente');setUserBackendState('erro',pretty,rs.source||'usuarios');const m=$('fu-msg');m.textContent='Erro: '+pretty;m.style.color='var(--rd)';}
 }
 async function salvarCaboM(){
   const nome=($('nc-nm')?.value||'').trim();
