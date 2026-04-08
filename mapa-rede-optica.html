@@ -956,6 +956,79 @@ function formatUserWriteError(msg=''){
   if(/RLS|permissão no banco/i.test(txt))return `${txt} Peça a correção da RPC/policy de usuários no Supabase.`;
   return txt;
 }
+async function sha256Hex(text=''){
+  try{
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(text||'')));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch{return '';}
+}
+const LOCAL_USERS_KEY='redeoptica_local_users_v1';
+function getLocalUsersStore(){
+  try{
+    const raw=localStorage.getItem(LOCAL_USERS_KEY);
+    const data=raw?JSON.parse(raw):[];
+    return Array.isArray(data)?data:[];
+  }catch{return [];}
+}
+function saveLocalUsersStore(list){
+  try{localStorage.setItem(LOCAL_USERS_KEY,JSON.stringify(Array.isArray(list)?list:[]));}catch{}
+}
+function mkLocalUserId(){
+  return `local-user-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+}
+function isLocalUserId(id){
+  return String(id||'').startsWith('local-user-');
+}
+function normalizeLocalUser(u){
+  return {
+    id:u.id||mkLocalUserId(),
+    nome:String(u.nome||'').trim(),
+    email:String(u.email||'').trim().toLowerCase(),
+    perfil:u.perfil||'colaborador',
+    ativo:u.ativo!==false,
+    senha_texto:u.senha_texto||'',
+    senha_hash:u.senha_hash||null,
+    ultimo_acesso:u.ultimo_acesso||null,
+    criado_em:u.criado_em||new Date().toISOString(),
+    fonte:'local',
+    pendente_sync:true
+  };
+}
+function getLocalUsers(){
+  return getLocalUsersStore().map(normalizeLocalUser);
+}
+function findLocalUserByEmail(email){
+  const key=String(email||'').trim().toLowerCase();
+  return getLocalUsers().find(u=>u.email===key)||null;
+}
+function findLocalUserById(id){
+  return getLocalUsers().find(u=>String(u.id)===String(id))||null;
+}
+function upsertLocalUser(user){
+  const list=getLocalUsersStore();
+  const next=normalizeLocalUser(user);
+  const idx=list.findIndex(u=>String(u.id||'')===String(next.id));
+  if(idx>=0)list[idx]={...list[idx],...next};
+  else list.push(next);
+  saveLocalUsersStore(list);
+  return next;
+}
+function touchLocalUser(id){
+  const found=findLocalUserById(id);
+  if(!found)return false;
+  upsertLocalUser({...found,ultimo_acesso:new Date().toISOString()});
+  return true;
+}
+function mergeUsersForUI(remoteUsers){
+  const merged=new Map();
+  getLocalUsers().forEach(u=>merged.set(`email:${u.email}`,u));
+  (Array.isArray(remoteUsers)?remoteUsers:[]).forEach(u=>{
+    merged.set(`email:${String(u.email||'').trim().toLowerCase()}`,{...u,fonte:u.fonte||'banco',pendente_sync:false});
+  });
+  return [...merged.values()].sort((a,b)=>{
+    return new Date(a.criado_em||0)-new Date(b.criado_em||0);
+  });
+}
 async function callRpcCandidates(candidates,payload){
   for(const fn of candidates){
     try{
@@ -993,6 +1066,8 @@ async function authFetchUsuario(email){
       const err=await readJsonSafe(r);
       const errMsg=describeApiError(err,r.status);
       setUserBackendState('erro',errMsg,'rest:usuarios');
+      const localUser=findLocalUserByEmail(email);
+      if(localUser&&localUser.ativo!==false)return{ok:true,user:localUser,source:'local:usuarios'};
       return{ok:false,error:errMsg,source:'rest:usuarios'};
     }
     const lista=await r.json();
@@ -1001,10 +1076,13 @@ async function authFetchUsuario(email){
   }catch(err){
     const errMsg=getFriendlyErrorMessage(err,'Falha ao consultar usuários.');
     setUserBackendState('erro',errMsg,'rest:usuarios');
+    const localUser=findLocalUserByEmail(email);
+    if(localUser&&localUser.ativo!==false)return{ok:true,user:localUser,source:'local:usuarios'};
     return{ok:false,error:errMsg,source:'rest:usuarios'};
   }
 }
 async function authTouchUsuario(id){
+  if(isLocalUserId(id))return touchLocalUser(id);
   const rpc=await callRpcCandidates(['fn_touch_usuario','touch_usuario','fn_atualizar_ultimo_acesso_usuario'],{p_id:id,id});
   if(rpc.ok||!rpc.missing)return rpc.ok;
   try{
@@ -1013,24 +1091,51 @@ async function authTouchUsuario(id){
   }catch{return false;}
 }
 async function authCreateUsuario(reg){
-  const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],reg);
+  const existingLocal=findLocalUserByEmail(reg?.email);
+  if(existingLocal)return{ok:false,error:'E-mail já cadastrado na contingência local.',source:'local:usuarios'};
+  const remoteReg={...reg};
+  delete remoteReg.senha_hash;
+  const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],remoteReg);
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
-  if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
+  if(!rpc.missing){
+    const pretty=describeApiError(rpc.error,rpc.status);
+    if(/RLS|permissão|401|unauthorized/i.test(String(pretty))){
+      upsertLocalUser(reg);
+      return{ok:true,source:'local:usuarios',degraded:true};
+    }
+    return{ok:false,error:pretty,source:`rpc:${rpc.fn}`};
+  }
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(remoteReg)});
     if(r.status===201)return{ok:true,source:'rest:usuarios'};
     const err=await readJsonSafe(r);
-    return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+    const pretty=describeApiError(err,r.status);
+    if(r.status===401||/RLS|permissão|unauthorized/i.test(String(pretty))){
+      upsertLocalUser(reg);
+      return{ok:true,source:'local:usuarios',degraded:true};
+    }
+    return{ok:false,error:pretty,source:'rest:usuarios'};
   }catch(err){
-    return{ok:false,error:getFriendlyErrorMessage(err,'Falha ao criar usuário.'),source:'rest:usuarios'};
+    const pretty=getFriendlyErrorMessage(err,'Falha ao criar usuário.');
+    if(findLocalUserByEmail(reg?.email))return{ok:false,error:'E-mail já cadastrado na contingência local.',source:'local:usuarios'};
+    upsertLocalUser(reg);
+    return{ok:true,source:'local:usuarios',degraded:true,warning:pretty};
   }
 }
 async function authUpdateUsuario(id,reg){
-  const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],{p_id:id,id,...reg});
+  if(isLocalUserId(id)){
+    const found=findLocalUserById(id);
+    if(!found)return{ok:false,error:'Usuário local não encontrado.',source:'local:usuarios'};
+    upsertLocalUser({...found,...reg,id});
+    return{ok:true,source:'local:usuarios',degraded:true};
+  }
+  const remoteReg={...reg};
+  delete remoteReg.senha_hash;
+  const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],{p_id:id,id,...remoteReg});
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
   if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(remoteReg)});
     if([200,204].includes(r.status))return{ok:true,source:'rest:usuarios'};
     const err=await readJsonSafe(r);
     return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
@@ -1203,6 +1308,24 @@ let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[
 let globalSearchActions={};
 let sidebarSearchTimer=null;
 let sidebarSearchToken=0;
+let sidebarSearchCache=new Map();
+let sidebarSearchRevision=0;
+const searchMetaCaches={
+  site:new WeakMap(),
+  cabo:new WeakMap(),
+  caixa_oficial:new WeakMap(),
+  dgo_oficial:new WeakMap(),
+  segmento_oficial:new WeakMap(),
+  ruptura_oficial:new WeakMap(),
+};
+const GLOBAL_SEARCH_MAX_RESULTS=70;
+const GLOBAL_SEARCH_RENDER_LIMIT=50;
+const GLOBAL_SEARCH_MAX_SCANS=5200;
+const GLOBAL_SEARCH_CACHE_MAX=24;
+let sidebarCompactMode=localStorage.getItem('redeoptica_sb_compact_v1')==='1';
+let caboViewportRefreshTimer=null;
+let caboViewportBound=false;
+let caboLastRenderMeta={zoom:0,inView:0,total:0};
 let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
@@ -1211,6 +1334,8 @@ let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer
 let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v5';
 const FLAG_KEY='redeoptica_flags_v1';
+let scienceSitesTotalHint=0;
+let mapCacheMeta={partial:false,scienceTotal:0,siteCount:0,caboCount:0,source:'live'};
 let touchHoldTimer=null;
 let assetTouchHoldTimer=null;
 let netSlowTimer=null;
@@ -1303,7 +1428,10 @@ const nearestSiteTo=(lat,lng,maxDist=120)=>{
   });
   return best?{site:best,dist:bestDist}:null;
 };
-function saveMapCache(sites,cabos,science,official={}){
+function saveMapCache(sites,cabos,science,official={},meta={}){
+  const scienceTotal=Number(meta.scienceTotal)||0;
+  const siteCount=Number(meta.siteCount)||((Array.isArray(sites)?sites.length:0));
+  const caboCount=Number(meta.caboCount)||((Array.isArray(cabos)?cabos.length:0));
   try{
     const data = {
       sites,
@@ -1313,6 +1441,13 @@ function saveMapCache(sites,cabos,science,official={}){
       dgosMapa:Array.isArray(official.dgosMapa)?official.dgosMapa:[],
       segmentosMapa:Array.isArray(official.segmentosMapa)?official.segmentosMapa:[],
       rupturasMapa:Array.isArray(official.rupturasMapa)?official.rupturasMapa:[],
+      _meta:{
+        partial:false,
+        scienceTotal,
+        siteCount,
+        caboCount,
+        source:'live'
+      },
       salvo_em:new Date().toISOString()
     };
     localStorage.setItem(MAP_CACHE_KEY, JSON.stringify(data));
@@ -1328,6 +1463,13 @@ function saveMapCache(sites,cabos,science,official={}){
         dgosMapa:Array.isArray(official.dgosMapa)?official.dgosMapa.slice(0,400):[],
         segmentosMapa:Array.isArray(official.segmentosMapa)?official.segmentosMapa.slice(0,400):[],
         rupturasMapa:Array.isArray(official.rupturasMapa)?official.rupturasMapa.slice(0,200):[],
+        _meta:{
+          partial:true,
+          scienceTotal,
+          siteCount,
+          caboCount,
+          source:'cache-fallback'
+        },
         salvo_em: new Date().toISOString()
       }));
     } catch(e2) {}
@@ -1341,6 +1483,13 @@ function loadMapCache(){
     // Cache de 12h para uso em campo
     const exp = 1000 * 60 * 60 * 12;
     if(new Date() - new Date(data.salvo_em) > exp) return null;
+    data._meta=data._meta||{
+      partial:false,
+      scienceTotal:Array.isArray(data.science)?data.science.length:0,
+      siteCount:Array.isArray(data.sites)?data.sites.length:0,
+      caboCount:Array.isArray(data.cabos)?data.cabos.length:0,
+      source:'cache-legacy'
+    };
     return data;
   } catch(e){ return null; }
 }
@@ -1396,10 +1545,11 @@ function refreshSidebarOperationalStatus(){
     `<span class="sbpill ${mapOffline?'off':'ok'}">${mapOffline?'Offline':'Online'}</span>`,
     `<span class="sbpill ${cache?.salvo_em?'info':'warn'}">${cacheLabel}</span>`,
     `<span class="sbpill ${queueTotal?'warn':'ok'}">Sync ${queueTotal}</span>`,
+    counts.partial?`<span class="sbpill warn">Cache parcial</span>`:'',
     `<span class="sbpill info">Science ${counts.science.toLocaleString('pt-BR')}</span>`,
     `<span class="sbpill info">Mapa ${counts.mapa.toLocaleString('pt-BR')}</span>`,
     `<span class="sbpill info">Banco ${counts.banco.toLocaleString('pt-BR')}</span>`
-  ];
+  ].filter(Boolean);
   if(fieldMode)pills.push('<span class="sbpill info">Campo ativo</span>');
   el.innerHTML=pills.join('');
 }
@@ -1588,7 +1738,22 @@ function setSidebarOpen(open){
   const s=$('sb'),ov=$('mob-ov');
   const shouldOpen=!!open&&isMobileUI();
   if(s)s.classList.toggle('open',shouldOpen);
-  if(ov)ov.classList.toggle('show',shouldOpen);
+  if(ov){
+    ov.classList.toggle('show',shouldOpen);
+    if(shouldOpen){
+      ov.onclick=()=>setSidebarOpen(false);
+      let touchStartX=0;
+      s.ontouchstart=(e)=>{touchStartX=e.touches[0].clientX;};
+      s.ontouchmove=(e)=>{
+        const dx=e.touches[0].clientX-touchStartX;
+        if(dx<-50)setSidebarOpen(false);
+      };
+    }else{
+      ov.onclick=null;
+      s.ontouchstart=null;
+      s.ontouchmove=null;
+    }
+  }
 }
 function applyResponsiveLayout(){
   if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
@@ -1648,6 +1813,17 @@ function applyFieldMode(on,msg=''){
   }
   setOfflineState(mapOffline,msg||'');
   refreshMobileUiBadges();
+}
+function addLongPress(el,callback,delay=300){
+  let timer=null;
+  el.addEventListener('touchstart',(e)=>{
+    timer=setTimeout(()=>{
+      if(navigator.vibrate)navigator.vibrate(50);
+      callback(e);
+    },delay);
+  });
+  el.addEventListener('touchend',()=>{if(timer)clearTimeout(timer);});
+  el.addEventListener('touchmove',()=>{if(timer)clearTimeout(timer);});
 }
 function toggleFieldMode(){
   applyFieldMode(!fieldMode,fieldMode?'Modo campo desativado.':'Modo campo ativado.');
@@ -1857,6 +2033,7 @@ async function loadScienceSites(){
     if(!r.ok)return[];
     const payload=await r.json();
     const sites=Array.isArray(payload?.sites)?payload.sites:[];
+    scienceSitesTotalHint=Number(payload?.total_sites)||sites.length;
     return sites.map(s=>({
       ...s,
       codigo:normCode(s.codigo),
@@ -2090,15 +2267,21 @@ function mergeSitesData(baseSites,scienceList){
   return merged;
 }
 function getScienceDrivenSitesCount(){
+  if(Number(mapCacheMeta.scienceTotal)>0) return Number(mapCacheMeta.scienceTotal);
+  if(Number(scienceSitesTotalHint)>0) return Number(scienceSitesTotalHint);
   if(Array.isArray(scienceSites) && scienceSites.length) return scienceSites.length;
   return allS.length;
 }
 function getSiteCountSummary(){
   const science=getScienceDrivenSitesCount();
-  const mapa=Array.isArray(allS)?allS.length:0;
-  const banco=Array.isArray(allS)?allS.filter(s=>s.fonte!=='science').length:0;
+  const banco=Number(mapCacheMeta.siteCount)>0
+    ? Number(mapCacheMeta.siteCount)
+    : (Array.isArray(allS)?allS.filter(s=>s.fonte!=='science').length:0);
+  const mapa=Number(mapCacheMeta.siteCount)>0
+    ? Math.max(Array.isArray(allS)?allS.length:0,banco,science)
+    : (Array.isArray(allS)?allS.length:0);
   const scienceOnly=Array.isArray(allS)?allS.filter(s=>s.fonte==='science').length:0;
-  return {science,mapa,banco,scienceOnly};
+  return {science,mapa,banco,scienceOnly,partial:!!mapCacheMeta.partial};
 }
 function resetCableSelection(){
   activeCableId=null;
@@ -2264,6 +2447,7 @@ function initMapObj(){
   },{passive:true});
   mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
   mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
+  bindCaboViewportRefresh();
   applyResponsiveLayout();
 }
 
@@ -2271,6 +2455,73 @@ function getBBoxString(){
   if(!map)return'';
   const b=map.getBounds();
   return `BOX(${b.getWest()} ${b.getSouth()}, ${b.getEast()} ${b.getNorth()})`;
+}
+
+function getCableLimitByZoom(zoom){
+  if(zoom<=8)return 1400;
+  if(zoom<=10)return 3200;
+  if(zoom<=12)return 6200;
+  return 10000;
+}
+function lineLooksInView(pts,bounds){
+  if(!Array.isArray(pts)||pts.length<2||!bounds)return false;
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    if(!Array.isArray(p)||p.length<2)continue;
+    if(bounds.contains([Number(p[0]),Number(p[1])]))return true;
+  }
+  return false;
+}
+function clearCableLayersOnly(){
+  ['cab_bb','cab_dist','cab_drop'].forEach(id=>LYR[id]?.clearLayers());
+}
+function renderCabosNoMapa(){
+  if(!map)return;
+  clearCableLayersOnly();
+  Object.keys(fmap).forEach(k=>{if(String(k).startsWith('c-'))delete fmap[k];});
+  cableFx={};
+  const zoom=map.getZoom();
+  const pad=zoom>=13?0.15:(zoom>=11?0.28:0.45);
+  const bounds=map.getBounds().pad(pad);
+  let inViewCount=0;
+  allC.forEach(c=>{
+    const p2=PL(c.trajeto);if(!p2||p2.length<2)return;
+    if(!lineLooksInView(p2,bounds))return;
+    inViewCount++;
+    const t=c.tipo||'distribuicao';const cor=CABO[t]||CABO.distribuicao;
+    const peso=t==='backbone'?4.2:t==='drop'?2.2:2.8;
+    const lenCalc=Math.round(p2.reduce((a,p,i)=>i===0?0:a+map.distance(p2[i-1],p),0));
+    const popup=`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`;
+    const vis=addCableVisual((LYR[t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist']||LYR['outros']),p2,{color:cor,weight:peso,opacity:t==='backbone'?.96:.88,popup,click:ev=>{
+      L.DomEvent.stopPropagation(ev);if(drawMode||medMode)return;
+      showPanCabo(c,p2,lenCalc);
+    },dblclick:ev=>{
+      L.DomEvent.stopPropagation(ev);
+      if((sessao?.perfil||'leitura')==='leitura')return;
+      editarCabo(c.id);
+      toast('Edição rápida de cabo','in');
+    },contextmenu:ev=>{
+      L.DomEvent.stopPropagation(ev);
+      const oe=ev.originalEvent||{};
+      openActionMenu({...mkCaboMenu(c,p2,lenCalc),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
+    }});
+    cableFx[c.id]={...vis,baseColor:cor,baseWeight:peso,baseOpacity:t==='backbone'?.96:.88,baseHaloOpacity:Math.min((t==='backbone'?.96:.88)*.22,.32),baseDashArray:null};
+    fmap['c-'+c.id]=()=>map.fitBounds(vis.line.getBounds(),{padding:[50,50]});
+  });
+  caboLastRenderMeta={zoom,inView:inViewCount,total:allC.length};
+  if($('mapsub')){
+    $('mapsub').textContent=`Filtre e aja direto no mapa. Cabos visíveis: ${inViewCount}/${allC.length} (zoom ${zoom}).`;
+  }
+}
+function bindCaboViewportRefresh(){
+  if(!map||caboViewportBound)return;
+  const refresh=()=>{
+    clearTimeout(caboViewportRefreshTimer);
+    caboViewportRefreshTimer=setTimeout(()=>renderCabosNoMapa(),120);
+  };
+  map.on('moveend',refresh);
+  map.on('zoomend',refresh);
+  caboViewportBound=true;
 }
 
 async function loadMap(){
@@ -2281,6 +2532,8 @@ async function loadMap(){
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
   allS=[];allC=[];scienceSites=[];officialCaixas=[];officialDgos=[];officialSegmentos=[];officialRupturas=[];fmap={};cableFx={};activeCableId=null;
+  scienceSitesTotalHint=0;
+  mapCacheMeta={partial:false,scienceTotal:0,siteCount:0,caboCount:0,source:'live'};
   
   try{
     $('ltt').textContent='Carregando sites...';setProg(15);
@@ -2295,10 +2548,11 @@ async function loadMap(){
       // Evita o HTTP 500 do PostgREST ao tentar serializar geometry raw.
       let siteUrl = `${SU}/rest/v1/vw_sites_mapa?select=id,codigo,nome,tipo,camada,status,municipio,uf,observacao,responsavel,localizacao,lat,lng&limit=60000`;
       // vw_cabos_mapa: trajeto como JSON GeoJSON — evita HTTP 500 no PostgREST (geometry raw)
-      let caboUrl = `${SU}/rest/v1/vw_cabos_mapa?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&limit=10000`;
+      const caboLimit=getCableLimitByZoom(zoom);
+      let caboUrl = `${SU}/rest/v1/vw_cabos_mapa?select=id,nome,tipo,camada,status,comprimento,observacao,trajeto&limit=${caboLimit}`;
 
       // Otimização BBOX para sites: filtra por lat/lng range (view retorna lat/lng numérico)
-      // Cabos: sem filtro bbox — view retorna trajeto como JSON (não geometry), limit=10000
+      // Cabos: limit progressivo por zoom + recorte visual por viewport no render
       if(zoom > 12){
         const b = map.getBounds();
         const S=b.getSouth().toFixed(6),N=b.getNorth().toFixed(6);
@@ -2309,18 +2563,25 @@ async function loadMap(){
       const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
       const caboCountUrl = caboUrl.replace(/limit=\d+/,'limit=1');
       [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader]=await Promise.all([
-        fetchWithTimeout(siteUrl,{headers:RH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
-        fetchWithTimeout(caboUrl,{headers:RH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
+        fetchWithTimeout(siteUrl,{headers:WH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
+        fetchWithTimeout(caboUrl,{headers:WH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
-        fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetchWithTimeout(`${SU}/rest/v1/dgo?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetchWithTimeout(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetchWithTimeout(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetchWithTimeout(siteCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
-        fetchWithTimeout(caboCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/dgo?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(siteCountUrl,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetchWithTimeout(caboCountUrl,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
-      try{saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});}catch(cacheErr){console.warn('Cache local indisponível (storage cheio):',cacheErr.message);}
+      mapCacheMeta={
+        partial:false,
+        scienceTotal:Number(scienceSitesTotalHint)||((Array.isArray(science)?science.length:0)),
+        siteCount:Number(siteCountHeader)||((Array.isArray(sites)?sites.length:0)),
+        caboCount:Number(caboCountHeader)||((Array.isArray(cabos)?cabos.length:0)),
+        source:'live'
+      };
+      try{saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa},mapCacheMeta);}catch(cacheErr){console.warn('Cache local indisponível (storage cheio):',cacheErr.message);}
       updateCacheTimestamp(new Date().toISOString());
       setOfflineState(false);
     }catch(netErr){
@@ -2334,8 +2595,15 @@ async function loadMap(){
       dgosMapa=cache.dgosMapa||[];
       segmentosMapa=cache.segmentosMapa||[];
       rupturasMapa=cache.rupturasMapa||[];
+      mapCacheMeta={
+        partial:!!cache?._meta?.partial,
+        scienceTotal:Number(cache?._meta?.scienceTotal)||0,
+        siteCount:Number(cache?._meta?.siteCount)||0,
+        caboCount:Number(cache?._meta?.caboCount)||0,
+        source:String(cache?._meta?.source||'cache')
+      };
       updateCacheTimestamp(cache.salvo_em,{offline:true});
-      setOfflineState(true,'Sem rede estável. Carregando último cache local.');
+      setOfflineState(true,mapCacheMeta.partial?'Sem rede estável. Carregando cache parcial local.':'Sem rede estável. Carregando último cache local.');
     }
     scienceSites=Array.isArray(science)?science:[];
     allS=mergeSitesData(Array.isArray(sites)?sites:[],scienceSites);
@@ -2344,15 +2612,18 @@ async function loadMap(){
     officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
     officialSegmentos=(Array.isArray(segmentosMapa)?segmentosMapa:[]).map(normalizeSegmentoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
+    invalidateGlobalSearchCache();
+    refreshGlobalSearchResults();
     const counts=getSiteCountSummary();
     const totalSites=counts.science.toLocaleString('pt-BR');
-    const totalCabos=(caboCountHeader||allC.length).toLocaleString('pt-BR');
-    $('ce-label').textContent='Sites Science';
+    const totalCabos=(Number(mapCacheMeta.caboCount)||caboCountHeader||allC.length).toLocaleString('pt-BR');
+    $('ce-label').textContent=counts.partial?'Sites Science*':'Sites Science';
+    $('ce-label').title=counts.partial?'Total da Science preservado, mas o mapa foi aberto com cache parcial local.':'Total oficial vindo da base Science.';
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
     let totalSpans='0';
     try{
-      const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
+      const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
       totalSpans=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
     }catch{}
     $('cs').textContent=totalSpans;
@@ -2365,31 +2636,10 @@ async function loadMap(){
     });
     
     $('ltt').textContent=`Renderizando ${allC.length} cabos...`;setProg(78);
-    allC.forEach(c=>{
-      const p2=PL(c.trajeto);if(!p2||p2.length<2)return;
-      const t=c.tipo||'distribuicao';const cor=CABO[t]||CABO.distribuicao;
-      const peso=t==='backbone'?4.2:t==='drop'?2.2:2.8;
-      const lenCalc=Math.round(p2.reduce((a,p,i)=>i===0?0:a+map.distance(p2[i-1],p),0));
-      const popup=`<b>${c.nome||'Cabo'}</b><br>${c.tipo||'—'} | ${km(c.comprimento)}`;
-      const vis=addCableVisual((LYR[t==='backbone'?'cab_bb':t==='drop'?'cab_drop':'cab_dist']||LYR['outros']),p2,{color:cor,weight:peso,opacity:t==='backbone'?.96:.88,popup,click:ev=>{
-        L.DomEvent.stopPropagation(ev);if(drawMode||medMode)return;
-        showPanCabo(c,p2,lenCalc);
-      },dblclick:ev=>{
-        L.DomEvent.stopPropagation(ev);
-        if(sessao.perfil==='leitura')return;
-        editarCabo(c.id);
-        toast('Edição rápida de cabo','in');
-      },contextmenu:ev=>{
-        L.DomEvent.stopPropagation(ev);
-        const oe=ev.originalEvent||{};
-        openActionMenu({...mkCaboMenu(c,p2,lenCalc),latlng:ev.latlng,clientX:oe.clientX||120,clientY:oe.clientY||120});
-      }});
-      cableFx[c.id]={...vis,baseColor:cor,baseWeight:peso,baseOpacity:t==='backbone'?.96:.88,baseHaloOpacity:Math.min((t==='backbone'?.96:.88)*.22,.32),baseDashArray:null};
-      fmap['c-'+c.id]=()=>map.fitBounds(vis.line.getBounds(),{padding:[50,50]});
-    });
+    renderCabosNoMapa();
     // Carregar incidentes abertos com rompimento no mapa
     loadRompimentosNoMapa();
-    renderInventarioDrafts();
+    renderInventarioDraftsV2();
     sugerirConexoesCabos();
     renderPendencias();
     renderFlags();
@@ -2862,9 +3112,58 @@ function buildSearchMeta(label,sub,...parts){
   const haystack=[labelNorm,subNorm,...parts.map(normalizeSearchText)].filter(Boolean).join(' ').trim();
   return {labelNorm,subNorm,haystack};
 }
+function getCachedSearchMeta(kind,obj,builder){
+  if(!obj || typeof obj!=='object' || typeof builder!=='function')return typeof builder==='function'?builder():buildSearchMeta('','');
+  const cache=searchMetaCaches[kind];
+  if(!cache)return builder();
+  let meta=cache.get(obj);
+  if(!meta){
+    meta=builder();
+    cache.set(obj,meta);
+  }
+  return meta;
+}
 function getSearchTokens(q=''){
   const norm=normalizeSearchText(q);
   return {norm,tokens:norm.split(/\s+/).filter(Boolean)};
+}
+function invalidateGlobalSearchCache(){
+  sidebarSearchRevision++;
+  sidebarSearchCache.clear();
+}
+function buildGlobalSearchCacheKey(search){
+  return `${sidebarSearchRevision}:${search?.norm||''}`;
+}
+function primeGlobalSearchActions(results){
+  globalSearchActions={};
+  (Array.isArray(results)?results:[]).forEach(item=>{
+    if(!item || !item.key || typeof item.action!=='function')return;
+    globalSearchActions[item.key]=item.action;
+  });
+}
+function renderGlobalSearchResults(el,results){
+  if(!el)return;
+  const items=Array.isArray(results)?results:[];
+  primeGlobalSearchActions(items);
+  if(!items.length){
+    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado global</div>';
+    return;
+  }
+  el.innerHTML=`<div class="gh"><span>RESULTADOS DA BUSCA</span><span>${items.length}</span></div>` +
+    items.slice(0,GLOBAL_SEARCH_RENDER_LIMIT).map(r => `
+      <div class="si" onclick="globalSearchOpen('${r.key}')">
+        <div class="sii" style="background:${r.cor||'var(--cy)'}"></div>
+        <div class="sin">${esc(r.label)}</div>
+        <div class="sis">${esc(r.sub)}</div>
+        <div class="stg ${r.tipo==='ruptura'?'ter':r.tipo==='site'?'tok':'twn'}">${esc(r.tipo)}</div>
+      </div>
+    `).join('');
+}
+function refreshGlobalSearchResults(){
+  if(sbMode!=='camadas')return;
+  const term=$('si')?.value||'';
+  if(String(term).trim().length<2)return;
+  execBuscaGlobal(term,{skipCache:true});
 }
 function matchSearchMeta(meta,search){
   if(!search.norm)return false;
@@ -2891,7 +3190,7 @@ function rankSearchMeta(meta,search){
   return score - Math.min(meta.labelNorm.length,48)/120;
 }
 
-function execBuscaGlobal(q){
+function execBuscaGlobal(q,{skipCache=false}={}){
   const el=$('sbl'); 
   if(!q || q.length < 2) { 
     if(sbMode==='camadas') { el.style.display='none'; return; }
@@ -2900,6 +3199,11 @@ function execBuscaGlobal(q){
   
   el.style.display='block';
   const search=getSearchTokens(q);
+  const cacheKey=buildGlobalSearchCacheKey(search);
+  if(!skipCache && sidebarSearchCache.has(cacheKey)){
+    renderGlobalSearchResults(el,sidebarSearchCache.get(cacheKey)||[]);
+    return;
+  }
   const res = [];
   globalSearchActions={};
   const addRes=(item)=>{
@@ -2920,7 +3224,7 @@ function execBuscaGlobal(q){
     const pt=getSitePoint(s);
     const label=s.codigo||s.nome||'Site';
     const sub=s.municipio||'site';
-    const meta=buildSearchMeta(label,sub,s.nome,s.localidade,s.cn,s.supervisor);
+    const meta=getCachedSearchMeta('site',s,()=>buildSearchMeta(label,sub,s.nome,s.localidade,s.cn,s.supervisor));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'site',
@@ -2938,7 +3242,7 @@ function execBuscaGlobal(q){
   allC.forEach(c => {
     const label=c.nome||c.codigo||'Cabo';
     const sub=c.tipo||'cabo';
-    const meta=buildSearchMeta(label,sub,c.codigo,c.status);
+    const meta=getCachedSearchMeta('cabo',c,()=>buildSearchMeta(label,sub,c.codigo,c.status));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'cabo',
@@ -2975,7 +3279,7 @@ function execBuscaGlobal(q){
     const pt=pointFromLatLng(cx.lat,cx.lng);
     const label=cx.codigo||cx.nome||'Caixa oficial';
     const sub='caixa oficial';
-    const meta=buildSearchMeta(label,sub,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.site_codigo);
+    const meta=getCachedSearchMeta('caixa_oficial',cx,()=>buildSearchMeta(label,sub,cx.nome,cx.tipo_instalacao,cx.modelo,cx.fabricante,cx.status,cx.site_codigo));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'caixa',
@@ -3013,7 +3317,7 @@ function execBuscaGlobal(q){
     const pt=pointFromLatLng(site?.lat,site?.lng);
     const label=dg.codigo||dg.nome||'DGO oficial';
     const sub=`DGO oficial${dg.site_codigo?` • ${dg.site_codigo}`:''}`;
-    const meta=buildSearchMeta(label,sub,dg.nome,dg.site,dg.site_nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status);
+    const meta=getCachedSearchMeta('dgo_oficial',dg,()=>buildSearchMeta(label,sub,dg.nome,dg.site,dg.site_nome,dg.rack,dg.fila,dg.bastidor,dg.modelo,dg.fabricante,dg.status));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'dgo',
@@ -3051,7 +3355,7 @@ function execBuscaGlobal(q){
     const pt=pts ? midPointOfLine(pts) : pointFromLatLng(seg.lat,seg.lng);
     const label=seg.cabo||seg.codigo||'Segmento oficial';
     const sub=`oficial • ${seg.ponto_a||'—'} → ${seg.ponto_b||'—'}`;
-    const meta=buildSearchMeta(label,sub,seg.nome,seg.tipo_lancamento,seg.fabricante,seg.status,seg.observacao);
+    const meta=getCachedSearchMeta('segmento_oficial',seg,()=>buildSearchMeta(label,sub,seg.nome,seg.tipo_lancamento,seg.fabricante,seg.status,seg.observacao));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'segmento',
@@ -3087,7 +3391,7 @@ function execBuscaGlobal(q){
     const pt=pointFromLatLng(rp.lat,rp.lng);
     const label=rp.cabo_segmento||rp.codigo||'Ruptura oficial';
     const sub=`oficial • ${rp.status||rp.tipo_reparo||'ruptura'}`;
-    const meta=buildSearchMeta(label,sub,rp.codigo,rp.tipo_reparo,rp.nova_caixa,rp.causa);
+    const meta=getCachedSearchMeta('ruptura_oficial',rp,()=>buildSearchMeta(label,sub,rp.codigo,rp.tipo_reparo,rp.nova_caixa,rp.causa));
     if(!matchSearchMeta(meta,search))return;
     addRes({
       tipo:'ruptura',
@@ -3102,20 +3406,17 @@ function execBuscaGlobal(q){
   });
 
   if(!res.length){
-    el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum resultado global</div>';
+    sidebarSearchCache.set(cacheKey,[]);
+    renderGlobalSearchResults(el,[]);
     return;
   }
   res.sort((a,b)=>(b.score||0)-(a.score||0) || String(a.label||'').localeCompare(String(b.label||''),'pt-BR'));
-
-  el.innerHTML=`<div class="gh"><span>RESULTADOS DA BUSCA</span><span>${res.length}</span></div>` + 
-    res.slice(0,50).map(r => `
-      <div class="si" onclick="globalSearchOpen('${r.key}')">
-        <div class="sii" style="background:${r.cor||'var(--cy)'}"></div>
-        <div class="sin">${esc(r.label)}</div>
-        <div class="sis">${esc(r.sub)}</div>
-        <div class="stg ${r.tipo==='ruptura'?'ter':r.tipo==='site'?'tok':'twn'}">${esc(r.tipo)}</div>
-      </div>
-    `).join('');
+  sidebarSearchCache.set(cacheKey,res);
+  if(sidebarSearchCache.size>GLOBAL_SEARCH_CACHE_MAX){
+    const firstKey=sidebarSearchCache.keys().next().value;
+    if(firstKey!==undefined)sidebarSearchCache.delete(firstKey);
+  }
+  renderGlobalSearchResults(el,res);
 }
 function globalSearchOpen(key){
   const hit=globalSearchActions[key];
@@ -4246,15 +4547,16 @@ async function loadUsuarios(){
     loadErr=getFriendlyErrorMessage(err,'Falha ao carregar colaboradores.');
     setUserBackendState('erro',loadErr,'rest:usuarios');
   }
+  const mergedUsers=mergeUsersForUI(us);
   const PC={admin:'tp',supervisor:'tb2',colaborador:'tg',leitura:'ta'};
-  $('user-list').innerHTML=loadErr
-    ? `<div class="lcard"><div class="lct"><div class="lctt">Usuários indisponíveis</div></div><div class="lcsb"><span>${esc(loadErr)}</span></div></div>`
-    : us.map(u=>`
+  const warnCard=loadErr?`<div class="lcard"><div class="lct"><div class="lctt">Banco de usuários indisponível</div></div><div class="lcsb"><span>${esc(loadErr)}</span><span style="color:var(--am)">Contingência local ativa para colaboradores salvos neste navegador.</span></div></div>`:'';
+  $('user-list').innerHTML=(warnCard||'') + (mergedUsers.length?mergedUsers.map(u=>`
     <div class="lcard"><div class="lct">
       <span style="font-size:14px">${u.perfil==='admin'?'👑':u.perfil==='supervisor'?'🔵':'👤'}</span>
       <div class="lctt">${esc(u.nome)}</div>
       <span class="tag ${PC[u.perfil]||'ta'}">${u.perfil}</span>
       <span class="tag ${u.ativo?'tg':'ter'}">${u.ativo?'ativo':'inativo'}</span>
+      ${u.pendente_sync?`<span class="tag twn">local</span>`:''}
     </div>
     <div class="lcsb">
       <span>✉ ${esc(u.email)}</span>
@@ -4262,9 +4564,30 @@ async function loadUsuarios(){
     </div>
     ${sessao.perfil==='admin'?`<div style="margin-top:8px;display:flex;gap:6px">
       <button onclick="editarUsuario('${u.id}')" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--bl);background:transparent;color:var(--bl);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">✏ Editar</button>
-      ${u.id!==sessao.id?`<button onclick="toggleUsuario('${u.id}',${!u.ativo})" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">${u.ativo?'⊘ Inativar':'✓ Ativar'}</button>`:''}</div>`:''}</div>`).join('');
+      ${u.id!==sessao.id?`<button onclick="toggleUsuario('${u.id}',${!u.ativo})" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">${u.ativo?'⊘ Inativar':'✓ Ativar'}</button>`:''}</div>`:''}
+    </div>`).join(''):`<div class="lcard"><div class="lct"><div class="lctt">Nenhum colaborador disponível</div></div><div class="lcsb"><span>${loadErr?esc(loadErr):'Cadastre um colaborador para começar.'}</span></div></div>`);
 }
 async function editarUsuario(id){
+  if(isLocalUserId(id)){
+    const u=findLocalUserById(id);
+    if(!u){toast('Usuário local não encontrado','er');return;}
+    $('mtt').textContent='Editar colaborador local';
+    $('mbd').innerHTML=`
+      <div class="mfg"><label>Nome *</label><input id="eu-nome" value="${esc(u.nome||'')}"></div>
+      <div class="mfg"><label>E-mail *</label><input id="eu-email" type="email" value="${esc(u.email||'')}"></div>
+      <div class="mfgr">
+        <div class="mfg"><label>Perfil</label><select id="eu-perfil">${['colaborador','supervisor','leitura','admin'].map(p=>`<option ${u.perfil===p?'selected':''}>${p}</option>`).join('')}</select></div>
+        <div class="mfg"><label>Nova senha (deixe em branco para manter)</label><input id="eu-senha" type="password" placeholder="••••••••"></div>
+      </div>
+      <div style="background:rgba(255,182,72,.08);border:1px solid rgba(255,182,72,.24);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2);margin-bottom:10px">Este colaborador está em contingência local e será sincronizado quando o backend de usuários voltar.</div>
+      <div id="eu-msg" style="min-height:18px;font-size:11px;text-align:center"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn2 s" onclick="closeM()">Cancelar</button>
+        <button class="btn2 p" onclick="salvarUsuarioEdit('${id}')">💾 Salvar</button>
+      </div>`;
+    $('mbg').classList.add('show');
+    return;
+  }
   let us=[];
   try{
     const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
@@ -4307,7 +4630,10 @@ async function salvarUsuarioEdit(id){
   const msg=$('eu-msg');
   if(!nome||!email){msg.textContent='Nome e e-mail são obrigatórios';msg.style.color='var(--rd)';return;}
   const reg={nome,email,perfil};
-  if(senha)reg.senha_texto=senha;
+  if(senha){
+    reg.senha_texto=senha;
+    reg.senha_hash=await sha256Hex(senha);
+  }
   const rs=await authUpdateUsuario(id,reg);
   if(rs.ok){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
   else{const pretty=formatUserWriteError(rs.error||'falha desconhecida');setUserBackendState('erro',pretty,rs.source||'usuarios');msg.textContent='Erro ao salvar: '+pretty;msg.style.color='var(--rd)';}
@@ -4556,13 +4882,41 @@ function limpar(pre){
     if(el.type==='checkbox')el.checked=false;
     else if(el.tagName==='SELECT')el.selectedIndex=0;
     else el.value='';
+    if(el.dataset && Object.prototype.hasOwnProperty.call(el.dataset,'editId'))delete el.dataset.editId;
   });
-  if($(pre+'-msg'))$(pre+'-msg').textContent='';
+  if($(pre+'-msg')){
+    $(pre+'-msg').textContent='';
+    $(pre+'-msg').style.color='';
+  }
 }
 function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.style.color=tipo==='ok'?'var(--gr)':'var(--rd)';}}
 const INV_KEY='redeoptica_inventario_rascunho_v1';
+const SYNC_QUEUE_KEY='redeoptica_sync_queue_v1';
+function getSyncQueue(){try{return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY)||'[]');}catch{return[];}}
+function addToSyncQueue(item){const q=getSyncQueue();q.push({...item,queued_at:new Date().toISOString()});localStorage.setItem(SYNC_QUEUE_KEY,JSON.stringify(q));updateSyncQueueBadge();}
+function clearSyncQueue(){localStorage.setItem(SYNC_QUEUE_KEY,'[]');updateSyncQueueBadge();}
+async function processSyncQueue(){
+  const q=getSyncQueue();
+  if(!q.length)return;
+  toast(`Sincronizando ${q.length} itens...`,'in');
+  let ok=0,fail=0;
+  for(const item of q){
+    try{
+      const r=await fetch(`${SU}/rest/v1/${item.table}`,{method:'POST',headers:{...WH,'Content-Type':'application/json'},body:JSON.stringify(item.payload)});
+      if([200,201].includes(r.status))ok++;else fail++;
+    }catch{fail++;}
+  }
+  if(fail===0){clearSyncQueue();toast(`✓ ${ok} itens sincronizados`,'ok');}
+  else{toast(`${ok} ok, ${fail} falharam`,'wn');}
+}
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
-function saveInvStore(store){try{localStorage.setItem(INV_KEY,JSON.stringify(store));}catch(e){console.warn('Cache inv cheio:',e.message);}renderInventarioResumo();updateSyncQueueBadge();}
+function saveInvStore(store){
+  try{localStorage.setItem(INV_KEY,JSON.stringify(store));}catch(e){console.warn('Cache inv cheio:',e.message);}
+  invalidateGlobalSearchCache();
+  renderInventarioResumo();
+  updateSyncQueueBadge();
+  refreshGlobalSearchResults();
+}
 function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
 function updateInvItem(tipo,id,patch){
   const store=getInvStore();
@@ -4590,7 +4944,8 @@ function renderInventarioResumo(){
     ...store.pendencias.slice(-3).map(x=>`PEND ${x.tipo} | ${x.referencia||'—'}`)
   ];
   if($('inv-resumo'))$('inv-resumo').value=linhas.join('\n').trim();
-  renderInventarioDrafts();
+  // Mantem a mesma camada de inventario alinhada ao fluxo operacional atual.
+  renderInventarioDraftsV2();
 }
 function limparInventarioRascunho(){
   if(!confirm('Limpar todos os rascunhos locais do inventário?'))return;
@@ -5079,7 +5434,7 @@ function novaRupturaNoCentro(){
   toast('Centro do mapa aplicado para nova ruptura','ok');
 }
 window.addEventListener('offline',()=>setOfflineState(true,'Sem rede. O app vai tentar usar o último cache local.'));
-window.addEventListener('online',()=>setOfflineState(false,'Conexão restabelecida.'));
+window.addEventListener('online',()=>{setOfflineState(false,'Conexão restabelecida.');processSyncQueue();});
 function abrirCaixaPorPendencia(p){
   goTab('cadastro',document.querySelector('.nt[onclick*="cadastro"]'));
   const ref=String(p.referencia||'');
@@ -5153,11 +5508,13 @@ async function pushToSupabase(tbl, payload, msgId){
       const err = await r.json();
       console.error(`Erro ao salvar em ${tbl}:`, err, payload);
       msgField(msgId, '⚠ Erro nuvem: ' + (err.message || r.status));
+      addToSyncQueue({table:tbl,payload});
       return false;
     }
   } catch (e) {
     console.error(`Exceção ao sincronizar ${tbl}:`, e);
-    msgField(msgId, '⚠ Sem conexão para sincronizar agora.');
+    msgField(msgId, '⚠ Sem conexão. Item na fila de sincronização.');
+    addToSyncQueue({table:tbl,payload});
     return false;
   }
 }
@@ -5175,11 +5532,10 @@ async function salvarCaixa(){
   if(editId){
     updateInvItem('caixas',editId,payload);
     msgField('cx-msg','✓ Caixa atualizada em rascunho local.','ok');
+    if(navigator.vibrate)navigator.vibrate(50);
   }else{
     addInvItem('caixas',payload);
-    msgField('cx-msg','✓ Caixa salva em rascunho local.','ok');
-    
-    // Tenta persistir no banco (tabela caixa_emenda)
+    // Persistir no banco (tabela caixa_emenda)
     const dbPayload = {
       codigo: payload.codigo,
       nome: payload.nome,
@@ -5192,7 +5548,9 @@ async function salvarCaixa(){
       localizacao: lat && lng ? `SRID=4326;POINT(${lng} ${lat})` : null,
       observacao: payload.observacao
     };
-    await pushToSupabase('caixa_emenda', dbPayload, 'cx-msg');
+    const ok = await pushToSupabase('caixa_emenda', dbPayload, 'cx-msg');
+    if(navigator.vibrate)navigator.vibrate(ok?50:100);
+    if(!ok)msgField('cx-msg','✓ Salvo local. Sincronizará ao reconectar.','ok');
   }
   limpar('cx');
 }
@@ -6052,9 +6410,12 @@ async function salvarUsuarioM(){
   const nome=($('fu-nm')?.value||'').trim(),email=($('fu-em')?.value||'').trim().toLowerCase(),perfil=$('fu-pf')?.value,senha=($('fu-pw')?.value||'rede2026').trim();
   if(!nome||!email){const m=$('fu-msg');m.textContent='Nome e e-mail são obrigatórios';m.style.color='var(--rd)';return;}
   if(!email.includes('@')){const m=$('fu-msg');m.textContent='E-mail inválido';m.style.color='var(--rd)';return;}
-  const reg={nome,email,senha_texto:senha,perfil,ativo:true};
+  const reg={nome,email,senha_texto:senha,senha_hash:await sha256Hex(senha),perfil,ativo:true};
   const rs=await authCreateUsuario(reg);
-  if(rs.ok){toast('✓ Usuário criado!');closeM();loadUsuarios();}
+  if(rs.ok){
+    toast(rs.source==='local:usuarios'?'✓ Colaborador salvo na contingência local!':'✓ Usuário criado!');
+    closeM();loadUsuarios();
+  }
   else{const pretty=formatUserWriteError(rs.error||'E-mail já cadastrado ou permissão insuficiente');setUserBackendState('erro',pretty,rs.source||'usuarios');const m=$('fu-msg');m.textContent='Erro: '+pretty;m.style.color='var(--rd)';}
 }
 async function salvarCaboM(){
@@ -6742,7 +7103,7 @@ function estimarTempoReparo(causa, numCaixas){
   return Math.round(base / 60);
 }
 
-function gerarRelatorioAsBuilt(ta, siteRef, lat, lng, causa, obs){
+function imprimirRelatorioAsBuiltTA(ta, siteRef, lat, lng, causa, obs){
   const cadeia = auditarTrechoFalha(siteRef, lat, lng);
   const tempoEst = estimarTempoReparo(causa, cadeia.length);
   const win = window.open('', '_blank');

@@ -18,5 +18,11 @@ ia_hub/fila/
 ia_hub/inbox/
 ia_hub/sessoes/
 ia_hub/estado/
+ia_hub/alerts/
 ia_hub/PAINEL_IA_LOCAL.md
 ia_hub/PAINEL_IA_LOCAL.html
+node_modules/
+tests/node_modules/
+.kiro/specs/
+OUTPUT/smoke_front_latest.json
+OUTPUT/supabase_usuarios_apply_latest.json

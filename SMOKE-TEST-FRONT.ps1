@@ -44,11 +44,10 @@ foreach ($check in $checks) {
 
 $syntaxOk = $true
 $syntaxMsg = "OK"
-try {
-  node --check $tmpJs | Out-Null
-} catch {
+$syntaxOutput = & node --check $tmpJs 2>&1
+if ($LASTEXITCODE -ne 0) {
   $syntaxOk = $false
-  $syntaxMsg = $_.Exception.Message
+  $syntaxMsg = ($syntaxOutput | Out-String).Trim()
 }
 
 Remove-Item -LiteralPath $tmpJs -ErrorAction SilentlyContinue

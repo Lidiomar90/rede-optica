@@ -6,6 +6,36 @@
 
 begin;
 
+-- Remove assinaturas antigas incompatíveis com o front atual.
+drop function if exists public.fn_login_usuario(text, text);
+drop function if exists public.fn_touch_usuario(uuid, uuid);
+drop function if exists public.fn_create_usuario(text, text, text, text, boolean);
+drop function if exists public.fn_create_usuario(text, text, text, text, boolean, text);
+drop function if exists public.fn_update_usuario(uuid, uuid, text, text, text, text, boolean);
+drop function if exists public.fn_update_usuario(uuid, uuid, text, text, text, text, boolean, text);
+drop trigger if exists trg_usuarios_hash on public.usuarios;
+drop function if exists public.fn_usuarios_fill_hash();
+
+create or replace function public.fn_usuarios_fill_hash()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.senha_texto is not null and trim(new.senha_texto) <> '' then
+    new.senha_hash := encode(extensions.digest(trim(new.senha_texto)::text, 'sha256'::text), 'hex');
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_usuarios_hash
+before insert or update of senha_texto
+on public.usuarios
+for each row
+execute function public.fn_usuarios_fill_hash();
+
 -- Politicas REST para o app local.
 -- Mantem o modelo atual baseado em x-app-token sem abrir a tabela publicamente.
 do $$
@@ -77,7 +107,7 @@ as $$
     u.ultimo_acesso,
     u.criado_em
   from public.usuarios u
-  where lower(u.email) = lower(coalesce(p_email, email, ''))
+  where lower(u.email) = lower(coalesce(fn_login_usuario.p_email, fn_login_usuario.email, ''))
     and coalesce(u.ativo, true) = true
   order by u.criado_em asc nulls last
   limit 1;
@@ -127,6 +157,7 @@ begin
   insert into public.usuarios (
     nome,
     email,
+    senha_hash,
     senha_texto,
     perfil,
     ativo
@@ -134,6 +165,7 @@ begin
   values (
     trim(nome),
     lower(trim(email)),
+    '',
     nullif(trim(senha_texto), ''),
     coalesce(nullif(trim(perfil), ''), 'colaborador'),
     coalesce(ativo, true)
