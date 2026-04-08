@@ -1081,6 +1081,31 @@ function openUsuariosRepairGuide(){
     </div>`;
   $('mbg').classList.add('show');
 }
+async function probeUserBackend(force=false){
+  if(!force && userBackendState.status==='ok')return true;
+  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:'__probe__@redeop.local',email:'__probe__@redeop.local'});
+  if(rpc.ok){
+    setUserBackendState('ok','',`rpc:${rpc.fn}`);
+    return true;
+  }
+  if(!rpc.missing){
+    setUserBackendState('erro',describeApiError(rpc.error,rpc.status),`rpc:${rpc.fn}`);
+    return false;
+  }
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=id&limit=1`,{headers:RH});
+    if(r.ok){
+      setUserBackendState('ok','','rest:usuarios');
+      return true;
+    }
+    const err=await readJsonSafe(r);
+    setUserBackendState('erro',describeApiError(err,r.status),'rest:usuarios');
+    return false;
+  }catch(err){
+    setUserBackendState('erro',getFriendlyErrorMessage(err,'Falha ao consultar usuários.'),'rest:usuarios');
+    return false;
+  }
+}
 function togglePw(){const i=$('lp');i.type=i.type==='password'?'text':'password';}
 function toggleHint(){const h=$('lhint');h.style.display=h.style.display==='block'?'none':'block';}
 
@@ -1132,7 +1157,10 @@ function iniciarApp(){
   buildLayerPanel();
   if(fieldMode)applyFieldMode(true);
   loadMap();loadIncidentes();loadRotas();
-  if(sessao.perfil==='admin')loadUsuarios();
+  if(sessao.perfil==='admin'){
+    loadUsuarios();
+    setTimeout(()=>probeUserBackend(true),400);
+  }
   setTimeout(()=>rodarAuditoriaIA(true),250);
   aplicarTema();
 }
@@ -4018,6 +4046,7 @@ function goTab(tab,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   if(el)el.classList.add('on');$('pg-'+tab).classList.add('on');
   if(tab==='rotas')loadRotas();if(tab==='incidentes')loadIncidentes();if(tab==='usuarios')loadUsuarios();if(tab==='auditoria')rodarAuditoriaIA(true);
+  if((tab==='usuarios'||tab==='auditoria') && sessao?.perfil==='admin')probeUserBackend(true);
 }
 
 // INCIDENTES
