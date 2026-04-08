@@ -1207,7 +1207,7 @@ let siteQuickStatus='todos',siteQuickCn='todos',siteQuickLoc='todos';
 let cableFx={},activeCableId=null;
 let editMode=false,caixaMapMode=false,medMode=false,drawMode=false,incMode=false,moveMode=false,mapPointTarget=null;
 let medPts=[],medMks=[],medLn=null,drawPts=[],drawMks=[],drawLn=null,locMk=null;
-let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null,flagLayer=null;
+let rastLayer=null,otdrLayer=null,rompLayer=null,draftInvLayer=null,suggestLayer=null,pendingLayer=null,flagLayer=null,incidentFocusLayer=null;
 let mapOffline=false,ctxLatLng=null;
 const MAP_CACHE_KEY='redeoptica_cache_mapa_v5';
 const FLAG_KEY='redeoptica_flags_v1';
@@ -2101,6 +2101,59 @@ function highlightCable(id){
   fx.line.setStyle({weight:fx.baseWeight+2.2,opacity:1,color:fx.baseColor});
   fx.halo.setStyle({weight:fx.baseWeight+7,opacity:.42,color:fx.baseColor});
 }
+function clearIncidentFocus(){
+  if(incidentFocusLayer){
+    try{incidentFocusLayer.clearLayers();}catch{}
+    if(map&&map.hasLayer(incidentFocusLayer))map.removeLayer(incidentFocusLayer);
+  }
+}
+function getNearbySites(lat,lng,maxDist=800){
+  const hits=[];
+  allS.forEach(s=>{
+    const pt=PP(s.localizacao); if(!pt)return;
+    const d=map?map.distance([lat,lng],pt):999999;
+    if(d<=maxDist)hits.push({site:s,pt,dist:d});
+  });
+  return hits.sort((a,b)=>a.dist-b.dist).slice(0,8);
+}
+function renderIncidentImpact(inc,cabo=null){
+  if(!map||!inc)return;
+  clearIncidentFocus();
+  incidentFocusLayer=L.layerGroup().addTo(map);
+  const lat=Number(inc.lat_falha),lng=Number(inc.lng_falha);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+  L.circle([lat,lng],{
+    radius:900,
+    color:'#ff8a3d',
+    weight:2,
+    opacity:.9,
+    fillColor:'#ff8a3d',
+    fillOpacity:.08,
+    dashArray:'8 8'
+  }).addTo(incidentFocusLayer);
+  L.circleMarker([lat,lng],{
+    radius:10,
+    color:'#fff',
+    weight:2,
+    fillColor:'#e84455',
+    fillOpacity:1
+  }).bindPopup(`<b>Área de impacto</b><br>${esc(inc.titulo||'Incidente')}<br>${esc(inc.site_afetado||'—')}`).addTo(incidentFocusLayer);
+  getNearbySites(lat,lng,900).forEach(({site,pt,dist})=>{
+    L.circleMarker(pt,{
+      radius:7,
+      color:'#fff',
+      weight:2,
+      fillColor:'#4da6ff',
+      fillOpacity:.92
+    }).bindPopup(`<b>${esc(codeFirstLabel(site))}</b><br>Impacto potencial: ${km(dist)}`).addTo(incidentFocusLayer);
+  });
+  if(cabo&&cableFx[cabo.id]?.line){
+    try{
+      const bounds=cableFx[cabo.id].line.getBounds();
+      if(bounds.isValid())map.fitBounds(bounds.extend([lat,lng]),{padding:[80,80],maxZoom:16});
+    }catch{}
+  }
+}
 function guessIncidentCable(inc){
   if(!inc)return null;
   const raw=`${inc.titulo||''} ${inc.descricao||''} ${inc.site_afetado||''}`.toLowerCase();
@@ -2125,7 +2178,8 @@ function focusIncidentMap(incId){
       try{map.fitBounds(cableFx[cabo.id].line.getBounds(),{padding:[70,70],maxZoom:16});}catch{}
     }
   }
-  toast(cabo?'Incidente e cabo relacionado destacados':'Incidente destacado no mapa','ok');
+  renderIncidentImpact(inc,cabo);
+  toast(cabo?'Incidente, cabo e área impactada destacados':'Incidente e área impactada destacados','ok');
   goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
 }
 function armarSelecaoPonto(inputId){
