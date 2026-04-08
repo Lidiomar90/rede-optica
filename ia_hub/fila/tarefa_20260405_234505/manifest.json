@@ -49,10 +49,10 @@
                     }
                 ],
     "monitoramento":  {
-                          "atualizado_em":  "2026-04-07T16:11:03.8240957-03:00",
-                          "sessao_idade_min":  2425,
+                          "atualizado_em":  "2026-04-07T21:26:02.4930060-03:00",
+                          "sessao_idade_min":  2740,
                           "respostas_reais":  0,
-                          "respostas_faltando":  5,
+                          "respostas_faltando":  8,
                           "placeholders":  4
                       }
 }

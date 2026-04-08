@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--bg:#07111f;--bg2:#0e1a2b;--bg3:#132239;--bg4:#1b2c46;--bd:#1f3552;--bd2:#2d4970;--t:#e7f0ff;--t2:#9eb2d2;--t3:#647a9c;--gr:#45d08c;--bl:#48a8ff;--am:#ffb648;--rd:#ff5a68;--pu:#8d6bff;--cy:#2fd4cf;--ink:#06101c;--glass:rgba(14,26,43,.84)}
+:root{--bg:#07111f;--bg2:#0e1a2b;--bg3:#132239;--bg4:#1b2c46;--bd:#1f3552;--bd2:#2d4970;--t:#e7f0ff;--t2:#9eb2d2;--t3:#647a9c;--gr:#45d08c;--bl:#48a8ff;--am:#ffb648;--rd:#ff5a68;--pu:#8d6bff;--cy:#2fd4cf;--ink:#06101c;--glass:rgba(14,26,43,.84);--mobile-bottom-offset:0px;--mobile-safe-bottom:env(safe-area-inset-bottom,0px)}
 body.light{--bg:#ecf2fb;--bg2:#ffffff;--bg3:#f4f7fc;--bg4:#e7eef8;--bd:#d8e1ef;--bd2:#bac9dd;--t:#122033;--t2:#455a78;--t3:#8a9ab3;--glass:rgba(255,255,255,.9)}
 html,body{height:100%;overflow:hidden;background:
 radial-gradient(circle at top left,rgba(72,168,255,.12),transparent 28%),
@@ -85,8 +85,8 @@ color:var(--t);font-family:'Manrope',sans-serif;transition:background .25s,color
 #sb{width:290px;background:linear-gradient(180deg,var(--glass),rgba(10,20,35,.94));border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;flex-shrink:0;z-index:400;transition:background .25s;backdrop-filter:blur(16px);box-shadow:18px 0 44px rgba(0,0,0,.18)}
 @media(max-width:680px){#sb{position:absolute;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:8px 0 30px rgba(0,0,0,.5);width:min(84vw,320px)}}
 #sb.open{transform:translateX(0)!important}
-#mob-ov{display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:350;transition:opacity .28s;cursor:pointer}
-#mob-ov.show{display:block}
+#mob-ov{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:350;transition:opacity .28s;cursor:pointer;opacity:0;pointer-events:none}
+#mob-ov.show{opacity:1;pointer-events:auto}
 #sbhero{padding:10px 12px 8px;border-bottom:1px solid rgba(255,255,255,.06);background:
 linear-gradient(145deg,rgba(72,168,255,.12),transparent 42%),
 linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-direction:column;gap:8px}
@@ -267,7 +267,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 #net-indicator.online-flash{display:block;background:rgba(69,208,140,.14);border:1px solid rgba(69,208,140,.28);color:var(--gr)}
 
 /* CACHE TIMESTAMP */
-#cache-ts{position:absolute;bottom:68px;left:50%;transform:translateX(-50%);z-index:410;font-size:9px;color:var(--t3);background:rgba(9,18,31,.7);padding:3px 10px;border-radius:999px;pointer-events:none;display:none;white-space:nowrap}
+#cache-ts{position:absolute;bottom:calc(68px + var(--mobile-bottom-offset));left:50%;transform:translateX(-50%);z-index:410;font-size:9px;color:var(--t3);background:rgba(9,18,31,.7);padding:3px 10px;border-radius:999px;pointer-events:none;display:none;white-space:nowrap}
 @media(min-width:681px){#cache-ts{display:none!important}}
 
 /* FILA DE SYNC */
@@ -276,8 +276,9 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 
 /* DRAWBAR FIXO — não some com teclado virtual */
 @media(max-width:680px){
-  #drawbar{bottom:0;left:0;right:0;border-radius:0;transform:none;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));position:fixed}
+  #drawbar{bottom:var(--mobile-bottom-offset);left:0;right:0;border-radius:0;transform:none;padding:10px 10px calc(10px + var(--mobile-safe-bottom));position:fixed}
   #drawbar.show{display:flex}
+  #fieldbar{bottom:calc(10px + var(--mobile-bottom-offset));padding-bottom:calc(6px + var(--mobile-safe-bottom))}
 }
 
 /* PÁGINAS INTERNAS */
@@ -1081,6 +1082,7 @@ let mapFocus=localStorage.getItem('redeoptica_map_focus_v1')==='1';
 let mobileToolsExpanded=false;
 const LEGEND_PREF_KEY='redeoptica_legenda_mobile_v1';
 const LONG_PRESS_MS=320;
+const MOBILE_VIEWPORT_OFFSET_MIN=120;
 let legendCollapsed=localStorage.getItem(LEGEND_PREF_KEY)==='1';
 const OVERLAY_CFG=[
   {id:'ov_romp',label:'Incidentes',warn:true,vis:true},
@@ -1408,15 +1410,51 @@ function toggleLegend(){
   applyLegendState(!legendCollapsed,true);
   if(map)setTimeout(()=>map.invalidateSize(false),80);
 }
+let viewportInsetRaf=0;
+let visualViewportBound=false;
+function applyMobileViewportInsets(){
+  const root=document.documentElement;
+  if(!root)return;
+  let bottomOffset=0;
+  const vv=window.visualViewport;
+  if(vv&&isMobileUI()){
+    const gap=Math.round(window.innerHeight-(vv.height+vv.offsetTop));
+    if(gap>MOBILE_VIEWPORT_OFFSET_MIN)bottomOffset=gap;
+  }
+  root.style.setProperty('--mobile-bottom-offset',`${Math.max(0,bottomOffset)}px`);
+}
+function syncViewportInsets(){
+  if(viewportInsetRaf)return;
+  viewportInsetRaf=requestAnimationFrame(()=>{
+    viewportInsetRaf=0;
+    applyMobileViewportInsets();
+  });
+}
+function bindViewportInsetListeners(){
+  if(window.visualViewport&&!visualViewportBound){
+    window.visualViewport.addEventListener('resize',syncViewportInsets,{passive:true});
+    window.visualViewport.addEventListener('scroll',syncViewportInsets,{passive:true});
+    visualViewportBound=true;
+  }
+  syncViewportInsets();
+}
+function setSidebarOpen(open){
+  const s=$('sb'),ov=$('mob-ov');
+  const shouldOpen=!!open&&isMobileUI();
+  if(s)s.classList.toggle('open',shouldOpen);
+  if(ov)ov.classList.toggle('show',shouldOpen);
+}
 function applyResponsiveLayout(){
   if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
   else if(isMobileUI())applyLegendState(legendCollapsed,false);
   else applyLegendState(legendCollapsed,false);
   if(!isMobileUI()){
     setMobileToolsExpanded(false);
+    setSidebarOpen(false);
   }
   applyMapFocus(mapFocus,false);
   refreshMobileUiBadges();
+  syncViewportInsets();
 }
 function setOfflineState(on,msg=''){
   mapOffline=!!on;
@@ -1998,6 +2036,9 @@ function getBBoxString(){
 
 async function loadMap(){
   initMapObj();
+  // Restaura o conteúdo do #load caso tenha sido substituído pelo handler de erro anterior
+  const _ld=$('load');
+  if(_ld&&!$('ltt')){_ld.innerHTML='<div class="spi"></div><p id="ltt">Conectando...</p><div id="lprog"><div id="lbar"></div></div>';}
   $('load').style.display='flex';$('ltt').textContent='Conectando...';setProg(5);
   Object.values(LYR).forEach(l=>l.clearLayers());
   allS=[];allC=[];scienceSites=[];officialCaixas=[];officialDgos=[];officialSegmentos=[];officialRupturas=[];fmap={};cableFx={};activeCableId=null;
@@ -2342,75 +2383,45 @@ async function triggerGraphSync(){
 }
 
 // AUDITORIA RÁPIDA
-async function abrirAuditoriaRef(ref){
-  toast('Auditando referência...','in');
+function collectAuditoriaRefIssues(ref){
   const p=findDraftPoint(ref||'');
-  if(!p){toast('Referência não localizada','wn');return;}
-  
+  if(!p)return {point:null,issues:[],relatedSegs:[],dgos:[]};
   const issues=[];
   const relatedSegs=getRelatedSegmentsByRef(ref);
-  
+  const dgos=p.tipo==='site'?getDgosBySiteRef(p.item?.codigo||p.item?.nome||ref||''):[];
+
   if(p.tipo==='caixa'){
-    const cx=p.item;
-    const segs=relatedSegs;
+    const cx=p.item||{};
     if(!cx.vistoriada)issues.push('⚠ Caixa não vistoriada');
-    if(segs.length===0)issues.push('🔴 Caixa sem segmentos ligados');
-    if(segs.length===1)issues.push('🟠 Caixa com apenas 1 lado conectado');
-    if(!cx.lat||!cx.lng)issues.push('📍 Sem coordenadas');
+    if(relatedSegs.length===0)issues.push('🔴 Caixa sem segmentos ligados');
+    if(relatedSegs.length===1)issues.push('🟠 Caixa com apenas 1 lado conectado');
+    if(!p.lat||!p.lng)issues.push('📍 Sem coordenadas resolvidas no mapa');
   }
-  
+
   if(p.tipo==='dgo'){
-    const dg=p.item;
-    const segs=relatedSegs;
-    if(segs.length===0)issues.push('🔴 DGO sem segmentos ligados');
-    if(segs.length===1)issues.push('🟠 DGO com apenas 1 lado conectado');
-    if(!dg.status||dg.status!=='ativo')issues.push('⚠ DGO com status pendente');
+    const dg=p.item||{};
+    if(relatedSegs.length===0)issues.push('🔴 DGO sem segmentos ligados');
+    if(relatedSegs.length===1)issues.push('🟠 DGO com apenas 1 lado conectado');
+    if(!dg.status||String(dg.status).toLowerCase()!=='ativo')issues.push('⚠ DGO com status pendente');
   }
-  
-  if(p.tipo==='site'){
-    const st=p.item;
-    const dgos=getDgosBySiteRef(st.codigo||st.nome||'');
-    if(dgos.length===0)issues.push('🟡 Site sem DGOs cadastrados');
+
+  if(p.tipo==='site' && dgos.length===0){
+    issues.push('🟡 Site sem DGOs cadastrados');
   }
-  
-  $('mtt').textContent='🤖 Auditoria: '+esc(ref);
-  $('mbd').innerHTML=`
-    <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
-      ${issues.length===0?'✅ Nenhum problema detectado':'🔍 '+issues.length+' problema(s) encontrado(s)'}
-    </div>
-    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--am);font-size:11px">${esc(i)}</div>`).join('')}</div>`:''}
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn2 s" onclick="closeM()">Fechar</button>
-      <button class="btn2 p" onclick="jumpToRef('${String(ref).replace(/'/g,"\\'")}')">📍 Ir para mapa</button>
-    </div>
-  `;
-  $('mbg').classList.add('show');
+
+  return {point:p,issues,relatedSegs,dgos};
 }
 
-async function abrirAuditoriaRuptura(caboRef){
-  toast('Auditando ruptura...','in');
+function collectAuditoriaRupturaIssues(caboRef){
   const rel=getCableRelations(caboRef);
   const rupts=rel.rupts;
   const segs=rel.segs;
-  
   const issues=[];
   if(rupts.length===0)issues.push('ℹ Nenhuma ruptura registrada para este cabo');
   if(segs.length===0)issues.push('🔴 Cabo sem segmentos cadastrados');
   if(segs.some(s=>!s.ponto_a||!s.ponto_b))issues.push('🟠 Algum segmento sem pontos A/B definidos');
-  if(segs.some(s=>!s.geometria_pts||s.geometria_pts.length<2))issues.push('📍 Algum segmento sem geometria');
-  
-  $('mtt').textContent='🤖 Auditoria: Ruptura '+esc(caboRef);
-  $('mbd').innerHTML=`
-    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
-      ${rupts.length} ruptura(s) | ${segs.length} segmento(s) | ${issues.length} problema(s)
-    </div>
-    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--rd);font-size:11px">${esc(i)}</div>`).join('')}</div>`:''}
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn2 s" onclick="closeM()">Fechar</button>
-      <button class="btn2 p" onclick="abrirCaboPorReferencia('${String(caboRef).replace(/'/g,"\\'")}')">🧵 Ver cabo</button>
-    </div>
-  `;
-  $('mbg').classList.add('show');
+  if(segs.some(s=>!Array.isArray(s.geometria_pts)||s.geometria_pts.length<2))issues.push('📍 Algum segmento sem geometria');
+  return {rel,rupts,segs,issues};
 }
 
 // SIDEBAR
@@ -3081,8 +3092,8 @@ function renderSBv2(q=''){
 }
 renderSB=renderSBv2;
 function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
-function toggleSB(){const s=$('sb'),ov=$('mob-ov');const open=!s.classList.contains('open');s.classList.toggle('open',open);if(ov)ov.classList.toggle('show',open);}
-function closeSB(){const s=$('sb'),ov=$('mob-ov');if(s)s.classList.remove('open');if(ov)ov.classList.remove('show');}
+function toggleSB(){const s=$('sb');setSidebarOpen(!(s&&s.classList.contains('open')));}
+function closeSB(){setSidebarOpen(false);}
 function getPointSummary(ref){
   const p=findDraftPoint(ref||'');
   if(!p)return null;
@@ -3091,7 +3102,7 @@ function getPointSummary(ref){
   const segs=getRelatedSegmentsByRef(ref).length;
   const conns=store.conexoes.filter(c=>String(c.caixa_codigo||c.dgo_codigo||'').toUpperCase()===code).length;
   const pend=store.pendencias.filter(x=>String(x.referencia||'').toUpperCase()===code).length;
-  return {p,segs,conns,pend};
+  return {p,segs,conns,pend,code};
 }
 function buildOperationalBadges(items){
   return items.filter(Boolean).map(([label,tone='var(--bl)'])=>`<span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:9px;font-weight:800;color:${tone};text-transform:uppercase;letter-spacing:.08em">${esc(label)}</span>`).join('');
@@ -3299,28 +3310,54 @@ function abrirCaboPorReferencia(ref){
   if(pts.length)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:18});
   showPanCabo(c,pts,c.comprimento||0);
 }
-function abrirAuditoriaRef(ref){
+async function abrirAuditoriaRef(ref){
   const key=String(ref||'').toUpperCase().trim();
+  toast('Auditando referência...','in');
   goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
+  try{await rodarAuditoriaIA(true);}catch(err){console.warn('rodarAuditoriaIA falhou em abrirAuditoriaRef',err);}
+  const {point,issues,relatedSegs,dgos}=collectAuditoriaRefIssues(ref);
+  if(!point){toast('Referência não localizada','wn');return;}
   const pend=getInvStore().pendencias.filter(p=>String(p.referencia||'').toUpperCase()===key);
-  rodarAuditoriaIA(true);
-  if(pend.length){
-    showPanPendencia(pend[0]);
-    toast(`${pend.length} pendência(s) ligada(s) a ${ref}`,'wn');
-  }else{
-    toast(`Sem pendência local aberta para ${ref}`,'ok');
-  }
+  const summary=getPointSummary(ref)||{segs:relatedSegs.length,conns:0,pend:pend.length};
+  $('mtt').textContent='🤖 Auditoria: '+esc(ref);
+  $('mbd').innerHTML=`
+    <div style="background:rgba(62,207,142,.08);border:1px solid rgba(62,207,142,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      ${issues.length===0?'✅ Nenhum problema detectado':'🔍 '+issues.length+' problema(s) encontrado(s)'}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${buildOperationalBadges([
+      [point.tipo,'var(--cy)'],
+      [`${summary.segs||0} segmento(s)`,'var(--bl)'],
+      [summary.conns?`${summary.conns} conexão(ões)`:'sem conexão local',summary.conns?'var(--gr)':'var(--am)'],
+      [pend.length?`${pend.length} pendência(s)`:'sem pendência local',pend.length?'var(--rd)':'var(--gr)'],
+      [point.tipo==='site'?`${dgos.length} DGO(s)`:'ativo localizado','var(--gr)'],
+    ])}</div>
+    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--am);font-size:11px">${esc(i)}</div>`).join('')}</div>`:'<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--t2)">A leitura operacional não encontrou bloqueio local imediato para esta referência.</div>'}
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="jumpToRef('${String(ref).replace(/'/g,"\\'")}')">📍 Ir para mapa</button>
+      ${pend.length?`<button class="btn2 p" onclick="closeM();showPanPendencia(getInvStore().pendencias.find(p=>String(p.referencia||'').toUpperCase()==='${key.replace(/'/g,"\\'")}'))">📋 Ver pendência</button>`:''}
+    </div>
+  `;
+  $('mbg').classList.add('show');
 }
-function abrirAuditoriaRuptura(caboSeg){
+async function abrirAuditoriaRuptura(caboSeg){
+  toast('Auditando ruptura...','in');
   goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
-  rodarAuditoriaIA(true);
-  const rel=getCableDraftRelations(caboSeg||'');
-  if(rel.rupts.length){
-    jumpToRuptura(rel.rupts[0].id,rel.rupts[0]._kind==='ruptura_oficial'?'oficial':'draft');
-    toast(`${rel.rupts.length} ruptura(s) ligada(s) a ${caboSeg}`,'wn');
-  }else{
-    toast(`Auditoria aberta para ${caboSeg||'ruptura'}`,'ok');
-  }
+  try{await rodarAuditoriaIA(true);}catch(err){console.warn('rodarAuditoriaIA falhou em abrirAuditoriaRuptura',err);}
+  const {rupts,segs,issues}=collectAuditoriaRupturaIssues(caboSeg||'');
+  $('mtt').textContent='🤖 Auditoria: Ruptura '+esc(caboSeg);
+  $('mbd').innerHTML=`
+    <div style="background:rgba(232,68,85,.08);border:1px solid rgba(232,68,85,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);line-height:1.65;margin-bottom:12px">
+      ${rupts.length} ruptura(s) | ${segs.length} segmento(s) | ${issues.length} problema(s)
+    </div>
+    ${issues.length>0?`<div style="display:flex;flex-direction:column;gap:6px">${issues.map(i=>`<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;border-left:3px solid var(--rd);font-size:11px">${esc(i)}</div>`).join('')}</div>`:'<div style="padding:8px 10px;background:var(--bg3);border-radius:6px;font-size:11px;color:var(--t2)">Sem inconsistência local adicional além do incidente já registrado.</div>'}
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn2 s" onclick="closeM()">Fechar</button>
+      <button class="btn2 p" onclick="abrirCaboPorReferencia('${String(caboSeg).replace(/'/g,"\\'")}')">🧵 Ver cabo</button>
+      ${rupts.length?`<button class="btn2 p" onclick="closeM();jumpToRuptura('${String(rupts[0].id).replace(/'/g,"\\'")}','${rupts[0]._kind==='ruptura_oficial'?'oficial':'draft'}')">🚨 Abrir ruptura</button>`:''}
+    </div>
+  `;
+  $('mbg').classList.add('show');
 }
 
 // PAINEL
@@ -5096,6 +5133,7 @@ function showPanCaixaOficial(cx){
   if(aplicarPontoSelecionado(cx.codigo||cx.nome||''))return;
   closePan();
   const caixaFlag=getFlagForAsset('caixa',cx.id);
+  const resumo=operationalSummaryHtml(cx.codigo||cx.nome||'');
   $('pt').textContent=`🧰 ${cx.codigo||'Caixa oficial'}`;
   $('pb').innerHTML=`
     <div class="pr"><span class="pl">Sigla / código</span><span class="pv">${esc(cx.codigo||'—')}</span></div>
@@ -5111,6 +5149,8 @@ function showPanCaixaOficial(cx){
       [caixaFlag.priority||'normal',caixaFlag.color||'var(--am)'],
       [caixaFlag.category||'operacao',caixaFlag.color||'var(--am)']
     ])}</div>${caixaFlag.note?`<div style="margin-top:8px;font-size:11px;color:var(--t2);line-height:1.6">${esc(caixaFlag.note)}</div>`:''}</div>`:''}
+    ${resumo}
+    ${buildRefLinksHtml(cx.codigo||cx.nome||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
   $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
@@ -6471,6 +6511,7 @@ $('lp').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 loadPref();aplicarTema();
 renderInventarioResumo();
 if(checkSessao()){iniciarApp();}else{$('le').focus();}
+bindViewportInsetListeners();
 window.addEventListener('resize',()=>{
   clearTimeout(window.__uiResizeTimer);
   window.__uiResizeTimer=setTimeout(()=>{

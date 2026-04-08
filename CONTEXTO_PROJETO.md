@@ -1,5 +1,5 @@
 # CONTEXTO COMPLETO — Rede Optica MG
-**Atualizado em:** 2026-04-06 (sessao 10.6 — busca operacional mais leve no mobile)
+**Atualizado em:** 2026-04-07 (sessao 10.7.2 — auditoria contextual consolidada + caixa oficial com resumo operacional)
 **Pasta local:** `C:\FIBRA CADASTRO`
 **Repositorio:** `https://github.com/Lidiomar90/rede-optica`
 **Site publicado:** `https://lidiomar90.github.io/rede-optica`
@@ -10,8 +10,25 @@
 
 ## ULTIMA ATUALIZACAO
 
-**Data:** 2026-04-06 — sessoes 9, 10, 10.1, 10.2, 10.3, 10.4, 10.5 e 10.6 (front/mobile/tracer/auditoria/telegram/busca/deduplicacao) + sessoes 7 e 8 (banco/tracer)
+**Data:** 2026-04-07 — sessoes 9, 10, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.7.1 e 10.7.2 (front/mobile/tracer/auditoria/telegram/busca/deduplicacao/drawer/viewport) + sessoes 7 e 8 (banco/tracer)
 **O que foi feito:**
+
+### Sessao 10.7.2 — Auditoria contextual consolidada
+0. Corrigida uma regressao silenciosa em `mapa-rede-optica.html`: `abrirAuditoriaRef()` e `abrirAuditoriaRuptura()` estavam duplicadas, e a segunda definicao sobrescrevia a primeira sem aviso, alterando o fluxo da auditoria contextual.
+1. A auditoria contextual agora usa uma implementacao unica por fluxo, sempre abre a aba `Auditoria`, tenta recalcular a auditoria geral e mostra um modal com resumo local de `segmentos`, `conexoes` e `pendencias` antes de navegar para mapa, pendencia ou ruptura.
+2. O painel de `caixa oficial` passou a exibir o mesmo `Resumo operacional` e os atalhos de `Ativos relacionados` ja usados em DGOs e caixas em rascunho, reduzindo a diferenca de UX entre item oficial e rascunho local.
+3. Validacao desta rodada: parse completo do bloco `<script>` via `node`, checagem de unicidade das funcoes de auditoria e `git diff --check`; ainda falta validacao manual em browser real para `caixa`, `DGO`, `site` e `ruptura`.
+
+### Sessao 10.7.1 — Barras mobile acompanham teclado virtual
+0. `mapa-rede-optica.html` passou a observar `window.visualViewport` no mobile e calcular um offset inferior dinamico quando o teclado virtual reduz a area visivel.
+1. `drawbar`, `fieldbar` e o badge de cache agora sobem junto com esse offset, reduzindo o risco de esconder a barra de desenho ou acoes de campo atras do teclado em Android/iOS.
+2. A mudanca ficou restrita ao front local e nao toca em banco, auth, RLS, schema nem publicacao.
+3. Validacao desta rodada: parse completo do bloco `<script>` via `node` e `git diff --check`; ainda falta validacao manual em browser real com teclado aberto em Android/iOS.
+
+### Sessao 10.7 — Drawer mobile sem estado residual
+0. O drawer lateral voltou a fechar de forma forçada ao sair do viewport mobile, evitando carregar para o desktop a classe `open` e o overlay de uma sessao anterior.
+1. O overlay mobile deixou de alternar `display:none/block` e passou a usar `opacity + pointer-events`, o que estabiliza a transicao de abrir/fechar e reduz risco de clique fantasma durante resize ou swipe interrompido.
+2. Validacao desta rodada: parse completo do bloco `<script>` via `node` (`FULL_JS_OK`) e `git diff --check` sem erro fatal; falta apenas validacao manual em Android/iOS para confirmar gesto e transicao visual no browser real.
 
 ### Sessao 10.6 — Busca operacional mais leve no mobile
 0. A busca da sidebar em `Camadas` deixou de recalcular tudo a cada tecla: agora roda com debounce curto, reduzindo travamento percebido quando a massa de sites/cabos/ativos oficiais ja esta carregada no front.
@@ -106,12 +123,14 @@
 - Codex: plotar caixa_emenda no mapa via `vw_caixas_emenda_mapa`
 - Codex: painel de rupturas via `vw_rupturas_abertas`
 - Codex: evoluir `flag` para suportar cabos por vértice/trecho e, no futuro, persistência compartilhada no banco
-- Codex: validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari, incluindo fade do overlay e conflito com scroll vertical da lista lateral
+- Codex: validar drawer mobile com swipe de abrir/fechar em Android real/iOS Safari, incluindo fade do overlay, ausencia de clique fantasma e conflito com scroll vertical da lista lateral
 - Codex: validar modal generico e formularios em Android real/iOS Safari, especialmente auditoria, conexao DGO e edicao de ativos
 - Codex: validar busca global no browser com massa real para `DGO`, `caixa`, `segmento` e `ruptura`, agora incluindo debounce curto, matching sem acento/tokens e ranking por relevancia para ajustar pesos se o operador ainda precisar "caçar" item na lista
 - Codex: unificar futuro da aba `Incidentes` com `evento_ruptura`/`vw_rupturas_abertas` para evitar dupla origem (`incidentes` legado + rupturas oficiais)
 - Codex: validar esteira Telegram em browser real, incluindo ordenacao de `complemento pendente`, resumo da fila e reaproveitamento de sugestoes no fluxo aprovar/complementar
+- Codex: validar em browser real a nova auditoria contextual consolidada, garantindo que `caixa`, `DGO`, `site` e `ruptura` abram o modal correto sem perder navegacao para mapa/pendencia
 - Gemini/Claude: revisar se a nova deduplicacao semantica de `segmentos` e `rupturas` nao colapsa casos distintos com mesmo cabo/OTDR e se a prioridade do rascunho local faz sentido operacionalmente
+- Gemini/Claude: revisar se o novo resumo operacional contextual pode passar falsa sensacao de completude em `caixa oficial`/`DGO oficial` quando nao houver conexao oficial carregada no front
 - Lidiomar: rodar `PUBLICAR.bat` e testar ETL `--dry-run`
 
 ---

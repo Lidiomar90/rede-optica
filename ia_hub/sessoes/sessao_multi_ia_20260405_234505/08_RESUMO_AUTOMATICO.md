@@ -1,7 +1,7 @@
 ﻿# Resumo Automatico do Hub
 
 Sessao: C:\FIBRA CADASTRO\ia_hub\sessoes\sessao_multi_ia_20260405_234505
-Gerado em: 07/04/2026 16:11:03
+Gerado em: 07/04/2026 21:26:02
 
 ## Respostas detectadas
 - Claude: placeholder
@@ -9,9 +9,12 @@ Gerado em: 07/04/2026 16:11:03
 - DeepSeek: placeholder
 - Manus: placeholder
 - Kiro: sem_arquivo
+- Claude Cowork: sem_arquivo
+- Codex Cowork: sem_arquivo
+- Qwen: sem_arquivo
 
 ## Leitura de execucao
-- Idade da sessao em minutos: 2425
+- Idade da sessao em minutos: 2740
 - Estado geral da sessao: placeholders_sem_execucao_real
 - Placeholder sem resposta real detectado: sim
 
@@ -28,5 +31,5 @@ Gerado em: 07/04/2026 16:11:03
 
 ## Proximos passos
 - IAs prontas: nenhuma
-- IAs faltando: Claude, Gemini, DeepSeek, Manus, Kiro
+- IAs faltando: Claude, Gemini, DeepSeek, Manus, Kiro, Claude Cowork, Codex Cowork, Qwen
 - Acao sugerida: disparar IAs externas ou integrar APIs
