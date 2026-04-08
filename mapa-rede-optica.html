@@ -1061,7 +1061,7 @@ async function authFetchUsuario(email){
     return{ok:false,error:errMsg,source:`rpc:${rpc.fn}`};
   }
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:WH});
     if(!r.ok){
       const err=await readJsonSafe(r);
       const errMsg=describeApiError(err,r.status);
@@ -4533,7 +4533,7 @@ async function loadUsuarios(){
   let us=[];
   let loadErr='';
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:RH});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:WH});
     if(r.ok){
       us=await r.json();
       setUserBackendState('ok','','rest:usuarios');
@@ -4590,7 +4590,7 @@ async function editarUsuario(id){
   }
   let us=[];
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:WH});
     us=r.ok?await r.json():[];
     if(!r.ok){
       const err=await readJsonSafe(r);
