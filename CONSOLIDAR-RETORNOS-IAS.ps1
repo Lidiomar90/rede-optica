@@ -46,12 +46,18 @@ $GeminiResp = Join-Path $RespDir "gemini_resposta.md"
 $DeepSeekResp = Join-Path $RespDir "deepseek_resposta.md"
 $ManusResp = Join-Path $RespDir "manus_resposta.md"
 $KiroResp = Join-Path $RespDir "kiro_resposta.md"
+$ClaudeCoworkResp = Join-Path $RespDir "claude_cowork_resposta.md"
+$CodexCoworkResp = Join-Path $RespDir "codex_cowork_resposta.md"
+$QwenResp = Join-Path $RespDir "qwen_resposta.md"
 
 Ensure-File $ClaudeResp "# Resposta Claude`r`n`r`nCole aqui a resposta do Claude.`r`n"
 Ensure-File $GeminiResp "# Resposta Gemini`r`n`r`nCole aqui a resposta do Gemini.`r`n"
 Ensure-File $DeepSeekResp "# Resposta DeepSeek`r`n`r`nCole aqui a resposta do DeepSeek.`r`n"
 Ensure-File $ManusResp "# Resposta Manus`r`n`r`nCole aqui a resposta do Manus.`r`n"
 Ensure-File $KiroResp "# Resposta Kiro`r`n`r`nCole aqui a resposta do Kiro.`r`n"
+Ensure-File $ClaudeCoworkResp "# Resposta Claude Cowork`r`n`r`nCole aqui a resposta do Claude Cowork.`r`n"
+Ensure-File $CodexCoworkResp "# Resposta Codex Cowork`r`n`r`nCole aqui a resposta do Codex Cowork.`r`n"
+Ensure-File $QwenResp "# Resposta Qwen`r`n`r`nCole aqui a resposta do Qwen.`r`n"
 
 $resumo = Read-All $ResumoPath
 $claude = Read-All $ClaudeResp
@@ -59,13 +65,19 @@ $gemini = Read-All $GeminiResp
 $deepseek = Read-All $DeepSeekResp
 $manus = Read-All $ManusResp
 $kiro = Read-All $KiroResp
+$claudeCowork = Read-All $ClaudeCoworkResp
+$codexCowork = Read-All $CodexCoworkResp
+$qwen = Read-All $QwenResp
 
 $fontes = @(
     @{Nome="Claude"; Caminho=$ClaudeResp; Texto=$claude; Itens=(Count-ChecklistItems $claude)},
     @{Nome="Gemini"; Caminho=$GeminiResp; Texto=$gemini; Itens=(Count-ChecklistItems $gemini)},
     @{Nome="DeepSeek"; Caminho=$DeepSeekResp; Texto=$deepseek; Itens=(Count-ChecklistItems $deepseek)},
     @{Nome="Manus"; Caminho=$ManusResp; Texto=$manus; Itens=(Count-ChecklistItems $manus)},
-    @{Nome="Kiro"; Caminho=$KiroResp; Texto=$kiro; Itens=(Count-ChecklistItems $kiro)}
+    @{Nome="Kiro"; Caminho=$KiroResp; Texto=$kiro; Itens=(Count-ChecklistItems $kiro)},
+    @{Nome="Claude Cowork"; Caminho=$ClaudeCoworkResp; Texto=$claudeCowork; Itens=(Count-ChecklistItems $claudeCowork)},
+    @{Nome="Codex Cowork"; Caminho=$CodexCoworkResp; Texto=$codexCowork; Itens=(Count-ChecklistItems $codexCowork)},
+    @{Nome="Qwen"; Caminho=$QwenResp; Texto=$qwen; Itens=(Count-ChecklistItems $qwen)}
 )
 
 $preenchidas = $fontes | Where-Object { $_.Texto -and $_.Texto -notmatch 'Cole aqui a resposta' }
@@ -93,6 +105,9 @@ $($linhasFonte -join "`r`n")
 - Revisar os achados de DeepSeek para bugs e fragilidades ocultas.
 - Revisar os achados de Manus para UX, produto e benchmark.
 - Revisar os achados de Kiro para backlog, sprint e prioridade.
+- Revisar os achados de Claude Cowork para execucao paralela e dependencias.
+- Revisar os achados de Codex Cowork para endurecimento e implementacoes pequenas.
+- Revisar os achados de Qwen para contraponto e simplificacoes.
 
 ## Faltando resposta de
 $(if($faltantes.Count){ ($faltantes | ForEach-Object { "- $($_.Nome)" }) -join "`r`n" } else { "- Nenhuma" })
@@ -116,6 +131,15 @@ $manus
 
 ## Kiro
 $kiro
+
+## Claude Cowork
+$claudeCowork
+
+## Codex Cowork
+$codexCowork
+
+## Qwen
+$qwen
 
 ## Sintese manual guiada
 Preencha ou refine esta secao apos ler as respostas:

@@ -166,14 +166,20 @@ $respGemini = Get-ResponseState (Join-Path $RespDir "gemini_resposta.md")
 $respDeepSeek = Get-ResponseState (Join-Path $RespDir "deepseek_resposta.md")
 $respManus = Get-ResponseState (Join-Path $RespDir "manus_resposta.md")
 $respKiro = Get-ResponseState (Join-Path $RespDir "kiro_resposta.md")
+$respClaudeCowork = Get-ResponseState (Join-Path $RespDir "claude_cowork_resposta.md")
+$respCodexCowork = Get-ResponseState (Join-Path $RespDir "codex_cowork_resposta.md")
+$respQwen = Get-ResponseState (Join-Path $RespDir "qwen_resposta.md")
 
-$responseStates = @($respClaude, $respGemini, $respDeepSeek, $respManus, $respKiro)
+$responseStates = @($respClaude, $respGemini, $respDeepSeek, $respManus, $respKiro, $respClaudeCowork, $respCodexCowork, $respQwen)
 $estado = [ordered]@{
     Claude = $respClaude.real
     Gemini = $respGemini.real
     DeepSeek = $respDeepSeek.real
     Manus = $respManus.real
     Kiro = $respKiro.real
+    "Claude Cowork" = $respClaudeCowork.real
+    "Codex Cowork" = $respCodexCowork.real
+    Qwen = $respQwen.real
 }
 $sessionAgeMinutes = Get-SessionAgeMinutes $SessaoPath
 $sessionExecutionState = Get-SessionExecutionState -ResponseStates $responseStates -SessionAgeMinutes $sessionAgeMinutes
@@ -220,6 +226,9 @@ Gerado em: $(Get-Date -Format "dd/MM/yyyy HH:mm:ss")
 - DeepSeek: $($respDeepSeek.estado)
 - Manus: $($respManus.estado)
 - Kiro: $($respKiro.estado)
+- Claude Cowork: $($respClaudeCowork.estado)
+- Codex Cowork: $($respCodexCowork.estado)
+- Qwen: $($respQwen.estado)
 
 ## Leitura de execucao
 - Idade da sessao em minutos: $sessionAgeMinutes

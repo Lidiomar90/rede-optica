@@ -113,12 +113,18 @@ $sessionCards = foreach ($sessao in $sessions) {
     $deepseek = Join-Path $sessao.FullName "04_DEEPSEEK_REVISAO.md"
     $manus = Join-Path $sessao.FullName "05_MANUS_PRODUTO_UX.md"
     $kiro = Join-Path $sessao.FullName "06_KIRO_COORDENACAO.md"
+    $claudeCowork = Join-Path $sessao.FullName "09_CLAUDE_COWORK_EXECUCAO.md"
+    $codexCowork = Join-Path $sessao.FullName "10_CODEX_COWORK_EXECUCAO.md"
+    $qwen = Join-Path $sessao.FullName "11_QWEN_REVISAO.md"
     $respostas = Join-Path $sessao.FullName "respostas"
     $claudeResp = Join-Path $respostas "claude_resposta.md"
     $geminiResp = Join-Path $respostas "gemini_resposta.md"
     $deepseekResp = Join-Path $respostas "deepseek_resposta.md"
     $manusResp = Join-Path $respostas "manus_resposta.md"
     $kiroResp = Join-Path $respostas "kiro_resposta.md"
+    $claudeCoworkResp = Join-Path $respostas "claude_cowork_resposta.md"
+    $codexCoworkResp = Join-Path $respostas "codex_cowork_resposta.md"
+    $qwenResp = Join-Path $respostas "qwen_resposta.md"
     $consolidado = Join-Path $sessao.FullName "07_RELATORIO_CONSOLIDADO.md"
     $monitor = Join-Path $sessao.FullName "08_RESUMO_AUTOMATICO.md"
     $meta = Get-SessionMeta -SessionDir $sessao.FullName
@@ -128,7 +134,10 @@ $sessionCards = foreach ($sessao in $sessions) {
         (Has-RealResponse $geminiResp),
         (Has-RealResponse $deepseekResp),
         (Has-RealResponse $manusResp),
-        (Has-RealResponse $kiroResp)
+        (Has-RealResponse $kiroResp),
+        (Has-RealResponse $claudeCoworkResp),
+        (Has-RealResponse $codexCoworkResp),
+        (Has-RealResponse $qwenResp)
     ) | Where-Object { $_ } | Measure-Object | Select-Object -ExpandProperty Count
 
     $badges = @()
@@ -136,8 +145,8 @@ $sessionCards = foreach ($sessao in $sessions) {
     $badges += Get-Badge -Label $meta.Priority -Kind "priority-$($meta.Priority)"
     if (Test-Path $monitor) { $badges += Get-Badge -Label "monitorado" -Kind "ok" }
     if (Test-Path $consolidado) { $badges += Get-Badge -Label "consolidado" -Kind "info" }
-    if ($readyCount -eq 5) { $badges += Get-Badge -Label "5/5 respostas" -Kind "ok" }
-    elseif ($readyCount -gt 0) { $badges += Get-Badge -Label "$readyCount/5 respostas" -Kind "warn" }
+    if ($readyCount -eq 8) { $badges += Get-Badge -Label "8/8 respostas" -Kind "ok" }
+    elseif ($readyCount -gt 0) { $badges += Get-Badge -Label "$readyCount/8 respostas" -Kind "warn" }
     else { $badges += Get-Badge -Label "aguardando respostas" -Kind "muted" }
 
 @"
@@ -156,6 +165,9 @@ $sessionCards = foreach ($sessao in $sessions) {
           <a class="agent-link deepseek" href="$(To-FileUrl $deepseek)">DeepSeek</a>
           <a class="agent-link manus" href="$(To-FileUrl $manus)">Manus</a>
           <a class="agent-link kiro" href="$(To-FileUrl $kiro)">Kiro</a>
+          <a class="agent-link claude" href="$(To-FileUrl $claudeCowork)">Claude Cowork</a>
+          <a class="agent-link codex" href="$(To-FileUrl $codexCowork)">Codex Cowork</a>
+          <a class="agent-link deepseek" href="$(To-FileUrl $qwen)">Qwen</a>
         </div>
         <div class="session-actions">
           <a class="subtle-link" href="$(To-FileUrl $respostas)">pasta respostas</a>

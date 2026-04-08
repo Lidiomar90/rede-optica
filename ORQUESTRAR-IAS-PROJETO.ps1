@@ -158,12 +158,18 @@ $DeepSeekPath = Join-Path $SESSION_DIR "04_DEEPSEEK_REVISAO.md"
 $ManusPath = Join-Path $SESSION_DIR "05_MANUS_PRODUTO_UX.md"
 $KiroPath = Join-Path $SESSION_DIR "06_KIRO_COORDENACAO.md"
 $ChecklistPath = Join-Path $SESSION_DIR "07_CHECKLIST_COORDENACAO.md"
+$ClaudeCoworkPath = Join-Path $SESSION_DIR "09_CLAUDE_COWORK_EXECUCAO.md"
+$CodexCoworkPath = Join-Path $SESSION_DIR "10_CODEX_COWORK_EXECUCAO.md"
+$QwenPath = Join-Path $SESSION_DIR "11_QWEN_REVISAO.md"
 $StatePath = Join-Path $SESSION_DIR "estado_sessao.json"
 $RespostaClaude = Join-Path $RESP_DIR "claude_resposta.md"
 $RespostaGemini = Join-Path $RESP_DIR "gemini_resposta.md"
 $RespostaDeepSeek = Join-Path $RESP_DIR "deepseek_resposta.md"
 $RespostaManus = Join-Path $RESP_DIR "manus_resposta.md"
 $RespostaKiro = Join-Path $RESP_DIR "kiro_resposta.md"
+$RespostaClaudeCowork = Join-Path $RESP_DIR "claude_cowork_resposta.md"
+$RespostaCodexCowork = Join-Path $RESP_DIR "codex_cowork_resposta.md"
+$RespostaQwen = Join-Path $RESP_DIR "qwen_resposta.md"
 
 $resumo = @"
 # Sessao Multi-IA
@@ -183,6 +189,9 @@ Cole os retornos das IAs em:
 - $RespostaDeepSeek
 - $RespostaManus
 - $RespostaKiro
+- $RespostaClaudeCowork
+- $RespostaCodexCowork
+- $RespostaQwen
 
 Depois rode:
 - C:\FIBRA CADASTRO\CONSOLIDAR-RETORNOS-IAS.ps1 -Sessao "$SESSION_DIR"
@@ -194,6 +203,9 @@ Depois rode:
 - DeepSeek: revisao logica, bugs ocultos, alternativas tecnicas, critique de baixo custo
 - Manus: produto, UX operacional, benchmark, fluxo de campo, documentacao de operacao
 - Kiro: coordenacao de backlog, sprint, priorizacao e encadeamento entre frentes
+- Claude Cowork: execucao estruturada em paralelo, refinamento de entregas, apoio de arquitetura aplicada
+- Codex Cowork: implementacao paralela, endurecimento, testes locais e acabamento
+- Qwen: contraponto rapido, simplificacao e cobertura adicional de baixo custo
 
 ## Arquivos-chave
 $keyFiles
@@ -430,6 +442,93 @@ $Foco
 - Priorize velocidade de entrega com seguranca.
 "@
 
+$claudeCowork = @"
+# Sessao Claude Cowork
+
+Leia primeiro:
+- C:\FIBRA CADASTRO\CONTEXTO_PROJETO.md
+- $ResumoPath
+
+## Papel
+Voce e o agente de cowork de execucao.
+Atue como apoio autonomo ao Claude principal e ao Codex.
+Nao reanalise tudo do zero.
+Nao devolver opiniao ampla.
+
+## Foco desta rodada
+$Foco
+
+## O que fazer
+1. Transformar lacunas em plano executavel de baixo atrito.
+2. Refinar entregas por blocos pequenos e seguros.
+3. Apontar dependencias entre banco, front e validacao.
+4. Sugerir trilha de implementacao paralela.
+
+## Saida obrigatoria
+1. Entregas paralelizaveis
+2. Riscos de conflito
+3. Ordem de execucao
+4. Handoff para Codex Cowork
+5. Handoff para Codex principal
+"@
+
+$codexCowork = @"
+# Sessao Codex Cowork
+
+Leia primeiro:
+- C:\FIBRA CADASTRO\CONTEXTO_PROJETO.md
+- $ResumoPath
+
+## Papel
+Voce e o agente de implementacao paralelo.
+Seu foco e acabamento, hardening, simplificacao e verificacao local.
+Nao reescreva o produto.
+
+## Foco desta rodada
+$Foco
+
+## O que fazer
+1. Encontrar pequenas melhorias implementaveis em paralelo.
+2. Endurecer UX, validacao e consistencia.
+3. Preparar a base para validacao do Gemini.
+4. Sugerir testes locais objetivos.
+
+## Saida obrigatoria
+1. Melhorias seguras
+2. Ajustes pequenos de alto impacto
+3. Testes a rodar
+4. Handoff para Codex principal
+"@
+
+$qwen = @"
+# Sessao Qwen
+
+Leia primeiro:
+- C:\FIBRA CADASTRO\CONTEXTO_PROJETO.md
+- C:\FIBRA CADASTRO\CHECKLIST_GEOSITE_GAP.md
+- $ResumoPath
+
+## Papel
+Voce e o revisor de contraponto rapido.
+Seu trabalho e achar pontos cegos, simplificacoes melhores e riscos de excesso de complexidade.
+Nao repetir benchmark amplo.
+
+## Foco desta rodada
+$Foco
+
+## O que revisar
+1. O que esta complexo demais para o valor entregue.
+2. O que falta para o sistema parecer superior ao GeoSite em uso real.
+3. O que pode ser simplificado sem perder capacidade.
+4. Onde a UX ou a logica ainda esta confusa.
+
+## Saida obrigatoria
+1. Pontos cegos
+2. Simplificacoes recomendadas
+3. Melhorias de produto de baixo custo
+4. Handoff para Codex
+"@
+
 $checklistCoord = @"
 # Checklist de Coordenacao
 
@@ -468,6 +567,21 @@ Foco: $Foco
 - [ ] Separou banco, front e validacao
 - [ ] Indicou proxima sprint e riscos
 
+## Claude Cowork
+- [ ] Refinou a trilha de execucao paralela
+- [ ] Apontou dependencias entre frentes
+- [ ] Entregou handoff de execucao
+
+## Codex Cowork
+- [ ] Listou melhorias seguras de implementacao paralela
+- [ ] Listou testes e endurecimentos
+- [ ] Entregou handoff para Codex principal
+
+## Qwen
+- [ ] Trouxe contrapontos e simplificacoes
+- [ ] Apontou excesso de complexidade
+- [ ] Indicou melhorias de baixo custo
+
 ## Codex
 - [ ] Implementou sem reescrever tudo
 - [ ] Rodou validacao basica
@@ -494,6 +608,9 @@ $state = @{
         manus = $ManusPath
         kiro = $KiroPath
         checklist = $ChecklistPath
+        claude_cowork = $ClaudeCoworkPath
+        codex_cowork = $CodexCoworkPath
+        qwen = $QwenPath
         respostas = @{
             pasta = $RESP_DIR
             claude = $RespostaClaude
@@ -501,6 +618,9 @@ $state = @{
             deepseek = $RespostaDeepSeek
             manus = $RespostaManus
             kiro = $RespostaKiro
+            claude_cowork = $RespostaClaudeCowork
+            codex_cowork = $RespostaCodexCowork
+            qwen = $RespostaQwen
         }
     }
 } | ConvertTo-Json -Depth 5
@@ -513,6 +633,9 @@ Save-Text -Path $DeepSeekPath -Text $deepseek
 Save-Text -Path $ManusPath -Text $manus
 Save-Text -Path $KiroPath -Text $kiro
 Save-Text -Path $ChecklistPath -Text $checklistCoord
+Save-Text -Path $ClaudeCoworkPath -Text $claudeCowork
+Save-Text -Path $CodexCoworkPath -Text $codexCowork
+Save-Text -Path $QwenPath -Text $qwen
 Save-Text -Path $StatePath -Text $state
 
 Write-Log "Pacote criado em $SESSION_DIR"
@@ -524,6 +647,9 @@ Write-Log "DeepSeek: $DeepSeekPath"
 Write-Log "Manus: $ManusPath"
 Write-Log "Kiro: $KiroPath"
 Write-Log "Checklist: $ChecklistPath"
+Write-Log "Claude Cowork: $ClaudeCoworkPath"
+Write-Log "Codex Cowork: $CodexCoworkPath"
+Write-Log "Qwen: $QwenPath"
 Write-Log "Pasta de respostas: $RESP_DIR"
 
 Write-Host ""
@@ -540,6 +666,9 @@ Write-Host "DeepSeek:" $DeepSeekPath
 Write-Host "Manus:" $ManusPath
 Write-Host "Kiro:" $KiroPath
 Write-Host "Checklist:" $ChecklistPath
+Write-Host "Claude Cowork:" $ClaudeCoworkPath
+Write-Host "Codex Cowork:" $CodexCoworkPath
+Write-Host "Qwen:" $QwenPath
 Write-Host "Respostas:" $RESP_DIR
 Write-Host ""
 

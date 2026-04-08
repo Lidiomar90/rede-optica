@@ -49,6 +49,9 @@ $sessionBlocks = foreach ($sessao in $sessions) {
     $deepseek = Join-Path $sessao.FullName "04_DEEPSEEK_REVISAO.md"
     $manus = Join-Path $sessao.FullName "05_MANUS_PRODUTO_UX.md"
     $kiro = Join-Path $sessao.FullName "06_KIRO_COORDENACAO.md"
+    $claudeCowork = Join-Path $sessao.FullName "09_CLAUDE_COWORK_EXECUCAO.md"
+    $codexCowork = Join-Path $sessao.FullName "10_CODEX_COWORK_EXECUCAO.md"
+    $qwen = Join-Path $sessao.FullName "11_QWEN_REVISAO.md"
     $respostas = Join-Path $sessao.FullName "respostas"
 
     @(
@@ -61,6 +64,9 @@ $sessionBlocks = foreach ($sessao in $sessions) {
         "- DeepSeek: $deepseek",
         "- Manus: $manus",
         "- Kiro: $kiro",
+        "- Claude Cowork: $claudeCowork",
+        "- Codex Cowork: $codexCowork",
+        "- Qwen: $qwen",
         "- Respostas: $respostas",
         ""
     ) -join "`r`n"
@@ -84,6 +90,9 @@ $texto = @(
     "   - DeepSeek",
     "   - Manus",
     "   - Kiro",
+    "   - Claude Cowork",
+    "   - Codex Cowork",
+    "   - Qwen",
     "4. Colar as respostas nas pastas respostas",
     "5. Rodar o monitor:",
     "   - C:\FIBRA CADASTRO\MONITORAR-HUB-IAS.bat",

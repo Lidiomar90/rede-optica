@@ -78,6 +78,9 @@ $deepseek = Join-Path $sessao.FullName "04_DEEPSEEK_REVISAO.md"
 $manus = Join-Path $sessao.FullName "05_MANUS_PRODUTO_UX.md"
 $kiro = Join-Path $sessao.FullName "06_KIRO_COORDENACAO.md"
 $checklist = Join-Path $sessao.FullName "07_CHECKLIST_COORDENACAO.md"
+$claudeCowork = Join-Path $sessao.FullName "09_CLAUDE_COWORK_EXECUCAO.md"
+$codexCowork = Join-Path $sessao.FullName "10_CODEX_COWORK_EXECUCAO.md"
+$qwen = Join-Path $sessao.FullName "11_QWEN_REVISAO.md"
 $respDir = Join-Path $sessao.FullName "respostas"
 $consolidar = Join-Path $PASTA "CONSOLIDAR-RETORNOS-IAS.ps1"
 
@@ -96,6 +99,9 @@ $manifest = [ordered]@{
         deepseek = $deepseek
         manus = $manus
         kiro = $kiro
+        claude_cowork = $claudeCowork
+        codex_cowork = $codexCowork
+        qwen = $qwen
         checklist = $checklist
         respostas = $respDir
         consolidar = $consolidar
@@ -107,6 +113,9 @@ $manifest = [ordered]@{
         @{nome="DeepSeek"; papel="revisao logica e fragilidades"; entrada=$deepseek; saida=(Join-Path $respDir "deepseek_resposta.md")}
         @{nome="Manus"; papel="produto, UX e benchmark"; entrada=$manus; saida=(Join-Path $respDir "manus_resposta.md")}
         @{nome="Kiro"; papel="coordenacao de backlog e sprints"; entrada=$kiro; saida=(Join-Path $respDir "kiro_resposta.md")}
+        @{nome="Claude Cowork"; papel="execucao paralela e refinamento de entrega"; entrada=$claudeCowork; saida=(Join-Path $respDir "claude_cowork_resposta.md")}
+        @{nome="Codex Cowork"; papel="implementacao paralela e hardening"; entrada=$codexCowork; saida=(Join-Path $respDir "codex_cowork_resposta.md")}
+        @{nome="Qwen"; papel="contraponto rapido e simplificacao"; entrada=$qwen; saida=(Join-Path $respDir "qwen_resposta.md")}
     )
 }
 
@@ -130,6 +139,9 @@ Foco: $Foco
    - DeepSeek: $deepseek
    - Manus: $manus
    - Kiro: $kiro
+   - Claude Cowork: $claudeCowork
+   - Codex Cowork: $codexCowork
+   - Qwen: $qwen
 2. Cole as respostas em:
    - $respDir
 3. Consolide tudo:
