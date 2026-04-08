@@ -476,7 +476,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
   </div>
   <div class="pdot"></div>
   <div class="sts">
-    <div class="sc">Sites <b id="ce">—</b></div>
+    <div class="sc"><span id="ce-label">Sites Science</span> <b id="ce">—</b></div>
     <div class="sc">Cabos <b id="cc">—</b></div>
     <div class="sc">Spans <b id="cs">—</b></div>
   </div>
@@ -1391,10 +1391,14 @@ function refreshSidebarOperationalStatus(){
     +(store.dgos||[]).filter(x=>!x._synced).length
     +(store.segmentos||[]).filter(x=>!x._synced).length
     +(store.rupturas||[]).filter(x=>!x._synced).length;
+  const counts=getSiteCountSummary();
   const pills=[
     `<span class="sbpill ${mapOffline?'off':'ok'}">${mapOffline?'Offline':'Online'}</span>`,
     `<span class="sbpill ${cache?.salvo_em?'info':'warn'}">${cacheLabel}</span>`,
-    `<span class="sbpill ${queueTotal?'warn':'ok'}">Sync ${queueTotal}</span>`
+    `<span class="sbpill ${queueTotal?'warn':'ok'}">Sync ${queueTotal}</span>`,
+    `<span class="sbpill info">Science ${counts.science.toLocaleString('pt-BR')}</span>`,
+    `<span class="sbpill info">Mapa ${counts.mapa.toLocaleString('pt-BR')}</span>`,
+    `<span class="sbpill info">Banco ${counts.banco.toLocaleString('pt-BR')}</span>`
   ];
   if(fieldMode)pills.push('<span class="sbpill info">Campo ativo</span>');
   el.innerHTML=pills.join('');
@@ -2089,6 +2093,13 @@ function getScienceDrivenSitesCount(){
   if(Array.isArray(scienceSites) && scienceSites.length) return scienceSites.length;
   return allS.length;
 }
+function getSiteCountSummary(){
+  const science=getScienceDrivenSitesCount();
+  const mapa=Array.isArray(allS)?allS.length:0;
+  const banco=Array.isArray(allS)?allS.filter(s=>s.fonte!=='science').length:0;
+  const scienceOnly=Array.isArray(allS)?allS.filter(s=>s.fonte==='science').length:0;
+  return {science,mapa,banco,scienceOnly};
+}
 function resetCableSelection(){
   activeCableId=null;
   Object.values(cableFx).forEach(v=>{
@@ -2333,8 +2344,10 @@ async function loadMap(){
     officialDgos=(Array.isArray(dgosMapa)?dgosMapa:[]).map(normalizeDgoRow);
     officialSegmentos=(Array.isArray(segmentosMapa)?segmentosMapa:[]).map(normalizeSegmentoRow);
     officialRupturas=(Array.isArray(rupturasMapa)?rupturasMapa:[]).map(normalizeRupturaMapaRow).filter(x=>x._pt);
-    const totalSites=getScienceDrivenSitesCount().toLocaleString('pt-BR');
+    const counts=getSiteCountSummary();
+    const totalSites=counts.science.toLocaleString('pt-BR');
     const totalCabos=(caboCountHeader||allC.length).toLocaleString('pt-BR');
+    $('ce-label').textContent='Sites Science';
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
     let totalSpans='0';
@@ -4490,9 +4503,10 @@ function renderAuditUI(issues){
   $('aud-score').textContent=score;
   $('aud-score').style.color=scoreTone;
   $('aud-score-txt').textContent=crit?`Foram detectados ${crit} bloqueio(s) crítico(s).`:alto?`Existem ${alto} ponto(s) altos para corrigir antes de consolidar.`:'Sem bloqueios críticos na auditoria local.';
-  const scienceDrivenSites=getScienceDrivenSitesCount();
+  const counts=getSiteCountSummary();
   $('aud-resumo').innerHTML=[
-    auditCard('Sites da Science',`${scienceDrivenSites.toLocaleString('pt-BR')} na base oficial | ${merged.toLocaleString('pt-BR')} com enriquecimento no mapa`,'ok'),
+    auditCard('Sites da Science',`${counts.science.toLocaleString('pt-BR')} na base oficial | ${merged.toLocaleString('pt-BR')} com enriquecimento no mapa`,'ok'),
+    auditCard('Cobertura no mapa',`Mapa ${counts.mapa.toLocaleString('pt-BR')} | Banco ${counts.banco.toLocaleString('pt-BR')} | Science-only ${counts.scienceOnly.toLocaleString('pt-BR')}`,'in'),
     auditCard('Sites Science sem duplicidade',`${scienceSites.length.toLocaleString('pt-BR')} na base local | ${sciOnly.toLocaleString('pt-BR')} somente Science`,scienceSites.length?'ok':'wn'),
     auditCard('Rascunhos operacionais',`Caixas ${store.caixas.length} | DGOs ${store.dgos.length} | Segmentos ${store.segmentos.length} | Pendências ${store.pendencias.length}`,store.segmentos.length||store.caixas.length||store.dgos.length?'ok':'wn'),
     auditCard('Uso em campo',`${activeVis} flags ativas | cache offline ${cacheReady?'pronto':'ausente'}`,cacheReady&&activeVis<=6?'ok':'wn'),
