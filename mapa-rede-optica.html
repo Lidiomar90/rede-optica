@@ -911,23 +911,51 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const km=m=>!m?'—':m>=1000?(m/1000).toFixed(2)+'km':Math.round(m)+'m';
 const TC=s=>s==='ativo'?'tok':s==='previsto'?'twn':'ter';
+const API_TIMEOUT_MS=15000;
+const MAP_TIMEOUT_MS=30000;
 let _toT;
-const toast=(m,t='ok')=>{const e=$('toast');e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
-const setProg=p=>{$('lbar').style.width=p+'%'};
+const toast=(m,t='ok')=>{const e=$('toast');if(!e)return; e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
+const setProg=p=>{const bar=$('lbar');if(bar)bar.style.width=p+'%'};
 async function readJsonSafe(res){
   try{return await res.json();}catch{return {};}
+}
+async function fetchWithTimeout(url,options={},timeoutMs=API_TIMEOUT_MS){
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+    const cfg={...options,signal:ctrl.signal};
+    return await fetch(url,cfg);
+  }catch(err){
+    if(err?.name==='AbortError')throw new Error(`Tempo limite excedido (${Math.round(timeoutMs/1000)}s)`);
+    throw err;
+  }finally{
+    clearTimeout(timer);
+  }
+}
+function getFriendlyErrorMessage(err,fallback='Falha na operação.'){
+  const raw=String(err?.message||err||fallback);
+  if(/tempo limite|timeout/i.test(raw))return raw;
+  if(/failed to fetch|network|load failed|fetch/i.test(raw))return 'Falha de rede ao falar com o servidor.';
+  return raw||fallback;
 }
 function describeApiError(payload,status){
   const raw=payload?.message||payload?.details||payload?.hint||status||'erro';
   const txt=String(raw||'erro');
   if(/row-level security|permission denied|rls/i.test(txt))return 'Bloqueado por permissão no banco (RLS).';
   if(/jwt|auth|permission/i.test(txt))return 'Permissão insuficiente para esta operação.';
+  if(/tempo limite|timeout/i.test(txt))return 'Servidor demorou demais para responder.';
+  if(/failed to fetch|network/i.test(txt))return 'Falha de rede ao falar com o banco.';
+  return txt;
+}
+function formatUserWriteError(msg=''){
+  const txt=String(msg||'');
+  if(/RLS|permissão no banco/i.test(txt))return `${txt} Peça a correção da RPC/policy de usuários no Supabase.`;
   return txt;
 }
 async function callRpcCandidates(candidates,payload){
   for(const fn of candidates){
     try{
-      const r=await fetch(`${SU}/rest/v1/rpc/${fn}`,{method:'POST',headers:WH,body:JSON.stringify(payload||{})});
+      const r=await fetchWithTimeout(`${SU}/rest/v1/rpc/${fn}`,{method:'POST',headers:WH,body:JSON.stringify(payload||{})});
       if(r.ok)return{ok:true,fn,data:await readJsonSafe(r),status:r.status};
       const err=await readJsonSafe(r);
       const msg=String(err?.message||err?.details||'');
@@ -943,42 +971,55 @@ async function authFetchUsuario(email){
   const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email,email});
   if(rpc.ok){
     const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
-    return{ok:true,user:data,source:`rpc:${rpc.fn}`};
+    if(data&&typeof data==='object')return{ok:true,user:data,source:`rpc:${rpc.fn}`};
+    return{ok:false,error:'Resposta inválida da RPC de login.',source:`rpc:${rpc.fn}`};
   }
   if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
-  const r=await fetch(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
-  if(!r.ok){
-    const err=await readJsonSafe(r);
-    return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?email=eq.${encodeURIComponent(email)}&ativo=eq.true&select=*`,{headers:RH});
+    if(!r.ok){
+      const err=await readJsonSafe(r);
+      return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+    }
+    const lista=await r.json();
+    return{ok:true,user:lista?.[0]||null,source:'rest:usuarios'};
+  }catch(err){
+    return{ok:false,error:getFriendlyErrorMessage(err,'Falha ao consultar usuários.'),source:'rest:usuarios'};
   }
-  const lista=await r.json();
-  return{ok:true,user:lista?.[0]||null,source:'rest:usuarios'};
 }
 async function authTouchUsuario(id){
   const rpc=await callRpcCandidates(['fn_touch_usuario','touch_usuario','fn_atualizar_ultimo_acesso_usuario'],{p_id:id,id});
   if(rpc.ok||!rpc.missing)return rpc.ok;
   try{
-    await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})});
-    return true;
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify({ultimo_acesso:new Date().toISOString()})});
+    return [200,204].includes(r.status);
   }catch{return false;}
 }
 async function authCreateUsuario(reg){
   const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],reg);
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
   if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
-  const r=await fetch(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
-  if(r.status===201)return{ok:true,source:'rest:usuarios'};
-  const err=await readJsonSafe(r);
-  return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(reg)});
+    if(r.status===201)return{ok:true,source:'rest:usuarios'};
+    const err=await readJsonSafe(r);
+    return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  }catch(err){
+    return{ok:false,error:getFriendlyErrorMessage(err,'Falha ao criar usuário.'),source:'rest:usuarios'};
+  }
 }
 async function authUpdateUsuario(id,reg){
   const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],{p_id:id,id,...reg});
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
   if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
-  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
-  if([200,204].includes(r.status))return{ok:true,source:'rest:usuarios'};
-  const err=await readJsonSafe(r);
-  return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}`,{method:'PATCH',headers:WH,body:JSON.stringify(reg)});
+    if([200,204].includes(r.status))return{ok:true,source:'rest:usuarios'};
+    const err=await readJsonSafe(r);
+    return{ok:false,error:describeApiError(err,r.status),source:'rest:usuarios'};
+  }catch(err){
+    return{ok:false,error:getFriendlyErrorMessage(err,'Falha ao atualizar usuário.'),source:'rest:usuarios'};
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -2069,20 +2110,18 @@ async function loadMap(){
 
       const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
       const caboCountUrl = caboUrl.replace(/limit=\d+/,'limit=1');
-      const _mapLoadTimeout=setTimeout(()=>{throw new Error('Timeout 30s: servidor não respondeu');},30000);
       [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader]=await Promise.all([
-        fetch(siteUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
-        fetch(caboUrl,{headers:RH}).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
+        fetchWithTimeout(siteUrl,{headers:RH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
+        fetchWithTimeout(caboUrl,{headers:RH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
-        fetch(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetch(`${SU}/rest/v1/dgo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetch(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetch(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH}).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
-        fetch(siteCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
-        fetch(caboCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}}).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/dgo?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:RH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchWithTimeout(siteCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetchWithTimeout(caboCountUrl,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
-      clearTimeout(_mapLoadTimeout);
       try{saveMapCache(sites,cabos,science,{caixasMapa,dgosMapa,segmentosMapa,rupturasMapa});}catch(cacheErr){console.warn('Cache local indisponível (storage cheio):',cacheErr.message);}
       updateCacheTimestamp(new Date().toISOString());
       setOfflineState(false);
@@ -2111,8 +2150,11 @@ async function loadMap(){
     const totalCabos=(caboCountHeader||allC.length).toLocaleString('pt-BR');
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
-    const sr=await fetch(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}});
-    const totalSpans=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
+    let totalSpans='0';
+    try{
+      const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...RH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
+      totalSpans=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
+    }catch{}
     $('cs').textContent=totalSpans;
     $('ltt').textContent=`Renderizando ${allS.length.toLocaleString()} sites...`;setProg(50);
     const pts=[];
@@ -2155,7 +2197,8 @@ async function loadMap(){
     if(pts.length>1)map.fitBounds(L.latLngBounds(pts),{padding:[40,40],maxZoom:11});
     $('load').style.display='none';setProg(0);
   }catch(err){
-    $('load').innerHTML=`<div style="color:var(--rd);text-align:center;padding:20px;max-width:260px"><div style="font-size:32px;margin-bottom:10px">⚠</div><b>Erro ao carregar</b><br><span style="font-size:11px;color:var(--t2)">${err.message}</span><br><br><button onclick="loadMap()" style="padding:10px 24px;background:var(--gr);border:none;border-radius:8px;cursor:pointer;font-weight:700;color:#000;font-size:13px">Tentar novamente</button></div>`;
+    const msg=getFriendlyErrorMessage(err,'Falha ao carregar o mapa.');
+    $('load').innerHTML=`<div style="color:var(--rd);text-align:center;padding:20px;max-width:260px"><div style="font-size:32px;margin-bottom:10px">⚠</div><b>Erro ao carregar</b><br><span style="font-size:11px;color:var(--t2)">${esc(msg)}</span><br><br><button onclick="loadMap()" style="padding:10px 24px;background:var(--gr);border:none;border-radius:8px;cursor:pointer;font-weight:700;color:#000;font-size:13px">Tentar novamente</button></div>`;
   }
 }
 
@@ -3973,10 +4016,22 @@ async function loadRotas(){
 
 // USUÁRIOS
 async function loadUsuarios(){
-  const r=await fetch(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:RH});
-  const us=r.ok?await r.json():[];
+  let us=[];
+  let loadErr='';
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:RH});
+    if(r.ok)us=await r.json();
+    else{
+      const err=await readJsonSafe(r);
+      loadErr=describeApiError(err,r.status);
+    }
+  }catch(err){
+    loadErr=getFriendlyErrorMessage(err,'Falha ao carregar colaboradores.');
+  }
   const PC={admin:'tp',supervisor:'tb2',colaborador:'tg',leitura:'ta'};
-  $('user-list').innerHTML=us.map(u=>`
+  $('user-list').innerHTML=loadErr
+    ? `<div class="lcard"><div class="lct"><div class="lctt">Usuários indisponíveis</div></div><div class="lcsb"><span>${esc(loadErr)}</span></div></div>`
+    : us.map(u=>`
     <div class="lcard"><div class="lct">
       <span style="font-size:14px">${u.perfil==='admin'?'👑':u.perfil==='supervisor'?'🔵':'👤'}</span>
       <div class="lctt">${esc(u.nome)}</div>
@@ -3992,8 +4047,20 @@ async function loadUsuarios(){
       ${u.id!==sessao.id?`<button onclick="toggleUsuario('${u.id}',${!u.ativo})" style="flex:1;padding:5px;border-radius:5px;border:1px solid var(--am);background:transparent;color:var(--am);font-size:10px;cursor:pointer;font-weight:700;font-family:inherit">${u.ativo?'⊘ Inativar':'✓ Ativar'}</button>`:''}</div>`:''}</div>`).join('');
 }
 async function editarUsuario(id){
-  const r=await fetch(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
-  const us=r.ok?await r.json():[];if(!us.length)return;
+  let us=[];
+  try{
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:RH});
+    us=r.ok?await r.json():[];
+    if(!r.ok){
+      const err=await readJsonSafe(r);
+      toast(describeApiError(err,r.status),'er');
+      return;
+    }
+  }catch(err){
+    toast(getFriendlyErrorMessage(err,'Falha ao abrir colaborador.'),'er');
+    return;
+  }
+  if(!us.length)return;
   const u=us[0];
   $('mtt').textContent='Editar colaborador';
   $('mbd').innerHTML=`
@@ -4021,11 +4088,11 @@ async function salvarUsuarioEdit(id){
   if(senha)reg.senha_texto=senha;
   const rs=await authUpdateUsuario(id,reg);
   if(rs.ok){toast('✓ Usuário atualizado!');closeM();loadUsuarios();}
-  else{msg.textContent='Erro ao salvar: '+(rs.error||'falha desconhecida');msg.style.color='var(--rd)';}
+  else{msg.textContent='Erro ao salvar: '+formatUserWriteError(rs.error||'falha desconhecida');msg.style.color='var(--rd)';}
 }
 async function toggleUsuario(id,ativo){
   const rs=await authUpdateUsuario(id,{ativo});
-  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast(rs.error||'Erro ao atualizar usuário','er');
+  if(rs.ok){toast(ativo?'Usuário ativado':'Usuário inativado');loadUsuarios();}else toast(formatUserWriteError(rs.error||'Erro ao atualizar usuário'),'er');
 }
 
 function auditCard(title,detail,tone='in'){
@@ -5763,7 +5830,7 @@ async function salvarUsuarioM(){
   const reg={nome,email,senha_texto:senha,perfil,ativo:true};
   const rs=await authCreateUsuario(reg);
   if(rs.ok){toast('✓ Usuário criado!');closeM();loadUsuarios();}
-  else{const m=$('fu-msg');m.textContent='Erro: '+(rs.error||'E-mail já cadastrado ou permissão insuficiente');m.style.color='var(--rd)';}
+  else{const m=$('fu-msg');m.textContent='Erro: '+formatUserWriteError(rs.error||'E-mail já cadastrado ou permissão insuficiente');m.style.color='var(--rd)';}
 }
 async function salvarCaboM(){
   const nome=($('nc-nm')?.value||'').trim();
