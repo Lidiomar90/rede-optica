@@ -7,6 +7,7 @@
 begin;
 
 -- Remove assinaturas antigas incompatíveis com o front atual.
+drop function if exists public.fn_login_usuario(text);
 drop function if exists public.fn_login_usuario(text, text);
 drop function if exists public.fn_touch_usuario(uuid, uuid);
 drop function if exists public.fn_create_usuario(text, text, text, text, boolean);

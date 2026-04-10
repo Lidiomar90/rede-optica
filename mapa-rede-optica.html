@@ -1045,7 +1045,7 @@ async function callRpcCandidates(candidates,payload){
   return{ok:false,missing:true,status:404,error:{message:'RPC indisponível'}};
 }
 async function authFetchUsuario(email){
-  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email,email});
+  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email});
   if(rpc.ok){
     const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
     if(data&&typeof data==='object'){
@@ -1095,7 +1095,14 @@ async function authCreateUsuario(reg){
   if(existingLocal)return{ok:false,error:'E-mail já cadastrado na contingência local.',source:'local:usuarios'};
   const remoteReg={...reg};
   delete remoteReg.senha_hash;
-  const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],remoteReg);
+  const createPayload={
+    nome:remoteReg.nome,
+    email:remoteReg.email,
+    senha_texto:remoteReg.senha_texto||remoteReg.senha||'',
+    perfil:remoteReg.perfil||'colaborador',
+    ativo:remoteReg.ativo!==false
+  };
+  const rpc=await callRpcCandidates(['fn_create_usuario','create_usuario','fn_criar_usuario','criar_usuario'],createPayload);
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
   if(!rpc.missing){
     const pretty=describeApiError(rpc.error,rpc.status);
@@ -1106,7 +1113,7 @@ async function authCreateUsuario(reg){
     return{ok:false,error:pretty,source:`rpc:${rpc.fn}`};
   }
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(remoteReg)});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios`,{method:'POST',headers:WH,body:JSON.stringify(createPayload)});
     if(r.status===201)return{ok:true,source:'rest:usuarios'};
     const err=await readJsonSafe(r);
     const pretty=describeApiError(err,r.status);
@@ -1131,7 +1138,15 @@ async function authUpdateUsuario(id,reg){
   }
   const remoteReg={...reg};
   delete remoteReg.senha_hash;
-  const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],{p_id:id,id,...remoteReg});
+  const updatePayload={
+    p_id:id,
+    nome:remoteReg.nome,
+    email:remoteReg.email,
+    senha_texto:remoteReg.senha_texto||remoteReg.senha||null,
+    perfil:remoteReg.perfil,
+    ativo:typeof remoteReg.ativo==='boolean'?remoteReg.ativo:null
+  };
+  const rpc=await callRpcCandidates(['fn_update_usuario','update_usuario','fn_atualizar_usuario','atualizar_usuario'],updatePayload);
   if(rpc.ok)return{ok:true,source:`rpc:${rpc.fn}`};
   if(!rpc.missing)return{ok:false,error:describeApiError(rpc.error,rpc.status),source:`rpc:${rpc.fn}`};
   try{
@@ -1198,7 +1213,7 @@ async function probeUserBackend(force=false){
   }
   userBackendProbeAt=now;
   userBackendProbeInflight=(async()=>{
-  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:'__probe__@redeop.local',email:'__probe__@redeop.local'});
+  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:'__probe__@redeop.local'});
   if(rpc.ok){
     setUserBackendState('ok','',`rpc:${rpc.fn}`);
     return true;
@@ -1207,8 +1222,17 @@ async function probeUserBackend(force=false){
     setUserBackendState('erro',describeApiError(rpc.error,rpc.status),`rpc:${rpc.fn}`);
     return false;
   }
+  const listRpc=await callRpcCandidates(['fn_list_usuarios','list_usuarios'],{});
+  if(listRpc.ok){
+    setUserBackendState('ok','',`rpc:${listRpc.fn}`);
+    return true;
+  }
+  if(!listRpc.missing){
+    setUserBackendState('erro',describeApiError(listRpc.error,listRpc.status),`rpc:${listRpc.fn}`);
+    return false;
+  }
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=id&limit=1`,{headers:RH});
+    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=id&limit=1`,{headers:WH});
     if(r.ok){
       setUserBackendState('ok','','rest:usuarios');
       return true;
@@ -4533,15 +4557,27 @@ async function loadUsuarios(){
   let us=[];
   let loadErr='';
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:WH});
-    if(r.ok){
-      us=await r.json();
-      setUserBackendState('ok','','rest:usuarios');
+    const rpc=await callRpcCandidates(['fn_list_usuarios','list_usuarios'],{});
+    if(rpc.ok){
+      us=Array.isArray(rpc.data)?rpc.data:[];
+      setUserBackendState('ok','',`rpc:${rpc.fn}`);
     }
     else{
-      const err=await readJsonSafe(r);
-      loadErr=describeApiError(err,r.status);
-      setUserBackendState('erro',loadErr,'rest:usuarios');
+      if(!rpc.missing){
+        loadErr=describeApiError(rpc.error,rpc.status);
+        setUserBackendState('erro',loadErr,`rpc:${rpc.fn}`);
+      }else{
+        const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?select=*&order=criado_em.asc`,{headers:WH});
+        if(r.ok){
+          us=await r.json();
+          setUserBackendState('ok','','rest:usuarios');
+        }
+        else{
+          const err=await readJsonSafe(r);
+          loadErr=describeApiError(err,r.status);
+          setUserBackendState('erro',loadErr,'rest:usuarios');
+        }
+      }
     }
   }catch(err){
     loadErr=getFriendlyErrorMessage(err,'Falha ao carregar colaboradores.');
@@ -4590,14 +4626,27 @@ async function editarUsuario(id){
   }
   let us=[];
   try{
-    const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:WH});
-    us=r.ok?await r.json():[];
-    if(!r.ok){
-      const err=await readJsonSafe(r);
-      const msg=describeApiError(err,r.status);
-      setUserBackendState('erro',msg,'rest:usuarios');
-      toast(msg,'er');
-      return;
+    const rpc=await callRpcCandidates(['fn_get_usuario','get_usuario'],{p_id:id});
+    if(rpc.ok){
+      const found=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
+      us=found?[found]:[];
+      setUserBackendState('ok','',`rpc:${rpc.fn}`);
+    }else{
+      if(!rpc.missing){
+        const msg=describeApiError(rpc.error,rpc.status);
+        setUserBackendState('erro',msg,`rpc:${rpc.fn}`);
+        toast(msg,'er');
+        return;
+      }
+      const r=await fetchWithTimeout(`${SU}/rest/v1/usuarios?id=eq.${id}&select=*`,{headers:WH});
+      us=r.ok?await r.json():[];
+      if(!r.ok){
+        const err=await readJsonSafe(r);
+        const msg=describeApiError(err,r.status);
+        setUserBackendState('erro',msg,'rest:usuarios');
+        toast(msg,'er');
+        return;
+      }
     }
   }catch(err){
     const msg=getFriendlyErrorMessage(err,'Falha ao abrir colaborador.');
