@@ -2,8 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Rede Óptica — MG</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#07111f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -205,6 +206,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 #fieldbar{display:none}
 @media(max-width:680px){
   #fieldbar{position:absolute;left:8px;right:8px;bottom:10px;z-index:419;display:flex;gap:6px;padding:6px;background:rgba(9,18,31,.9);border:1px solid rgba(255,255,255,.08);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,.28);backdrop-filter:blur(16px);overflow-x:auto;scrollbar-width:none}
+  #fieldbar.is-hidden{opacity:0;transform:translateY(18px);pointer-events:none}
   #fieldbar::-webkit-scrollbar{display:none}
   .fbtn{flex:0 0 72px;min-width:72px;padding:8px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-size:10px;font-family:inherit;font-weight:800;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
   .fbtn:active{transform:scale(.98)}
@@ -572,6 +574,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
     <div id="fieldbar">
       <button class="fbtn" data-role="field-mode" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
       <button class="fbtn" data-role="map-focus" onclick="toggleMapFocus()"><span class="fi">▣</span><span class="ft">Foco</span></button>
+      <button class="fbtn" onclick="openMobileSearch()"><span class="fi">🔎</span><span class="ft">Busca</span></button>
       <button class="fbtn" onclick="toggleSB()"><span class="fi">☰</span><span class="ft">Camadas</span></button>
       <button class="fbtn" onclick="goLoc()"><span class="fi">📍</span><span class="ft">GPS</span></button>
       <button class="fbtn" onclick="novaCaixaNoCentro()"><span class="fi">🧰</span><span class="ft">Caixa</span></button>
@@ -581,6 +584,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
     <div id="mt">
       <div style="position:relative"><button class="mb" id="mt-toggle" onclick="toggleMobileTools()">⋯<div class="tip">Mais ferramentas</div></button></div>
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" onclick="openMobileSearch()">🔎<div class="tip">Buscar ativo</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bfocus" onclick="toggleMapFocus()">▣<div class="tip">Foco no mapa</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
@@ -917,6 +921,7 @@ const km=m=>!m?'—':m>=1000?(m/1000).toFixed(2)+'km':Math.round(m)+'m';
 const TC=s=>s==='ativo'?'tok':s==='previsto'?'twn':'ter';
 const API_TIMEOUT_MS=15000;
 const MAP_TIMEOUT_MS=30000;
+const SPAN_COUNT_KEY='redeoptica_span_count_v1';
 let _toT;
 const toast=(m,t='ok')=>{const e=$('toast');if(!e)return; e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
 const setProg=p=>{const bar=$('lbar');if(bar)bar.style.width=p+'%'};
@@ -935,6 +940,53 @@ async function fetchWithTimeout(url,options={},timeoutMs=API_TIMEOUT_MS){
   }finally{
     clearTimeout(timer);
   }
+}
+function getCachedSpanCount(){
+  try{
+    const raw=localStorage.getItem(SPAN_COUNT_KEY);
+    const val=Number(raw||0);
+    return Number.isFinite(val)&&val>0?val:0;
+  }catch{return 0;}
+}
+function setCachedSpanCount(v){
+  try{
+    const val=Number(v||0);
+    if(Number.isFinite(val)&&val>0)localStorage.setItem(SPAN_COUNT_KEY,String(val));
+  }catch{}
+}
+async function fetchSpanCount(){
+  try{
+    const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
+    const exact=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0);
+    if(Number.isFinite(exact)&&exact>0){setCachedSpanCount(exact);return exact;}
+    const body=await sr.json().catch(()=>[]);
+    if(Array.isArray(body)&&body.length){const fallback=body.length;setCachedSpanCount(fallback);return fallback;}
+  }catch{}
+  return getCachedSpanCount();
+}
+async function fetchCaixasMapaSafe(){
+  try{
+    const view=await fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:WH},MAP_TIMEOUT_MS);
+    if(view.ok){
+      const rows=await view.json().catch(()=>[]);
+      if(Array.isArray(rows)&&rows.length)return rows;
+    }
+  }catch{}
+  try{
+    const tbl=await fetchWithTimeout(`${SU}/rest/v1/caixa_emenda?select=*`,{headers:WH},MAP_TIMEOUT_MS);
+    if(tbl.ok)return await tbl.json().catch(()=>[]);
+  }catch{}
+  return [];
+}
+function openMobileSearch(){
+  setSidebarOpen(true);
+  setTimeout(()=>{
+    const input=$('si');
+    if(input){
+      try{input.focus({preventScroll:false});}catch{input.focus();}
+      try{input.select();}catch{}
+    }
+  },220);
 }
 function getFriendlyErrorMessage(err,fallback='Falha na operação.'){
   const raw=String(err?.message||err||fallback);
@@ -1538,14 +1590,20 @@ function updateCacheTimestamp(iso,{offline=false}={}){
   el.textContent=`Cache ${offline?'offline ':''}atualizado há ${formatRelativeTime(iso)}`;
   el.style.display='block';
 }
-function updateSyncQueueBadge(){
-  const el=$('sync-queue-badge');
-  if(!el)return;
+function getPendingDraftSyncCount(){
   const store=getInvStore();
-  const total=(store.caixas||[]).filter(x=>!x._synced).length
+  return (store.caixas||[]).filter(x=>!x._synced).length
     +(store.dgos||[]).filter(x=>!x._synced).length
     +(store.segmentos||[]).filter(x=>!x._synced).length
     +(store.rupturas||[]).filter(x=>!x._synced).length;
+}
+function getSyncQueueCount(){
+  return getSyncQueue().length;
+}
+function updateSyncQueueBadge(){
+  const el=$('sync-queue-badge');
+  if(!el)return;
+  const total=getSyncQueueCount();
   if(total>0){
     el.textContent=`Fila sync: ${total}`;
     el.classList.add('show');
@@ -1559,16 +1617,14 @@ function refreshSidebarOperationalStatus(){
   if(!el)return;
   const cache=loadMapCache?.();
   const cacheLabel=cache?.salvo_em?`Cache ${formatRelativeTime(cache.salvo_em)}`:'Cache ausente';
-  const store=getInvStore();
-  const queueTotal=(store.caixas||[]).filter(x=>!x._synced).length
-    +(store.dgos||[]).filter(x=>!x._synced).length
-    +(store.segmentos||[]).filter(x=>!x._synced).length
-    +(store.rupturas||[]).filter(x=>!x._synced).length;
+  const pendingDraftTotal=getPendingDraftSyncCount();
+  const queueTotal=getSyncQueueCount();
   const counts=getSiteCountSummary();
   const pills=[
     `<span class="sbpill ${mapOffline?'off':'ok'}">${mapOffline?'Offline':'Online'}</span>`,
     `<span class="sbpill ${cache?.salvo_em?'info':'warn'}">${cacheLabel}</span>`,
-    `<span class="sbpill ${queueTotal?'warn':'ok'}">Sync ${queueTotal}</span>`,
+    `<span class="sbpill ${pendingDraftTotal?'warn':'ok'}">Pendentes ${pendingDraftTotal}</span>`,
+    `<span class="sbpill ${queueTotal?'warn':'ok'}">Fila ${queueTotal}</span>`,
     counts.partial?`<span class="sbpill warn">Cache parcial</span>`:'',
     `<span class="sbpill info">Science ${counts.science.toLocaleString('pt-BR')}</span>`,
     `<span class="sbpill info">Mapa ${counts.mapa.toLocaleString('pt-BR')}</span>`,
@@ -1604,6 +1660,7 @@ function refreshMobileUiBadges(){
   else updateCacheTimestamp(null);
   updateSyncQueueBadge();
   refreshSidebarOperationalStatus();
+  refreshMobileChromeState();
 }
 function pointFromAnyGeom(row){
   const cand=[row?.localizacao,row?.geom_falha,row?.geom,row?.geometria,row?.ponto];
@@ -1701,8 +1758,22 @@ function setMobileToolsExpanded(on){
     tog.textContent=mobileToolsExpanded?'×':'⋯';
     tog.title=mobileToolsExpanded?'Recolher ferramentas':'Expandir ferramentas';
   }
+  refreshMobileChromeState();
 }
 function toggleMobileTools(){setMobileToolsExpanded(!mobileToolsExpanded);}
+function refreshMobileChromeState(){
+  const fieldbar=$('fieldbar');
+  if(fieldbar){
+    const hide=!isMobileUI()
+      || drawMode
+      || medMode
+      || incMode
+      || moveMode
+      || mobileToolsExpanded
+      || !!$('sb')?.classList.contains('open');
+    fieldbar.classList.toggle('is-hidden',hide);
+  }
+}
 function applyMapFocus(on,persist=true){
   mapFocus=!!on;
   const root=$('mw');
@@ -1732,6 +1803,9 @@ function toggleLegend(){
 }
 let viewportInsetRaf=0;
 let visualViewportBound=false;
+let sidebarTouchStartX=0;
+let sidebarTouchStartY=0;
+let sidebarTouchTracking=false;
 function applyMobileViewportInsets(){
   const root=document.documentElement;
   if(!root)return;
@@ -1758,6 +1832,19 @@ function bindViewportInsetListeners(){
   }
   syncViewportInsets();
 }
+function resetSidebarTouchState(){
+  sidebarTouchStartX=0;
+  sidebarTouchStartY=0;
+  sidebarTouchTracking=false;
+}
+function clearSidebarTouchHandlers(sidebar){
+  if(!sidebar)return;
+  sidebar.ontouchstart=null;
+  sidebar.ontouchmove=null;
+  sidebar.ontouchend=null;
+  sidebar.ontouchcancel=null;
+  resetSidebarTouchState();
+}
 function setSidebarOpen(open){
   const s=$('sb'),ov=$('mob-ov');
   const shouldOpen=!!open&&isMobileUI();
@@ -1766,18 +1853,38 @@ function setSidebarOpen(open){
     ov.classList.toggle('show',shouldOpen);
     if(shouldOpen){
       ov.onclick=()=>setSidebarOpen(false);
-      let touchStartX=0;
-      s.ontouchstart=(e)=>{touchStartX=e.touches[0].clientX;};
-      s.ontouchmove=(e)=>{
-        const dx=e.touches[0].clientX-touchStartX;
-        if(dx<-50)setSidebarOpen(false);
+      s.ontouchstart=(e)=>{
+        if(!e.touches||e.touches.length!==1){
+          resetSidebarTouchState();
+          return;
+        }
+        const touch=e.touches[0];
+        sidebarTouchStartX=touch.clientX;
+        sidebarTouchStartY=touch.clientY;
+        sidebarTouchTracking=true;
       };
+      s.ontouchmove=(e)=>{
+        if(!sidebarTouchTracking||!e.touches||e.touches.length!==1)return;
+        const touch=e.touches[0];
+        const dx=touch.clientX-sidebarTouchStartX;
+        const dy=touch.clientY-sidebarTouchStartY;
+        if(Math.abs(dx)<48)return;
+        if(Math.abs(dx)<=Math.abs(dy)*1.2)return;
+        if(dx<0){
+          clearSidebarTouchHandlers(s);
+          setSidebarOpen(false);
+        }else{
+          resetSidebarTouchState();
+        }
+      };
+      s.ontouchend=()=>resetSidebarTouchState();
+      s.ontouchcancel=()=>resetSidebarTouchState();
     }else{
       ov.onclick=null;
-      s.ontouchstart=null;
-      s.ontouchmove=null;
+      clearSidebarTouchHandlers(s);
     }
   }
+  refreshMobileChromeState();
 }
 function applyResponsiveLayout(){
   if(localStorage.getItem(LEGEND_PREF_KEY)===null)applyLegendState(true,false);
@@ -1789,6 +1896,7 @@ function applyResponsiveLayout(){
   }
   applyMapFocus(mapFocus,false);
   refreshMobileUiBadges();
+  refreshMobileChromeState();
   syncViewportInsets();
 }
 function setOfflineState(on,msg=''){
@@ -1840,14 +1948,27 @@ function applyFieldMode(on,msg=''){
 }
 function addLongPress(el,callback,delay=300){
   let timer=null;
+  const clear=()=>{
+    if(timer){
+      clearTimeout(timer);
+      timer=null;
+    }
+  };
   el.addEventListener('touchstart',(e)=>{
+    if(!e.touches||e.touches.length!==1){
+      clear();
+      return;
+    }
+    clear();
     timer=setTimeout(()=>{
+      timer=null;
       if(navigator.vibrate)navigator.vibrate(50);
       callback(e);
     },delay);
   });
-  el.addEventListener('touchend',()=>{if(timer)clearTimeout(timer);});
-  el.addEventListener('touchmove',()=>{if(timer)clearTimeout(timer);});
+  el.addEventListener('touchend',clear);
+  el.addEventListener('touchmove',clear);
+  el.addEventListener('touchcancel',clear);
 }
 function toggleFieldMode(){
   applyFieldMode(!fieldMode,fieldMode?'Modo campo desativado.':'Modo campo ativado.');
@@ -2110,7 +2231,7 @@ function getFlagAnchor(kind,id){
     return mid?{lat:mid[0],lng:mid[1],label:codeFirstLabel(c),asset:c,pts}:null;
   }
   if(kind==='caixa'){
-    const cx=getInvStore().caixas.find(x=>String(x.id)===String(id));
+    const cx=getInvStore().caixas.find(x=>String(x.id)===String(id))||officialCaixas.find(x=>String(x.id)===String(id));
     const lat=Number(cx?.lat),lng=Number(cx?.lng);
     return Number.isFinite(lat)&&Number.isFinite(lng)?{lat,lng,label:cx.codigo||cx.nome||`Caixa ${id}`,asset:cx}:null;
   }
@@ -2133,7 +2254,7 @@ function renderFlags(){
       .on('click',()=>{
         if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
         else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
-        else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
+        else if(f.kind==='caixa'&&anchor.asset)anchor.asset?._kind==='caixa_oficial'?showPanCaixaOficial(anchor.asset):showPanCaixaDraft(anchor.asset);
         else if(f.kind==='dgo'&&anchor.asset)anchor.asset?._kind==='dgo_oficial'?showPanDgoOficial(anchor.asset):showPanDgoDraft(anchor.asset);
       });
     attachMarkerFieldActions(mk,()=>({
@@ -2144,7 +2265,7 @@ function renderFlags(){
         {label:'📍 Ir para ativo',action:()=>{
           if(f.kind==='site'&&anchor.asset)showPanSite(anchor.asset,[anchor.lat,anchor.lng]);
           else if(f.kind==='cabo'&&anchor.asset)showPanCabo(anchor.asset,anchor.pts||PL(anchor.asset.trajeto)||[],anchor.asset.comprimento||0);
-          else if(f.kind==='caixa'&&anchor.asset)showPanCaixaDraft(anchor.asset);
+          else if(f.kind==='caixa'&&anchor.asset)anchor.asset?._kind==='caixa_oficial'?showPanCaixaOficial(anchor.asset):showPanCaixaDraft(anchor.asset);
           else if(f.kind==='dgo'&&anchor.asset)anchor.asset?._kind==='dgo_oficial'?showPanDgoOficial(anchor.asset):showPanDgoDraft(anchor.asset);
         }},
         {label:'🗑 Remover flag',warn:true,action:()=>removeFlag(f.kind,f.assetId)}
@@ -2467,10 +2588,11 @@ function initMapObj(){
         if(navigator.vibrate)navigator.vibrate(16);
         toast('Menu de campo aberto por toque longo','in');
       }catch{}
-    },LONG_PRESS_MS);
-  },{passive:true});
-  mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
-  mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
+  },LONG_PRESS_MS);
+},{passive:true});
+mapEl.addEventListener('touchend',()=>clearTimeout(touchHoldTimer),{passive:true});
+mapEl.addEventListener('touchmove',()=>clearTimeout(touchHoldTimer),{passive:true});
+mapEl.addEventListener('touchcancel',()=>clearTimeout(touchHoldTimer),{passive:true});
   bindCaboViewportRefresh();
   applyResponsiveLayout();
 }
@@ -2586,16 +2708,17 @@ async function loadMap(){
 
       const siteCountUrl = siteUrl.replace(/limit=\d+/,'limit=1');
       const caboCountUrl = caboUrl.replace(/limit=\d+/,'limit=1');
-      [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader]=await Promise.all([
+      [sites,cabos,science,caixasMapa,dgosMapa,segmentosMapa,rupturasMapa,siteCountHeader,caboCountHeader,spanCountHeader]=await Promise.all([
         fetchWithTimeout(siteUrl,{headers:WH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar sites');return r.json();}),
         fetchWithTimeout(caboUrl,{headers:WH},MAP_TIMEOUT_MS).then(async r=>{if(!r.ok)throw new Error('Falha ao carregar cabos');return r.json();}),
         loadScienceSites(),
-        fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
+        fetchCaixasMapaSafe(),
         fetchWithTimeout(`${SU}/rest/v1/dgo?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetchWithTimeout(`${SU}/rest/v1/segmento_cabo?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetchWithTimeout(`${SU}/rest/v1/vw_rupturas_abertas?select=*`,{headers:WH},MAP_TIMEOUT_MS).then(async r=>r.ok?await r.json():[]).catch(()=>[]),
         fetchWithTimeout(siteCountUrl,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
         fetchWithTimeout(caboCountUrl,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS).then(r=>parseInt(r.headers.get('Content-Range')?.split('/')?.[1]||0)).catch(()=>0),
+        fetchSpanCount(),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
       mapCacheMeta={
@@ -2645,11 +2768,7 @@ async function loadMap(){
     $('ce-label').title=counts.partial?'Total da Science preservado, mas o mapa foi aberto com cache parcial local.':'Total oficial vindo da base Science.';
     $('ce').textContent=totalSites;
     $('cc').textContent=totalCabos;
-    let totalSpans='0';
-    try{
-      const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
-      totalSpans=parseInt(sr.headers.get('Content-Range')?.split('/')?.[1]||0).toLocaleString('pt-BR');
-    }catch{}
+    const totalSpans=Number(spanCountHeader||getCachedSpanCount()||0).toLocaleString('pt-BR');
     $('cs').textContent=totalSpans;
     $('ltt').textContent=`Renderizando ${allS.length.toLocaleString()} sites...`;setProg(50);
     const pts=[];
@@ -4044,10 +4163,10 @@ function caixaMapClick(e){
   map.off('click',caixaMapClick);
   toast('Preencha os dados da nova caixa no cadastro','ok');
 }
-function toggleMed(){if(medMode){cancelMed();return;}medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);toast('Medição ativa','in');}
+function toggleMed(){if(medMode){cancelMed();return;}medMode=true;$('bmed').classList.add('on');$('h-med').style.display='block';$('med-info').style.display='block';medPts=[];clearMedLines();map.on('click',addMedPt);map.on('dblclick',finishMed);refreshMobileChromeState();toast('Medição ativa','in');}
 function addMedPt(e){if(!medMode)return;medPts.push(e.latlng);medMks.push(L.circleMarker(e.latlng,{radius:5,color:'#fff',fillColor:'#4da6ff',fillOpacity:1,weight:2}).addTo(map));if(medPts.length>=2){if(medLn)map.removeLayer(medLn);medLn=L.polyline(medPts,{color:'#4da6ff',weight:2.5,dashArray:'5 4',opacity:.9}).addTo(map);}const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);$('med-info').textContent=medPts.length>1?`${medPts.length} pts • ${km(d)}`:'1 ponto';if(medPts.length>1)$('h-med').textContent=`📏 ${medPts.length} pts • ${km(d)} — duplo clique p/ finalizar`;}
 function finishMed(e){L.DomEvent.stopPropagation(e);if(medPts.length<2)return;const d=medPts.reduce((a,p,i)=>i===0?0:a+medPts[i-1].distanceTo(p),0);toast(`📏 Total: ${km(d)} em ${medPts.length} pontos`,'in');cancelMed();}
-function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();}
+function cancelMed(){medMode=false;map.off('click',addMedPt);map.off('dblclick',finishMed);$('bmed').classList.remove('on');$('h-med').style.display='none';$('h-med').textContent='📏 Clique para medir • duplo clique para finalizar';$('med-info').style.display='none';clearMedLines();refreshMobileChromeState();}
 function clearMedLines(){medMks.forEach(m=>map.removeLayer(m));medMks=[];if(medLn){map.removeLayer(medLn);medLn=null;}medPts=[];}
 function startDraw(seedPts=[],target='segmento'){
   if(drawMode){cancelDraw();return;}
@@ -4060,6 +4179,7 @@ function startDraw(seedPts=[],target='segmento'){
   clearDrawLines();
   map.on('click',addDrawPt);
   map.on('dblclick',finishDraw);
+  refreshMobileChromeState();
   if(Array.isArray(seedPts)&&seedPts.length){
     seedPts.forEach(p=>{
       const latlng=Array.isArray(p)?L.latLng(p[0],p[1]):L.latLng(p.lat,p.lng);
@@ -4115,7 +4235,7 @@ function finishDrawManual(){
   if(!drawMode||drawPts.length<2){toast('Adicione pelo menos 2 pontos','wn');return;}
   finishDraw({stopPropagation(){}});
 }
-function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('drawbar').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();}
+function cancelDraw(){drawMode=false;drawTarget='segmento';map.off('click',addDrawPt);map.off('dblclick',finishDraw);$('bdc').classList.remove('on-g');$('h-draw').style.display='none';$('drawbar').style.display='none';$('h-draw').textContent='🔌 Trace o cabo • duplo clique para salvar';clearDrawLines();refreshMobileChromeState();}
 function clearDrawLines(){drawMks.forEach(m=>map.removeLayer(m));drawMks=[];if(drawLn){map.removeLayer(drawLn);drawLn=null;}drawPts=[];}
 function redesenharSegmentoAtual(){
   goTab('mapa',document.querySelector('.nt[onclick*="mapa"]'));
@@ -4126,9 +4246,9 @@ function redesenharSegmentoAtual(){
   }catch{}
   startDraw(seed,'segmento');
 }
-function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
+function toggleInc(){incMode=!incMode;$('binc').classList.toggle('on',incMode);$('h-inc').style.display=incMode?'block':'none';refreshMobileChromeState();if(incMode)toast('Clique no local da falha','er');map[incMode?'on':'off']('click',incClick);}
 function incClick(e){if(incMode)regFalha(e.latlng.lat,e.latlng.lng,'');}
-function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);openM('incidente',null,lat,lng,null,null,site);}
+function regFalha(lat,lng,site){incMode=false;$('binc').classList.remove('on');$('h-inc').style.display='none';map.off('click',incClick);refreshMobileChromeState();openM('incidente',null,lat,lng,null,null,site);}
 
 function gerarRelatorioAsBuilt(cabo, site, lat, lng, causa, obs){
   const ts = new Date().toLocaleString('pt-BR');
@@ -4942,21 +5062,81 @@ function msgField(id,txt,tipo='er'){const el=$(id);if(el){el.textContent=txt;el.
 const INV_KEY='redeoptica_inventario_rascunho_v1';
 const SYNC_QUEUE_KEY='redeoptica_sync_queue_v1';
 function getSyncQueue(){try{return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY)||'[]');}catch{return[];}}
-function addToSyncQueue(item){const q=getSyncQueue();q.push({...item,queued_at:new Date().toISOString()});localStorage.setItem(SYNC_QUEUE_KEY,JSON.stringify(q));updateSyncQueueBadge();}
+function stableSyncValue(value){
+  if(Array.isArray(value))return value.map(stableSyncValue);
+  if(value && typeof value==='object'){
+    return Object.keys(value).sort().reduce((acc,key)=>{
+      acc[key]=stableSyncValue(value[key]);
+      return acc;
+    },{});
+  }
+  return value;
+}
+function getSyncQueueFingerprint(item){
+  return JSON.stringify({
+    table:String(item?.table||''),
+    payload:stableSyncValue(item?.payload||null)
+  });
+}
+function addToSyncQueue(item){
+  const q=getSyncQueue();
+  const now=new Date().toISOString();
+  const fingerprint=getSyncQueueFingerprint(item);
+  const idx=q.findIndex(existing=>(existing?.fingerprint||getSyncQueueFingerprint(existing))===fingerprint);
+  if(idx>=0){
+    const prev=q[idx]||{};
+    q[idx]={
+      ...prev,
+      ...item,
+      fingerprint,
+      queued_at:prev.queued_at||now,
+      last_seen_at:now,
+      retries:Number(prev.retries||0)+1,
+      error:item?.error||prev.error||''
+    };
+  }else{
+    q.push({...item,fingerprint,queued_at:now,last_seen_at:now,retries:0,error:item?.error||''});
+  }
+  localStorage.setItem(SYNC_QUEUE_KEY,JSON.stringify(q));
+  updateSyncQueueBadge();
+}
 function clearSyncQueue(){localStorage.setItem(SYNC_QUEUE_KEY,'[]');updateSyncQueueBadge();}
+function isRetryableSyncFailure(status,errCode){
+  if(status===401||status===403)return false;
+  if(String(errCode||'')==='42501')return false;
+  return true;
+}
 async function processSyncQueue(){
   const q=getSyncQueue();
   if(!q.length)return;
   toast(`Sincronizando ${q.length} itens...`,'in');
-  let ok=0,fail=0;
+  let ok=0,fail=0,skipped=0;
+  const retryQueue=[];
   for(const item of q){
     try{
       const r=await fetch(`${SU}/rest/v1/${item.table}`,{method:'POST',headers:{...WH,'Content-Type':'application/json'},body:JSON.stringify(item.payload)});
-      if([200,201].includes(r.status))ok++;else fail++;
-    }catch{fail++;}
+      if([200,201].includes(r.status)){
+        ok++;
+        continue;
+      }
+      const err=await r.json().catch(()=>({}));
+      if(isRetryableSyncFailure(r.status,err.code)){
+        fail++;
+        retryQueue.push({...item,last_error_status:r.status,last_error_code:err.code||'',last_error_at:new Date().toISOString()});
+      }else{
+        skipped++;
+        console.warn(`[CloudSync] Item removido da fila por erro permanente ${r.status}/${err.code||'sem-codigo'} em ${item.table}`);
+      }
+    }catch{
+      fail++;
+      retryQueue.push({...item,last_error_status:0,last_error_code:'network_error',last_error_at:new Date().toISOString()});
+    }
   }
-  if(fail===0){clearSyncQueue();toast(`✓ ${ok} itens sincronizados`,'ok');}
-  else{toast(`${ok} ok, ${fail} falharam`,'wn');}
+  localStorage.setItem(SYNC_QUEUE_KEY,JSON.stringify(retryQueue));
+  updateSyncQueueBadge();
+  if(fail===0&&skipped===0){toast(`✓ ${ok} itens sincronizados`,'ok');}
+  else if(fail===0&&skipped>0){toast(`${ok} sincronizados, ${skipped} descartados por erro permanente`,'wn');}
+  else{toast(`${ok} ok, ${fail} pendentes, ${skipped} descartados`,'wn');}
 }
 function getInvStore(){try{return JSON.parse(localStorage.getItem(INV_KEY)||'{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]}');}catch{return{"caixas":[],"dgos":[],"segmentos":[],"rupturas":[],"conexoes":[],"pendencias":[]};}}
 function saveInvStore(store){
@@ -5544,26 +5724,43 @@ function abrirDgoPorPendenciaId(id){
 }
 
 async function pushToSupabase(tbl, payload, msgId){
+  const startTime = Date.now();
   try {
+    if(!navigator.onLine){
+      throw new Error('Offline: aguardando conexão');
+    }
+
     const r = await fetch(`${SU}/rest/v1/${tbl}`, {
       method: 'POST',
       headers: { ...WH, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
       body: JSON.stringify(payload)
     });
+
+    const duration = Date.now() - startTime;
+
     if([200, 201].includes(r.status)){
+      console.log(`[CloudSync] OK ${tbl} em ${duration}ms`);
       msgField(msgId, '✓ Sincronizado com a nuvem.', 'ok');
       return true;
     } else {
-      const err = await r.json();
-      console.error(`Erro ao salvar em ${tbl}:`, err, payload);
-      msgField(msgId, '⚠ Erro nuvem: ' + (err.message || r.status));
-      addToSyncQueue({table:tbl,payload});
+      const err = await r.json().catch(() => ({ message: r.statusText }));
+      console.error(`[CloudSync] Erro ${r.status} em ${tbl}:`, err, payload);
+
+      const hint = err.code === '42501' ? 'Sem permissão (RLS)' : (err.message || r.status);
+      msgField(msgId, `⚠ Nuvem: ${hint}`);
+      toast(`Falha na sincronização: ${hint}`, 'wn');
+
+      if(isRetryableSyncFailure(r.status, err.code)){
+        addToSyncQueue({table:tbl, payload, error: err.code});
+      }else{
+        console.warn(`[CloudSync] Falha permanente não entrou na fila (${tbl}): ${r.status}/${err.code||'sem-codigo'}`);
+      }
       return false;
     }
   } catch (e) {
-    console.error(`Exceção ao sincronizar ${tbl}:`, e);
-    msgField(msgId, '⚠ Sem conexão. Item na fila de sincronização.');
-    addToSyncQueue({table:tbl,payload});
+    console.warn(`[CloudSync] Exceção em ${tbl}: ${e.message}`);
+    msgField(msgId, '⚠ Offline. Item na fila local.');
+    addToSyncQueue({table:tbl, payload});
     return false;
   }
 }
