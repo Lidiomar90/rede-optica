@@ -922,6 +922,7 @@ const TC=s=>s==='ativo'?'tok':s==='previsto'?'twn':'ter';
 const API_TIMEOUT_MS=15000;
 const MAP_TIMEOUT_MS=30000;
 const SPAN_COUNT_KEY='redeoptica_span_count_v1';
+const CAIXAS_FALLBACK_META_KEY='redeoptica_caixas_fallback_v1';
 let _toT;
 const toast=(m,t='ok')=>{const e=$('toast');if(!e)return; e.textContent=m;e.className='s '+t;clearTimeout(_toT);_toT=setTimeout(()=>e.className='',3500)};
 const setProg=p=>{const bar=$('lbar');if(bar)bar.style.width=p+'%'};
@@ -954,6 +955,15 @@ function setCachedSpanCount(v){
     if(Number.isFinite(val)&&val>0)localStorage.setItem(SPAN_COUNT_KEY,String(val));
   }catch{}
 }
+function getCaixasFallbackMeta(){
+  try{return JSON.parse(localStorage.getItem(CAIXAS_FALLBACK_META_KEY)||'null');}catch{return null;}
+}
+function setCaixasFallbackMeta(meta){
+  try{
+    if(meta)localStorage.setItem(CAIXAS_FALLBACK_META_KEY,JSON.stringify(meta));
+    else localStorage.removeItem(CAIXAS_FALLBACK_META_KEY);
+  }catch{}
+}
 async function fetchSpanCount(){
   try{
     const sr=await fetchWithTimeout(`${SU}/rest/v1/trechos_dwdm?select=id&limit=1`,{headers:{...WH,'Prefer':'count=exact','Range':'0-0'}},MAP_TIMEOUT_MS);
@@ -965,17 +975,32 @@ async function fetchSpanCount(){
   return getCachedSpanCount();
 }
 async function fetchCaixasMapaSafe(){
+  const checkedAt=new Date().toISOString();
   try{
     const view=await fetchWithTimeout(`${SU}/rest/v1/vw_caixas_emenda_mapa?select=*`,{headers:WH},MAP_TIMEOUT_MS);
     if(view.ok){
       const rows=await view.json().catch(()=>[]);
-      if(Array.isArray(rows)&&rows.length)return rows;
+      if(Array.isArray(rows)&&rows.length){
+        setCaixasFallbackMeta({source:'view',rows:rows.length,checkedAt});
+        return rows;
+      }
+      setCaixasFallbackMeta({source:'fallback',reason:'view-empty',rows:0,checkedAt});
     }
-  }catch{}
+  }catch(err){
+    setCaixasFallbackMeta({source:'fallback',reason:String(err?.message||'view-failed'),rows:0,checkedAt});
+  }
   try{
     const tbl=await fetchWithTimeout(`${SU}/rest/v1/caixa_emenda?select=*`,{headers:WH},MAP_TIMEOUT_MS);
-    if(tbl.ok)return await tbl.json().catch(()=>[]);
-  }catch{}
+    if(tbl.ok){
+      const rows=await tbl.json().catch(()=>[]);
+      const prev=getCaixasFallbackMeta();
+      setCaixasFallbackMeta({...prev,source:'fallback',fallbackRows:Array.isArray(rows)?rows.length:0,checkedAt});
+      return rows;
+    }
+  }catch(err){
+    const prev=getCaixasFallbackMeta();
+    setCaixasFallbackMeta({...prev,source:'fallback',fallbackError:String(err?.message||'table-failed'),checkedAt});
+  }
   return [];
 }
 function openMobileSearch(){
@@ -1620,12 +1645,14 @@ function refreshSidebarOperationalStatus(){
   const pendingDraftTotal=getPendingDraftSyncCount();
   const queueTotal=getSyncQueueCount();
   const counts=getSiteCountSummary();
+  const caixasMeta=getCaixasFallbackMeta();
   const pills=[
     `<span class="sbpill ${mapOffline?'off':'ok'}">${mapOffline?'Offline':'Online'}</span>`,
     `<span class="sbpill ${cache?.salvo_em?'info':'warn'}">${cacheLabel}</span>`,
     `<span class="sbpill ${pendingDraftTotal?'warn':'ok'}">Pendentes ${pendingDraftTotal}</span>`,
     `<span class="sbpill ${queueTotal?'warn':'ok'}">Fila ${queueTotal}</span>`,
     counts.partial?`<span class="sbpill warn">Cache parcial</span>`:'',
+    caixasMeta?.source==='fallback'?`<span class="sbpill warn" title="vw_caixas_emenda_mapa indisponível ou vazia; usando caixa_emenda.">Caixas fallback</span>`:'',
     `<span class="sbpill info">Science ${counts.science.toLocaleString('pt-BR')}</span>`,
     `<span class="sbpill info">Mapa ${counts.mapa.toLocaleString('pt-BR')}</span>`,
     `<span class="sbpill info">Banco ${counts.banco.toLocaleString('pt-BR')}</span>`
@@ -2721,6 +2748,11 @@ async function loadMap(){
         fetchSpanCount(),
       ]);
       clearTimeout(netSlowTimer);netSlowTimer=null;setNetworkIndicator();
+      const caixasMeta=getCaixasFallbackMeta();
+      if(caixasMeta?.source==='fallback'){
+        console.warn('[Mapa] vw_caixas_emenda_mapa indisponível ou vazia; usando fallback caixa_emenda.',caixasMeta);
+        toast('Caixas carregadas via fallback do banco','wn');
+      }
       mapCacheMeta={
         partial:false,
         scienceTotal:Number(scienceSitesTotalHint)||((Array.isArray(science)?science.length:0)),
