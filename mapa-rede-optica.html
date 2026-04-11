@@ -1121,7 +1121,7 @@ async function callRpcCandidates(candidates,payload){
   }
   return{ok:false,missing:true,status:404,error:{message:'RPC indisponível'}};
 }
-async function authFetchUsuario(email){
+  async function authFetchUsuario(email){
   const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:email});
   if(rpc.ok){
     const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
@@ -1155,10 +1155,43 @@ async function authFetchUsuario(email){
     setUserBackendState('erro',errMsg,'rest:usuarios');
     const localUser=findLocalUserByEmail(email);
     if(localUser&&localUser.ativo!==false)return{ok:true,user:localUser,source:'local:usuarios'};
-    return{ok:false,error:errMsg,source:'rest:usuarios'};
+      return{ok:false,error:errMsg,source:'rest:usuarios'};
+    }
   }
-}
-async function authTouchUsuario(id){
+  async function authLoginUsuario(email,senha){
+    const loginPayload={p_email:email,email,p_senha:senha,senha};
+    const rpc=await callRpcCandidates(['fn_auth_login_usuario','auth_login_usuario'],loginPayload);
+    if(rpc.ok){
+      const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
+      if(data&&typeof data==='object'){
+        setUserBackendState('ok','',`rpc:${rpc.fn}`);
+        return{ok:true,user:data,source:`rpc:${rpc.fn}`,secure:true};
+      }
+      setUserBackendState('erro','Resposta inválida da RPC de autenticação.',`rpc:${rpc.fn}`);
+      return{ok:false,error:'Resposta inválida da RPC de autenticação.',source:`rpc:${rpc.fn}`};
+    }
+    if(!rpc.missing){
+      const errMsg=describeApiError(rpc.error,rpc.status);
+      setUserBackendState('erro',errMsg,`rpc:${rpc.fn}`);
+      return{ok:false,error:errMsg,source:`rpc:${rpc.fn}`};
+    }
+    const legacy=await authFetchUsuario(email);
+    if(!legacy.ok)return legacy;
+    const u=legacy.user;
+    if(!u)return{ok:false,error:'E-mail não encontrado, usuário inativo ou leitura bloqueada no banco.',source:legacy.source||'legacy'};
+    let ok=false;
+    if(u.senha_texto&&u.senha_texto===senha)ok=true;
+    if(!ok&&u.senha_hash){
+      try{
+        const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(senha));
+        const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+        if(u.senha_hash===hash)ok=true;
+      }catch{}
+    }
+    if(!ok)return{ok:false,error:'Senha incorreta.',source:legacy.source||'legacy'};
+    return{ok:true,user:u,source:legacy.source||'legacy',secure:false,degraded:true};
+  }
+  async function authTouchUsuario(id){
   if(isLocalUserId(id))return touchLocalUser(id);
   const rpc=await callRpcCandidates(['fn_touch_usuario','touch_usuario','fn_atualizar_ultimo_acesso_usuario'],{p_id:id,id});
   if(rpc.ok||!rpc.missing)return rpc.ok;
@@ -1290,22 +1323,13 @@ async function probeUserBackend(force=false){
   }
   userBackendProbeAt=now;
   userBackendProbeInflight=(async()=>{
-  const rpc=await callRpcCandidates(['fn_login_usuario','login_usuario','fn_auth_usuario','auth_usuario'],{p_email:'__probe__@redeop.local'});
+  const rpc=await callRpcCandidates(['fn_list_usuarios','list_usuarios'],{});
   if(rpc.ok){
     setUserBackendState('ok','',`rpc:${rpc.fn}`);
     return true;
   }
   if(!rpc.missing){
     setUserBackendState('erro',describeApiError(rpc.error,rpc.status),`rpc:${rpc.fn}`);
-    return false;
-  }
-  const listRpc=await callRpcCandidates(['fn_list_usuarios','list_usuarios'],{});
-  if(listRpc.ok){
-    setUserBackendState('ok','',`rpc:${listRpc.fn}`);
-    return true;
-  }
-  if(!listRpc.missing){
-    setUserBackendState('erro',describeApiError(listRpc.error,listRpc.status),`rpc:${listRpc.fn}`);
     return false;
   }
   try{
@@ -1348,16 +1372,10 @@ async function login(){
   }catch{}
   // ─────────────────────────────────────────────────────────────
   try{
-    const auth=await authFetchUsuario(email);
+    const auth=await authLoginUsuario(email,senha);
     if(!auth.ok){$('lerr').textContent=auth.error||'Erro de autenticação.';btn.disabled=false;btn.textContent='Entrar';return;}
     const u=auth.user;
     if(!u){$('lerr').textContent='E-mail não encontrado, usuário inativo ou leitura bloqueada no banco.';btn.disabled=false;btn.textContent='Entrar';return;}
-    let ok=false;
-    if(u.senha_texto&&u.senha_texto===senha)ok=true;
-    if(!ok&&u.senha_hash){
-      try{const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(senha));const hash=Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');if(u.senha_hash===hash)ok=true;}catch{}
-    }
-    if(!ok){$('lerr').textContent='Senha incorreta.';btn.disabled=false;btn.textContent='Entrar';return;}
     sessao={id:u.id,nome:u.nome,email:u.email,perfil:u.perfil};
     localStorage.setItem('_ro_s',JSON.stringify(sessao));
     authTouchUsuario(u.id);
