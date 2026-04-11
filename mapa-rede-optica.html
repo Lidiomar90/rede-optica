@@ -1160,8 +1160,10 @@ async function callRpcCandidates(candidates,payload){
   }
   const ALLOW_LEGACY_AUTH_FALLBACK = (location.protocol==='file:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
   async function authLoginUsuario(email,senha){
-    const loginPayload={p_email:email,email,p_senha:senha,senha};
-    const rpc=await callRpcCandidates(['fn_auth_login_usuario','auth_login_usuario'],loginPayload);
+    let rpc=await callRpcCandidates(['fn_auth_login_usuario'],{p_email:email,p_senha:senha});
+    if(!rpc.ok && rpc.missing){
+      rpc=await callRpcCandidates(['auth_login_usuario'],{email,senha});
+    }
     if(rpc.ok){
       const data=Array.isArray(rpc.data)?rpc.data[0]:rpc.data;
       if(data&&typeof data==='object'){
@@ -7474,7 +7476,7 @@ window.addEventListener('resize',()=>{
     if(map)map.invalidateSize(false);
   },120);
 });
-const APP_BUILD='2026.04.11.2';
+const APP_BUILD='2026.04.11.3';
 if('serviceWorker' in navigator){
   let swReloading=false;
   window.addEventListener('load',()=>{
