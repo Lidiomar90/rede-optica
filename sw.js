@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rede-optica-mg-v7';
+const CACHE_NAME = 'rede-optica-mg-v8';
 const ASSETS = [
   './',
   './index.html',

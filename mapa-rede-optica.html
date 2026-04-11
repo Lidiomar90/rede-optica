@@ -1158,6 +1158,7 @@ async function callRpcCandidates(candidates,payload){
       return{ok:false,error:errMsg,source:'rest:usuarios'};
     }
   }
+  const ALLOW_LEGACY_AUTH_FALLBACK = (location.protocol==='file:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
   async function authLoginUsuario(email,senha){
     const loginPayload={p_email:email,email,p_senha:senha,senha};
     const rpc=await callRpcCandidates(['fn_auth_login_usuario','auth_login_usuario'],loginPayload);
@@ -1174,6 +1175,11 @@ async function callRpcCandidates(candidates,payload){
       const errMsg=describeApiError(rpc.error,rpc.status);
       setUserBackendState('erro',errMsg,`rpc:${rpc.fn}`);
       return{ok:false,error:errMsg,source:`rpc:${rpc.fn}`};
+    }
+    if(!ALLOW_LEGACY_AUTH_FALLBACK){
+      const errMsg='Autenticação do backend indisponível. Atualize a página com Ctrl+F5.';
+      setUserBackendState('erro',errMsg,'rpc:fn_auth_login_usuario');
+      return{ok:false,error:errMsg,source:'rpc:fn_auth_login_usuario'};
     }
     const legacy=await authFetchUsuario(email);
     if(!legacy.ok)return legacy;
@@ -7468,7 +7474,7 @@ window.addEventListener('resize',()=>{
     if(map)map.invalidateSize(false);
   },120);
 });
-const APP_BUILD='2026.04.11.1';
+const APP_BUILD='2026.04.11.2';
 if('serviceWorker' in navigator){
   let swReloading=false;
   window.addEventListener('load',()=>{
