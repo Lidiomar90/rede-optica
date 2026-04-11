@@ -7468,9 +7468,40 @@ window.addEventListener('resize',()=>{
     if(map)map.invalidateSize(false);
   },120);
 });
+const APP_BUILD='2026.04.11.1';
 if('serviceWorker' in navigator){
+  let swReloading=false;
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js').then(reg=>console.log('SW pronto!',reg.scope)).catch(err=>console.log('SW falhou',err));
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(swReloading)return;
+      swReloading=true;
+      location.reload();
+    });
+    navigator.serviceWorker.register(`./sw.js?v=${encodeURIComponent(APP_BUILD)}`,{
+      updateViaCache:'none'
+    }).then(async reg=>{
+      try{await reg.update();}catch{}
+      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      reg.addEventListener('updatefound',()=>{
+        const installing=reg.installing;
+        if(!installing)return;
+        installing.addEventListener('statechange',()=>{
+          if(installing.state==='installed'&&navigator.serviceWorker.controller&&reg.waiting){
+            reg.waiting.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+      try{
+        const buildKey='_ro_build';
+        const prevBuild=localStorage.getItem(buildKey);
+        if(prevBuild!==APP_BUILD&&'caches' in window){
+          const keys=await caches.keys();
+          await Promise.all(keys.filter(key=>/^rede-optica-mg-v/i.test(key)).map(key=>caches.delete(key)));
+        }
+        localStorage.setItem(buildKey,APP_BUILD);
+      }catch{}
+      console.log('SW pronto!',reg.scope,APP_BUILD);
+    }).catch(err=>console.log('SW falhou',err));
   });
 }
 </script>
