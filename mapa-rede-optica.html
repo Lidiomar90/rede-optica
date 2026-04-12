@@ -155,6 +155,10 @@ body.light .si.on{
   background:rgba(72,168,255,.12);
   border-color:rgba(72,168,255,.22);
 }
+body.light .si.mk{
+  background:rgba(69,208,140,.10);
+  border-color:rgba(69,208,140,.24);
+}
 body.light #map{background:linear-gradient(180deg,#eef4fb,#dde8f5)}
 body.light #maphead,
 body.light #leg,
@@ -334,6 +338,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
 .gha{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);font-size:9px;color:var(--t3);flex-shrink:0}
 .si{padding:9px 10px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:12px;transition:.08s;margin-bottom:4px}
 .si:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.06)}.si.on{background:rgba(72,168,255,.09);border-color:rgba(72,168,255,.18)}
+.si.mk{background:rgba(69,208,140,.08);border-color:rgba(69,208,140,.16)}
 .sii{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .sii.ln{width:13px;height:2px;border-radius:1px}
 .sin{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2);font-size:11px;font-weight:700}
@@ -1693,6 +1698,8 @@ const VIS={};
 LAYERS.forEach(l=>{VIS[l.id]=l.vis;l.sub.forEach(s=>VIS[s.id]=l.vis);});
 const SITEVIS={};
 const SITEGROUPS={};
+const SIDEBARMARKS={};
+const SIDEBARGROUPS={};
 const LYR={};
 
 function camVis(c,t){const cl=(c||'').toLowerCase(),tl=(t||'').toLowerCase();if(tl.includes('erb'))return'ERB';if(tl.includes('caixa')||tl.includes('armario'))return'caixa';if(cl in COR)return cl;return'outros';}
@@ -1700,6 +1707,8 @@ function getSiteLayer(cv){return{backbone:'bb_site',metro_alta:'m4_equip',metro_
 const PP=g=>g?.type==='Point'?[g.coordinates[1],g.coordinates[0]]:null;
 const PL=g=>g?.type==='LineString'?g.coordinates.map(c=>[c[1],c[0]]):null;
 const SITE_GROUP_PREF_KEY='redeoptica_site_groups_v1';
+const SIDEBAR_MARK_PREF_KEY='redeoptica_sidebar_marks_v1';
+const SIDEBAR_GROUP_PREF_KEY='redeoptica_sidebar_groups_v1';
 const normCode=v=>String(v||'').trim().toUpperCase();
 const normText=v=>String(v||'').trim();
 const sciencePoint=(lat,lng)=>({type:'Point',coordinates:[lng,lat]});
@@ -2372,6 +2381,113 @@ function mkSegmentoMenu(seg,path){
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
     ]
   };
+}
+function getSidebarSegmentPath(seg,isOfficial=false){
+  if(!seg)return [];
+  if(Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2){
+    return seg.geometria_pts.map(p=>Array.isArray(p)?[Number(p[0]),Number(p[1])]:[Number(p.lat),Number(p.lng)]).filter(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]));
+  }
+  if(isOfficial){
+    return parseGeom(seg.geom)||parseGeom(seg.geometria)||[];
+  }
+  const a=findDraftPoint(seg.ponto_a),b=findDraftPoint(seg.ponto_b);
+  return a&&b?[[a.lat,a.lng],[b.lat,b.lng]]:[];
+}
+function getSidebarCableLatLng(c,p2=[]){
+  const path=Array.isArray(p2)&&p2.length?p2:(PL(c?.trajeto)||[]);
+  if(path.length){
+    const p=path[Math.floor(path.length/2)];
+    return {lat:Number(p[0]),lng:Number(p[1])};
+  }
+  if(map){
+    const center=map.getCenter();
+    return {lat:center.lat,lng:center.lng};
+  }
+  return null;
+}
+function getSidebarItemMenuPayload(kind,id){
+  const idStr=String(id);
+  let menu=null;
+  let latlng=null;
+  if(kind==='site'){
+    const site=allS.find(s=>String(s.id)===idStr);
+    const pt=site?(PP(site.localizacao)||[Number(site.lat||0),Number(site.lng||0)]):null;
+    if(site&&pt)menu=mkSiteMenu(site,pt),latlng={lat:Number(pt[0]),lng:Number(pt[1])};
+  }else if(kind==='cabo'){
+    const cabo=allC.find(c=>String(c.id)===idStr);
+    const p2=cabo?(PL(cabo.trajeto)||[]):[];
+    const lenCalc=(map&&p2.length>=2)?Math.round(p2.reduce((a,p,i)=>i===0?0:a+map.distance(p2[i-1],p),0)):(cabo?.comprimento||0);
+    if(cabo)menu=mkCaboMenu(cabo,p2,lenCalc),latlng=getSidebarCableLatLng(cabo,p2);
+  }else if(kind==='caixa'||kind==='caixa_oficial'){
+    const source=kind==='caixa'?getInvStore().caixas:officialCaixas;
+    const item=source.find(x=>String(x.id)===idStr);
+    if(item){
+      menu=mkCaixaMenu(item);
+      latlng={lat:Number(item.lat||0),lng:Number(item.lng||0)};
+    }
+  }else if(kind==='dgo'||kind==='dgo_oficial'){
+    const source=kind==='dgo'?getInvStore().dgos:officialDgos;
+    const item=source.find(x=>String(x.id)===idStr);
+    if(item){
+      const site=kind==='dgo'?findDraftPoint(item.site||''):resolveOfficialDgoSite(item);
+      menu=mkDgoMenu(item,site||{lat:0,lng:0});
+      latlng=site?{lat:Number(site.lat||0),lng:Number(site.lng||0)}:null;
+    }
+  }else if(kind==='segmento'||kind==='segmento_oficial'){
+    const source=kind==='segmento'?getInvStore().segmentos:officialSegmentos;
+    const item=source.find(x=>String(x.id)===idStr);
+    const path=getSidebarSegmentPath(item,kind==='segmento_oficial');
+    if(item){
+      menu=mkSegmentoMenu(item,path);
+      const center=path.length?path[Math.floor(path.length/2)]:null;
+      latlng=center?{lat:Number(center[0]),lng:Number(center[1])}:null;
+    }
+  }else if(kind==='ruptura'||kind==='ruptura_oficial'){
+    const source=kind==='ruptura'?getInvStore().rupturas:officialRupturas;
+    const item=source.find(x=>String(x.id)===idStr);
+    if(item){
+      menu=mkRupturaMenu(item);
+      latlng={lat:Number(item.lat||0),lng:Number(item.lng||0)};
+    }
+  }
+  if(!menu)return null;
+  const marked=isSidebarMarked(kind,idStr);
+  menu.actions=[
+    {label:marked?'☑ Desmarcar item':'☐ Marcar item',primary:!marked,action:()=>toggleSidebarMark(kind,idStr,!marked)},
+    ...menu.actions
+  ];
+  return {menu,latlng};
+}
+function openSidebarItemMenu(ev,kind,id){
+  if(ev){
+    ev.preventDefault?.();
+    ev.stopPropagation?.();
+  }
+  const payload=getSidebarItemMenuPayload(kind,id);
+  if(!payload?.menu)return;
+  openActionMenu({
+    ...payload.menu,
+    latlng:payload.latlng||null,
+    clientX:ev?.clientX||120,
+    clientY:ev?.clientY||120
+  });
+}
+function bindSidebarItemMenus(){
+  document.querySelectorAll('#sbl .si[data-menu-kind][data-menu-id]').forEach(el=>{
+    if(el.dataset.ctxReady==='1')return;
+    el.dataset.ctxReady='1';
+    el.addEventListener('contextmenu',ev=>openSidebarItemMenu(ev,el.dataset.menuKind,el.dataset.menuId));
+    addLongPress(el,(touchEvent)=>{
+      const t=touchEvent.touches?.[0];
+      openSidebarItemMenu({
+        preventDefault(){},
+        stopPropagation(){},
+        clientX:t?.clientX||el.getBoundingClientRect().left+18,
+        clientY:t?.clientY||el.getBoundingClientRect().top+18
+      },el.dataset.menuKind,el.dataset.menuId);
+      toast('Ações rápidas do item abertas','in');
+    },LONG_PRESS_MS);
+  });
 }
 // Marcador de rompimento — vermelho pulsante
 function mkSyncIndicator(synced){
@@ -3169,9 +3285,187 @@ function applyPreset(name){
   if(name==='criticos'){OVIS.ov_romp=true;OVIS.ov_pending=true;OVIS.ov_draft=false;OVIS.ov_suggest=false;applyMapFocus(true,true);}
   buildLayerPanel();applyVis();savePref();
 }
-function savePref(){localStorage.setItem('_lv',JSON.stringify(VIS));localStorage.setItem('_ov',JSON.stringify(OVIS));localStorage.setItem('_sv',JSON.stringify(SITEVIS));}
-function loadPref(){const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}const ss=localStorage.getItem('_sv');if(ss){try{Object.assign(SITEVIS,JSON.parse(ss));}catch{}}const sg=localStorage.getItem(SITE_GROUP_PREF_KEY);if(sg){try{Object.assign(SITEGROUPS,JSON.parse(sg));}catch{}}}
+function savePref(){
+  localStorage.setItem('_lv',JSON.stringify(VIS));
+  localStorage.setItem('_ov',JSON.stringify(OVIS));
+  localStorage.setItem('_sv',JSON.stringify(SITEVIS));
+  localStorage.setItem(SIDEBAR_MARK_PREF_KEY,JSON.stringify(SIDEBARMARKS));
+  localStorage.setItem(SIDEBAR_GROUP_PREF_KEY,JSON.stringify(SIDEBARGROUPS));
+}
+function loadPref(){
+  const s=localStorage.getItem('_lv');if(s){try{Object.assign(VIS,JSON.parse(s));}catch{}}
+  const so=localStorage.getItem('_ov');if(so){try{Object.assign(OVIS,JSON.parse(so));}catch{}}
+  const ss=localStorage.getItem('_sv');if(ss){try{Object.assign(SITEVIS,JSON.parse(ss));}catch{}}
+  const sm=localStorage.getItem(SIDEBAR_MARK_PREF_KEY);if(sm){try{Object.assign(SIDEBARMARKS,JSON.parse(sm));}catch{}}
+  const sbg=localStorage.getItem(SIDEBAR_GROUP_PREF_KEY);if(sbg){try{Object.assign(SIDEBARGROUPS,JSON.parse(sbg));}catch{}}
+  const sg=localStorage.getItem(SITE_GROUP_PREF_KEY);if(sg){try{Object.assign(SITEGROUPS,JSON.parse(sg));}catch{}}
+}
 function saveSiteGroupPref(){localStorage.setItem(SITE_GROUP_PREF_KEY,JSON.stringify(SITEGROUPS));}
+function makeSidebarMarkKey(kind,id){return `${String(kind||'item')}:${String(id||'')}`;}
+function isSidebarMarked(kind,id){return SIDEBARMARKS[makeSidebarMarkKey(kind,id)]===true;}
+function toggleSidebarMark(kind,id,force){
+  const key=makeSidebarMarkKey(kind,id);
+  const next=typeof force==='boolean'?force:!isSidebarMarked(kind,id);
+  if(next)SIDEBARMARKS[key]=true;
+  else delete SIDEBARMARKS[key];
+  savePref();
+  if(sbMode!=='camadas'){
+    renderSidebarFilters();
+    renderSB($('si')?.value||'');
+  }
+}
+function setSidebarMarksBulk(items,on){
+  (items||[]).forEach(item=>{
+    if(!item||item.id===undefined||!item.kind)return;
+    const key=makeSidebarMarkKey(item.kind,item.id);
+    if(on)SIDEBARMARKS[key]=true;
+    else delete SIDEBARMARKS[key];
+  });
+  savePref();
+  if(sbMode!=='camadas'){
+    renderSidebarFilters();
+    renderSB($('si')?.value||'');
+  }
+}
+function countSidebarMarks(items){
+  return (items||[]).filter(item=>item&&isSidebarMarked(item.kind,item.id)).length;
+}
+function isSidebarGroupOpen(key,defaultOpen=true){
+  return Object.prototype.hasOwnProperty.call(SIDEBARGROUPS,key)?SIDEBARGROUPS[key]!==false:defaultOpen;
+}
+function toggleSidebarGroupState(key){
+  SIDEBARGROUPS[key]=!isSidebarGroupOpen(key,true);
+  savePref();
+  if(sbMode!=='camadas')renderSB($('si')?.value||'');
+}
+function setSidebarGroupsBulk(keys,open){
+  (keys||[]).forEach(key=>{if(key)SIDEBARGROUPS[key]=!!open;});
+  savePref();
+  if(sbMode!=='camadas')renderSB($('si')?.value||'');
+}
+function getCurrentSidebarSelectableItems(){
+  const q=$('si')?.value||'';
+  if(sbMode==='cabos')return getCabosSidebarData(q).map(c=>({kind:'cabo',id:c.id}));
+  if(sbMode==='ativos')return getAtivosSidebarItems(q);
+  if(sbMode==='continu')return getContinuSidebarItems(q);
+  if(sbMode==='sites')return getFilteredSiteData(q).map(s=>({kind:'site',id:s.id}));
+  return [];
+}
+function getCurrentSidebarGroupKeys(){
+  const q=$('si')?.value||'';
+  if(sbMode==='cabos')return [...new Set(getCabosSidebarData(q).map(c=>`cabos:${String(c.camada||'outros').toUpperCase()}`))];
+  if(sbMode==='ativos')return ['ativos:caixas','ativos:dgos'];
+  if(sbMode==='continu')return ['continu:segmento_oficial','continu:segmento','continu:ruptura','continu:ruptura_oficial'];
+  return [];
+}
+function markCurrentSidebarItems(on){
+  setSidebarMarksBulk(getCurrentSidebarSelectableItems(),on);
+}
+function expandCurrentSidebarGroups(open){
+  setSidebarGroupsBulk(getCurrentSidebarGroupKeys(),open);
+}
+function escapeAttr(value=''){
+  return String(value).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeJs(value=''){
+  return String(value).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function getCabosSidebarData(q=''){
+  const term=String(q||'').toLowerCase();
+  let data=allC.slice();
+  if(term){
+    data=data.filter(i=>((i.nome||'')+(i.codigo||'')+(i.municipio||'')+(i.localidade||'')+(i.cn||'')+(i.supervisor||'')+(i.status||'')).toLowerCase().includes(term));
+  }
+  return data;
+}
+function getContinuSidebarItems(q=''){
+  const term=String(q||'').toLowerCase();
+  const store=getInvStore();
+  const segs=[
+    ...officialSegmentos.map(seg=>{
+      const st=getSegmentOperationalState(seg);
+      return {
+        kind:'segmento_oficial',
+        id:seg.id,
+        label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+        sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m),'banco oficial'].filter(Boolean).join(' • '),
+        status:st.status||seg.status||'ativo',
+        cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+      };
+    }),
+    ...store.segmentos.map(seg=>{
+      const st=getSegmentOperationalState(seg);
+      return {
+        kind:'segmento',
+        id:seg.id,
+        label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
+        sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
+        status:st.status,
+        cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
+      };
+    })
+  ];
+  const rupts=[
+    ...store.rupturas.map(rp=>({
+      kind:'ruptura',
+      id:rp.id,
+      label:rp.cabo_segmento||'Ruptura local',
+      sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
+      status:rp._synced?'registrada':'rascunho',
+      cls:rp._synced?'tok':'twn'
+    })),
+    ...officialRupturas.map(rp=>({
+      kind:'ruptura_oficial',
+      id:rp.id,
+      label:rp.cabo_segmento||'Ruptura oficial',
+      sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`,'banco oficial'].filter(Boolean).join(' • '),
+      status:rp.status||'aberta',
+      cls:String(rp.status||'').toLowerCase().includes('fech')?'tok':'ter'
+    }))
+  ];
+  return [...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(term)&&matchesSidebarStatus(i.status));
+}
+function getAtivosSidebarItems(q=''){
+  const term=String(q||'').toLowerCase();
+  const store=getInvStore();
+  return [
+    ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+    ...officialCaixas.map(cx=>({kind:'caixa_oficial',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'ativo',flag:getFlagIndicatorHtml('caixa',cx.id)})),
+    ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)})),
+    ...officialDgos.map(dg=>({kind:'dgo_oficial',id:dg.id,label:dg.codigo||dg.nome||dg.site_codigo||'DGO',sub:[dg.site_codigo||dg.site_nome,dg.rack,dg.fila,dg.bastidor,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site_codigo||'')||{}).status||dg.status||'ativo',flag:getFlagIndicatorHtml('dgo',dg.id)}))
+  ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(term)&&matchesSidebarStatus(i.status));
+}
+function getSidebarFocusId(kind,id){
+  if(kind==='site')return `s-${id}`;
+  if(kind==='cabo')return `c-${id}`;
+  if(kind==='caixa')return `cx-${id}`;
+  if(kind==='caixa_oficial')return `cx-db-${id}`;
+  if(kind==='dgo')return `dg-${id}`;
+  if(kind==='dgo_oficial')return `dg-db-${id}`;
+  if(kind==='segmento')return `seg-${id}`;
+  if(kind==='segmento_oficial')return `seg-db-${id}`;
+  if(kind==='ruptura')return `rp-${id}`;
+  if(kind==='ruptura_oficial')return `rp-db-${id}`;
+  return `${kind}-${id}`;
+}
+function getSidebarStatusClass(status){
+  const s=String(status||'').toLowerCase();
+  if(!s)return 'tok';
+  if(s.includes('quebrado')||s.includes('sem continuidade')||s.includes('ruptura')||s.includes('aberta'))return 'ter';
+  if(s.includes('pend')||s.includes('montagem')||s.includes('rascunho')||s.includes('revisar'))return 'twn';
+  return 'tok';
+}
+function renderSidebarGroupHeader(groupKey,label,count,open,extraClass=''){
+  const cls=`gh click ${extraClass||''}`.trim();
+  return `<div class="${cls}" onclick="toggleSidebarGroupState('${escapeJs(groupKey)}')"><div class="ghl"><span class="gha">${open?'▾':'▸'}</span><span>${esc(label)}</span></div><span>${count}</span></div>`;
+}
+function renderSidebarRow({kind,id,label,sub='',status='',statusClass='',color='var(--bl)',line=false,flag='',checked=false,checkAction='',menuKind=kind,menuId=id,checkMode='mark'}){
+  const focusId=getSidebarFocusId(kind,id);
+  const rowClasses=['si'];
+  if(checkMode==='mark'&&checked)rowClasses.push('mk');
+  const checkStyle=`width:18px;height:18px;min-width:18px;border-color:${color};${checked?`background:${color};color:#04111d;`:''}`;
+  return `<div class="${rowClasses.join(' ')}" id="si-${escapeAttr(focusId)}" data-menu-kind="${escapeAttr(menuKind)}" data-menu-id="${escapeAttr(menuId)}" onclick="focI('${escapeJs(focusId)}')"><div class="lg-ck ${checked?'on':''}" onclick="event.stopPropagation();${checkAction}" style="${checkStyle}">${checked?'✓':''}</div><div class="sii ${line?'ln':''}" style="background:${color}${line?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag||''}<span>${esc(label)}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${status?`<span class="stg ${statusClass||getSidebarStatusClass(status)}">${esc(status)}</span>`:''}</div>`;
+}
 
 async function syncGraphRPC(){
   toast('Sincronizando grafos no banco...','in');
@@ -3318,8 +3612,8 @@ function collectAuditoriaRupturaIssues(caboRef){
 function renderSidebarFilters(){
   const el=$('sbflt');
   if(!el)return;
+  const q=$('si')?.value||'';
   if(sbMode==='sites'){
-    const q=$('si')?.value||'';
     const baseData=getFilteredSiteData(q);
     const total=baseData.length;
     const visiveis=baseData.filter(s=>isSiteVisible(s.id)).length;
@@ -3344,18 +3638,34 @@ function renderSidebarFilters(){
     el.classList.add('on');
     return;
   }
+  if(sbMode==='cabos'){
+    const data=getCabosSidebarData(q);
+    const marked=countSidebarMarks(data.map(c=>({kind:'cabo',id:c.id})));
+    el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">Cabos na lista <span style="color:var(--cy)">${marked}/${data.length} marcados</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="markCurrentSidebarItems(true)">Marcar</button><button class="overlay-chip" onclick="markCurrentSidebarItems(false)">Limpar</button></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="overlay-chip" onclick="expandCurrentSidebarGroups(true)">Expandir</button><button class="overlay-chip" onclick="expandCurrentSidebarGroups(false)">Recolher</button><span style="font-size:10px;color:var(--t3);font-weight:700;padding:6px 2px">Botão direito: ações do cabo</span></div>
+    </div>`;
+    el.classList.add('on');
+    return;
+  }
   if(sbMode!=='ativos'&&sbMode!=='continu'){
     el.classList.remove('on');
     el.innerHTML='';
     return;
   }
+  const items=sbMode==='ativos'?getAtivosSidebarItems($('si')?.value||''):getContinuSidebarItems($('si')?.value||'');
+  const marked=countSidebarMarks(items);
   const opts=[
     ['todos','Todos'],
     ['quebrado','Quebrados'],
     ['pendente','Pendentes'],
     ['confirmado','Confirmados'],
   ];
-  el.innerHTML=opts.map(([id,label])=>`<button class="overlay-chip ${sbStatusFilter===id?'on':''}" onclick="setSidebarStatusFilter('${id}')">${label}</button>`).join('');
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;width:100%">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;width:100%"><div style="font-size:10px;color:var(--t3);font-weight:800;letter-spacing:.08em;text-transform:uppercase">${sbMode==='ativos'?'Ativos operacionais':'Continuidade'} <span style="color:var(--cy)">${marked}/${items.length} marcados</span></div><div style="display:flex;gap:6px"><button class="overlay-chip" onclick="markCurrentSidebarItems(true)">Marcar</button><button class="overlay-chip" onclick="markCurrentSidebarItems(false)">Limpar</button></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${opts.map(([id,label])=>`<button class="overlay-chip ${sbStatusFilter===id?'on':''}" onclick="setSidebarStatusFilter('${id}')">${label}</button>`).join('')}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="overlay-chip" onclick="expandCurrentSidebarGroups(true)">Expandir</button><button class="overlay-chip" onclick="expandCurrentSidebarGroups(false)">Recolher</button><span style="font-size:10px;color:var(--t3);font-weight:700;padding:6px 2px">Botão direito: editar ou detalhar</span></div>
+  </div>`;
   el.classList.add('on');
 }
 function setSidebarStatusFilter(next){
@@ -3870,98 +4180,72 @@ function renderSB(q=''){
 function renderSBv2(q=''){
   const el=$('sbl');q=(q||'').toLowerCase();
   if(sbMode==='continu'){
-    const store=getInvStore();
-    const segs=[
-      ...officialSegmentos.map(seg=>{
-        const st=getSegmentOperationalState(seg);
-        return {
-          kind:'segmento_oficial',
-          id:seg.id,
-          label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
-          sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m),'banco oficial'].filter(Boolean).join(' • '),
-          status:st.status||seg.status||'ativo',
-          cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
-        };
-      }),
-      ...store.segmentos.map(seg=>{
-        const st=getSegmentOperationalState(seg);
-        return {
-          kind:'segmento',
-          id:seg.id,
-          label:seg.cabo||`Segmento ${String(seg.id).slice(0,8)}`,
-          sub:[seg.ponto_a&&`A ${seg.ponto_a}`,seg.ponto_b&&`B ${seg.ponto_b}`,seg.tipo_lancamento,km(seg.metragem_m)].filter(Boolean).join(' • '),
-          status:st.status,
-          cls:st.status&&String(st.status).toLowerCase().includes('quebrado')?'ter':st.status&&String(st.status).toLowerCase().includes('pend')?'twn':st.status&&String(st.status).toLowerCase().includes('sem')?'ter':'tok'
-        };
-      })
-    ];
-    const rupts=[
-      ...store.rupturas.map(rp=>({
-        kind:'ruptura',
-        id:rp.id,
-        label:rp.cabo_segmento||'Ruptura local',
-        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`].filter(Boolean).join(' • '),
-        status:rp._synced?'registrada':'rascunho',
-        cls:rp._synced?'tok':'twn'
-      })),
-      ...officialRupturas.map(rp=>({
-        kind:'ruptura_oficial',
-        id:rp.id,
-        label:rp.cabo_segmento||'Ruptura oficial',
-        sub:[rp.distancia_otdr_m?`OTDR ${km(rp.distancia_otdr_m)}`:'OTDR n/i',rp.metragem_lancada_m?`lançado ${km(rp.metragem_lancada_m)}`:'sem lançamento',rp.nova_caixa&&`caixa ${rp.nova_caixa}`,'banco oficial'].filter(Boolean).join(' • '),
-        status:rp.status||'aberta',
-        cls:String(rp.status||'').toLowerCase().includes('fech')?'tok':'ter'
-      }))
-    ];
-    const items=[...segs,...rupts].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
+    const items=getContinuSidebarItems(q);
     if(!items.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhuma continuidade operacional</div>';return;}
     let h='';
     const groups=[
-      ['segmento_oficial','Segmentos oficiais','#64d8ff'],
-      ['segmento','Segmentos físicos','#22d3ee'],
-      ['ruptura','Rupturas / reparos','#e84455'],
-      ['ruptura_oficial','Rupturas oficiais','#ff7a8c']
+      ['continu:segmento_oficial','segmento_oficial','Segmentos oficiais','#64d8ff',true],
+      ['continu:segmento','segmento','Segmentos físicos','#22d3ee',true],
+      ['continu:ruptura','ruptura','Rupturas / reparos','#e84455',false],
+      ['continu:ruptura_oficial','ruptura_oficial','Rupturas oficiais','#ff7a8c',false]
     ];
-    groups.forEach(([kind,label,color])=>{
+    groups.forEach(([groupKey,kind,label,color,lineKind])=>{
       const arr=items.filter(i=>i.kind===kind).sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'));
       if(!arr.length)return;
-      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      const open=isSidebarGroupOpen(groupKey,true);
+      h+=renderSidebarGroupHeader(groupKey,label,arr.length,open);
+      if(!open)return;
       arr.forEach(i=>{
-        const id=kind==='segmento'?`seg-${i.id}`:(kind==='segmento_oficial'?`seg-db-${i.id}`:(kind==='ruptura_oficial'?`rp-db-${i.id}`:`rp-${i.id}`));
-        const lineKind=kind==='segmento'||kind==='segmento_oficial';
-        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii ${lineKind?'ln':''}" style="background:${color}${lineKind?';height:3px;border-radius:2px':''}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(i.label)}</div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${i.cls}">${esc(i.status||'ativo')}</span></div>`;
+        h+=renderSidebarRow({
+          kind:i.kind,
+          id:i.id,
+          label:i.label,
+          sub:i.sub,
+          status:i.status||'ativo',
+          statusClass:i.cls||getSidebarStatusClass(i.status),
+          color,
+          line:lineKind,
+          checked:isSidebarMarked(i.kind,i.id),
+          checkAction:`toggleSidebarMark('${i.kind}','${escapeJs(i.id)}')`
+        });
       });
     });
     el.innerHTML=h;
+    bindSidebarItemMenus();
     return;
   }
   if(sbMode==='ativos'){
-    const store=getInvStore();
-    const ativos=[
-      ...store.caixas.map(cx=>({kind:'caixa',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'rascunho',flag:getFlagIndicatorHtml('caixa',cx.id)})),
-      ...officialCaixas.map(cx=>({kind:'caixa_oficial',id:cx.id,label:cx.codigo||cx.nome||'Caixa',sub:[cx.nome,cx.tipo_instalacao,cx.modelo,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(cx.codigo||cx.nome||'')||{}).status||cx.status||'ativo',flag:getFlagIndicatorHtml('caixa',cx.id)})),
-      ...store.dgos.map(dg=>({kind:'dgo',id:dg.id,label:dg.codigo||dg.nome||dg.site||'DGO',sub:[dg.site,dg.rack,dg.fila,dg.bastidor].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site||'')||{}).status||dg.status||'rascunho',flag:getFlagIndicatorHtml('dgo',dg.id)})),
-      ...officialDgos.map(dg=>({kind:'dgo_oficial',id:dg.id,label:dg.codigo||dg.nome||dg.site_codigo||'DGO',sub:[dg.site_codigo||dg.site_nome,dg.rack,dg.fila,dg.bastidor,'banco oficial'].filter(Boolean).join(' • '),status:(getPointOperationalState(dg.codigo||dg.nome||dg.site_codigo||'')||{}).status||dg.status||'ativo',flag:getFlagIndicatorHtml('dgo',dg.id)}))
-    ].filter(i=>((i.label||'')+(i.sub||'')+(i.status||'')).toLowerCase().includes(q)&&matchesSidebarStatus(i.status));
+    const ativos=getAtivosSidebarItems(q);
     if(!ativos.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum ativo operacional</div>';return;}
     const groups={
       caixas:ativos.filter(a=>a.kind==='caixa'||a.kind==='caixa_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR')),
       dgos:ativos.filter(a=>a.kind==='dgo'||a.kind==='dgo_oficial').sort((a,b)=>String(a.label).localeCompare(String(b.label),'pt-BR'))
     };
     let h='';
-    const groupDefs=[['caixas','Caixas / emendas'],['dgos','DGOs']];
-    groupDefs.forEach(([key,label])=>{
+    const groupDefs=[['ativos:caixas','caixas','Caixas / emendas','#3ecf8e'],['ativos:dgos','dgos','DGOs','#7c93ff']];
+    groupDefs.forEach(([groupKey,key,label,tone])=>{
       const arr=groups[key];
       if(!arr.length)return;
-      h+=`<div class="gh"><span>${label}</span><span>${arr.length}</span></div>`;
+      const open=isSidebarGroupOpen(groupKey,true);
+      h+=renderSidebarGroupHeader(groupKey,label,arr.length,open);
+      if(!open)return;
       arr.forEach(i=>{
-        const tone=i.kind==='caixa'||i.kind==='caixa_oficial'?'#3ecf8e':'#7c93ff';
-        const id=i.kind==='caixa_oficial'?`cx-db-${i.id}`:(i.kind==='dgo_oficial'?`dg-db-${i.id}`:`${i.kind==='caixa'?'cx':'dg'}-${i.id}`);
-        const cls=i.status&&String(i.status).toLowerCase().includes('quebrado')?'ter':i.status&&String(i.status).toLowerCase().includes('pend')?'twn':'tok';
-        h+=`<div class="si" id="si-${id}" onclick="focI('${id}')"><div class="sii" style="background:${tone}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${i.flag}<span>${esc(i.label)}</span></div>${i.sub?`<div class="sis">${esc(i.sub)}</div>`:''}</div><span class="stg ${cls}">${esc(i.status||'ativo')}</span></div>`;
+        h+=renderSidebarRow({
+          kind:i.kind,
+          id:i.id,
+          label:i.label,
+          sub:i.sub,
+          status:i.status||'ativo',
+          statusClass:getSidebarStatusClass(i.status),
+          color:tone,
+          flag:i.flag||'',
+          checked:isSidebarMarked(i.kind,i.id),
+          checkAction:`toggleSidebarMark('${i.kind}','${escapeJs(i.id)}')`
+        });
       });
     });
     el.innerHTML=h;
+    bindSidebarItemMenus();
     return;
   }
   let data=sbMode==='cabos'?allC:getFilteredSiteData(q);
@@ -3997,39 +4281,75 @@ function renderSBv2(q=''){
             const sub=i.supervisor?`Resp. ${i.supervisor}`:fonteLabel;
             const flag=getFlagIndicatorHtml('site',i.id);
             const vis=isSiteVisible(i.id);
-            h+=`<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="lg-ck ${vis?'on':''}" onclick="event.stopPropagation();toggleSiteVisible('${String(i.id).replace(/'/g,"\\'")}')" style="width:18px;height:18px;min-width:18px;border-color:${cor};${vis?'background:'+cor:''}">${vis?'✓':''}</div><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+            h+=renderSidebarRow({
+              kind:'site',
+              id:i.id,
+              label:codeFirstLabel(i),
+              sub,
+              status:i.status||'',
+              statusClass:TC(i.status),
+              color:cor,
+              flag,
+              checked:vis,
+              checkMode:'visibility',
+              checkAction:`toggleSiteVisible('${escapeJs(i.id)}')`
+            });
           });
           if(arr.length>120)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-120} refine a busca nesta localidade</div>`;
         });
       });
       el.innerHTML=h||'<div style="padding:20px;text-align:center;color:var(--t3);font-size:11px">Nenhum site agrupado</div>';
+      bindSidebarItemMenus();
       return;
     }catch(err){
       console.error('renderSB sites falhou',err);
       const fallback=data.slice(0,200).map(i=>{
         const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
         const sub=[getSiteQuickCn(i)!=='Sem CN'&&`CN ${getSiteQuickCn(i)}`,getSiteQuickLoc(i),i.supervisor&&`Resp. ${i.supervisor}`].filter(Boolean).join(' • ');
-        return `<div class="si" id="si-s-${i.id}" onclick="focI('s-${i.id}')"><div class="sii" style="background:${cor}"></div><div style="flex:1;min-width:0"><div class="sin">${esc(codeFirstLabel(i))}</div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div></div>`;
+        return renderSidebarRow({
+          kind:'site',
+          id:i.id,
+          label:codeFirstLabel(i),
+          sub,
+          color:cor,
+          checked:isSiteVisible(i.id),
+          checkMode:'visibility',
+          checkAction:`toggleSiteVisible('${escapeJs(i.id)}')`
+        });
       }).join('');
       el.innerHTML=`<div style="padding:8px 10px;font-size:10px;color:var(--am);font-weight:800">Agrupamento CN/localidade falhou. Exibindo lista simples.</div>${fallback}`;
+      bindSidebarItemMenus();
       return;
     }
   }
   const G={};data.forEach(i=>{const g=(i.camada||'outros').toUpperCase();if(!G[g])G[g]=[];G[g].push(i);});
   let h='';
   Object.entries(G).sort().forEach(([g,arr])=>{
-    h+=`<div class="gh"><span>${g}</span><span>${arr.length}</span></div>`;
-    arr.slice(0,80).forEach(i=>{
+    const groupKey=`cabos:${g}`;
+    const open=isSidebarGroupOpen(groupKey,true);
+    h+=renderSidebarGroupHeader(groupKey,g,arr.length,open);
+    if(!open)return;
+    arr.forEach(i=>{
       const cv=camVis(i.camada,i.tipo);const cor=COR[cv]||COR.outros;
-      const ic=sbMode==='cabos'?`<div class="sii ln" style="background:${CABO[i.tipo]||cor}"></div>`:`<div class="sii" style="background:${cor}"></div>`;
-      const sub=i.municipio||km(i.comprimento)||'';
-      const id=sbMode==='cabos'?'c-'+i.id:'s-'+i.id;
-      const flag=sbMode==='cabos'?getFlagIndicatorHtml('cabo',i.id):getFlagIndicatorHtml('site',i.id);
-      h+=`<div class="si" id="si-${id}" onclick="focI('${id}')">${ic}<div style="flex:1;min-width:0"><div class="sin" style="display:flex;align-items:center;gap:6px">${flag}<span>${esc(codeFirstLabel(i))}</span></div>${sub?`<div class="sis">${esc(sub)}</div>`:''}</div>${i.status?`<span class="stg ${TC(i.status)}">${i.status}</span>`:''}</div>`;
+      const lineColor=CABO[i.tipo]||cor;
+      const sub=[i.tipo,km(i.comprimento),i.municipio].filter(Boolean).join(' • ');
+      h+=renderSidebarRow({
+        kind:'cabo',
+        id:i.id,
+        label:codeFirstLabel(i),
+        sub,
+        status:i.status||'',
+        statusClass:TC(i.status),
+        color:lineColor,
+        line:true,
+        flag:getFlagIndicatorHtml('cabo',i.id),
+        checked:isSidebarMarked('cabo',i.id),
+        checkAction:`toggleSidebarMark('cabo','${escapeJs(i.id)}')`
+      });
     });
-    if(arr.length>80)h+=`<div style="padding:3px 9px;font-size:9px;color:var(--t3)">+${arr.length-80} refine a busca</div>`;
   });
   el.innerHTML=h;
+  bindSidebarItemMenus();
 }
 renderSB=renderSBv2;
 function focI(id){document.querySelectorAll('.si').forEach(e=>e.classList.remove('on'));const el=$('si-'+id);if(el){el.classList.add('on');el.scrollIntoView({block:'nearest',behavior:'smooth'});}if(id?.startsWith('c-'))highlightCable(id.slice(2));else resetCableSelection();if(fmap[id])fmap[id]();closeSB();}
