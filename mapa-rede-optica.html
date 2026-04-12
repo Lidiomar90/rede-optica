@@ -735,11 +735,11 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
   <div id="maphead">
       <div class="mhk">Mapa</div>
       <div class="mht">Rede e falhas</div>
-      <div class="mhs" id="mapsub">Filtre e aja direto no mapa.</div>
+      <div class="mhs" id="mapsub">Filtre, edite e importe DWG/KMZ direto no mapa.</div>
       <div class="mmeta">
         <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
         <button class="mchip" id="map-focus-chip" onclick="toggleMapFocus()">▣ Foco mapa</button>
-        <button class="mchip" onclick="openFileInteropHub()">🗂 Arquivos</button>
+        <button class="mchip" onclick="openFileInteropHub()">🗂 DWG/KMZ</button>
       </div>
     </div>
     <div id="map"></div>
@@ -763,6 +763,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
       <button class="fbtn" data-role="field-mode" onclick="toggleFieldMode()"><span class="fi">🛠</span><span class="ft">Campo</span></button>
       <button class="fbtn" data-role="map-focus" onclick="toggleMapFocus()"><span class="fi">▣</span><span class="ft">Foco</span></button>
       <button class="fbtn" onclick="openMobileSearch()"><span class="fi">🔎</span><span class="ft">Busca</span></button>
+      <button class="fbtn" onclick="openFileInteropHub()"><span class="fi">🗂</span><span class="ft">DWG/KMZ</span></button>
       <button class="fbtn" onclick="toggleSB()"><span class="fi">☰</span><span class="ft">Camadas</span></button>
       <button class="fbtn" onclick="goLoc()"><span class="fi">📍</span><span class="ft">GPS</span></button>
       <button class="fbtn" onclick="novaCaixaNoCentro()"><span class="fi">🧰</span><span class="ft">Caixa</span></button>
@@ -773,6 +774,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
       <div style="position:relative"><button class="mb" id="mt-toggle" onclick="toggleMobileTools()">⋯<div class="tip">Mais ferramentas</div></button></div>
       <div style="position:relative"><button class="mb" onclick="goLoc()">📍<div class="tip">Minha localização</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" onclick="openMobileSearch()">🔎<div class="tip">Buscar ativo</div></button></div>
+      <div style="position:relative"><button class="mb mb-extra" onclick="openFileInteropHub()">🗂<div class="tip">Importar/exportar DWG e KMZ</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bfocus" onclick="toggleMapFocus()">▣<div class="tip">Foco no mapa</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bed" onclick="toggleEdit()">✏<div class="tip">Criar site aqui</div></button></div>
       <div style="position:relative"><button class="mb mb-extra" id="bcx" onclick="toggleCaixaMap()">🧰<div class="tip">Criar caixa no mapa</div></button></div>
