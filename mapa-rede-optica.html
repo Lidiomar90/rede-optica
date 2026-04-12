@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link rel="stylesheet" href="styles/operational-enterprise.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#07111f;--bg2:#0e1a2b;--bg3:#132239;--bg4:#1b2c46;--bd:#1f3552;--bd2:#2d4970;--t:#e7f0ff;--t2:#9eb2d2;--t3:#647a9c;--gr:#45d08c;--bl:#48a8ff;--am:#ffb648;--rd:#ff5a68;--pu:#8d6bff;--cy:#2fd4cf;--ink:#06101c;--glass:rgba(14,26,43,.84);--mobile-bottom-offset:0px;--mobile-safe-bottom:env(safe-area-inset-bottom,0px)}
@@ -450,6 +452,11 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
       <h1>Rede Óptica MG</h1>
       <p>Sistema de cadastro e inventário</p>
     </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:-4px 0 18px">
+      <span class="sbpill ok">Operação crítica</span>
+      <span class="sbpill info">Inventário vivo</span>
+      <span class="sbpill warn">Sincronização assistida</span>
+    </div>
     <div class="lf"><label>E-mail</label><input id="le" type="email" placeholder="seu@redeop.com.br" autocomplete="email"></div>
     <div class="lf"><label>Senha</label>
       <div class="pw-wrap">
@@ -554,9 +561,12 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
       <div class="mmeta">
         <button class="mchip" id="field-mode-chip" onclick="toggleFieldMode()">🛠 Modo campo</button>
         <button class="mchip" id="map-focus-chip" onclick="toggleMapFocus()">▣ Foco mapa</button>
+        <button class="mchip" onclick="openFileInteropHub()">🗂 Arquivos</button>
       </div>
     </div>
     <div id="map"></div>
+    <input id="geo-file-input" type="file" accept=".kml,.kmz" style="display:none" onchange="handleGeoImport(event)">
+    <input id="dwg-file-input" type="file" accept=".dwg" style="display:none" onchange="handleDwgImport(event)">
     <button id="mobb" class="mb" onclick="toggleSB()">☰</button>
     <div id="net-indicator"></div>
     <div id="cache-ts"></div>
@@ -835,6 +845,7 @@ linear-gradient(180deg,rgba(255,255,255,.025),transparent);display:flex;flex-dir
         <button class="tb" onclick="abrirEsteiraTelegram()">💬 Validar Telegram</button>
         <button class="tb g" onclick="publicarTelegramAprovadosStaging()">📤 Publicar Telegram</button>
         <button class="tb" onclick="abrirFilaAuditoria()">📋 Esteira</button>
+        <button class="tb b" onclick="abrirStatus7Grupos()">📊 Status 7 Grupos</button>
       </div>
     </div>
     <div id="sec-sigitm" style="display:none;margin-bottom:20px;background:rgba(77,166,255,0.05);border:1px solid rgba(77,166,255,0.2);border-radius:12px;padding:16px">
@@ -1432,6 +1443,7 @@ function aplicarTema(){
 const COR={backbone:'#f0a500',metro_alta:'#f97316',metro_dist:'#4da6ff',acesso:'#3ecf8e',b2b:'#a855f7',ERB:'#f43f5e',caixa:'#22d3ee',outros:'#6b7090'};
 const CABO={backbone:'#f0a500',distribuicao:'#4da6ff',drop:'#3ecf8e',interligacao:'#a855f7'};
 let map,allS=[],allC=[],allR=[],scienceSites=[],officialCaixas=[],officialDgos=[],officialSegmentos=[],officialRupturas=[],sbMode='camadas',sbStatusFilter='todos',fmap={};
+let fileImportLayer=null,importedGeoFeatures=[],importedGeoSources=[],lastDwgUploadMeta=null;
 let globalSearchActions={};
 let sidebarSearchTimer=null;
 let sidebarSearchToken=0;
@@ -1483,6 +1495,7 @@ const OVERLAY_CFG=[
   {id:'ov_draft',label:'Rascunhos',vis:true},
   {id:'ov_suggest',label:'Sugestões',vis:false},
   {id:'ov_pending',label:'Pendências',warn:true,vis:true},
+  {id:'ov_import',label:'Importados',vis:true},
 ];
 const OVIS={};
 OVERLAY_CFG.forEach(o=>OVIS[o.id]=o.vis);
@@ -2160,9 +2173,10 @@ function mkCaboMenu(c,p2,lenCalc){
     subtitle:`${esc(c.tipo||'—')} | ${km(c.comprimento||lenCalc)}<br>${esc(c.status||'—')}`,
     actions:[
       {label:'📋 Ver detalhes',action:()=>showPanCabo(c,p2,lenCalc)},
+      {label:'🧬 Diagrama operacional',primary:true,action:()=>abrirDiagramaOperacional('cabo',c.id)},
       {label:flagged?'🚩 Editar flag':'🚩 Marcar cabo',action:()=>openFlagEditor('cabo',c.id)},
       {label:'✏️ Editar cabo',action:()=>editarCabo(c.id)},
-      {label:'🧭 Redesenhar no mapa',primary:true,action:()=>redesenharCaboOficial(c.id)},
+      {label:'🧭 Redesenhar no mapa',action:()=>redesenharCaboOficial(c.id)},
       {label:'🚨 Nova ruptura',warn:true,action:()=>abrirNovaRupturaContextual(c,latlng.lat,latlng.lng)},
       {label:'📋 Copiar coordenadas',action:()=>copiarCoordenadasAt(latlng.lat,latlng.lng)},
     ]
@@ -2621,11 +2635,13 @@ function initMapObj(){
   draftInvLayer=L.layerGroup();
   suggestLayer=L.layerGroup();
   pendingLayer=L.layerGroup();
+  fileImportLayer=L.layerGroup();
   flagLayer=L.layerGroup().addTo(map);
   if(OVIS.ov_romp)rompLayer.addTo(map);
   if(OVIS.ov_draft)draftInvLayer.addTo(map);
   if(OVIS.ov_suggest)suggestLayer.addTo(map);
   if(OVIS.ov_pending)pendingLayer.addTo(map);
+  if(OVIS.ov_import)fileImportLayer.addTo(map);
   map.on('click',()=>hideContextMenu());
   map.on('contextmenu',ev=>openContextMenu(ev));
   const mapEl=map.getContainer();
@@ -2933,7 +2949,7 @@ function applyVis(){
     if(vis&&!map.hasLayer(lyr))lyr.addTo(map);
     else if(!vis&&map.hasLayer(lyr))map.removeLayer(lyr);
   });
-  const overlayMap={ov_romp:rompLayer,ov_draft:draftInvLayer,ov_suggest:suggestLayer,ov_pending:pendingLayer};
+  const overlayMap={ov_romp:rompLayer,ov_draft:draftInvLayer,ov_suggest:suggestLayer,ov_pending:pendingLayer,ov_import:fileImportLayer};
   Object.entries(overlayMap).forEach(([id,lyr])=>{
     if(!lyr)return;
     const vis=OVIS[id]!==false;
@@ -4177,6 +4193,7 @@ function showPanCabo(c,pts,lenCalc){
     c.observacao&&['Obs',c.observacao.substring(0,200)],
   ],[
     {l:caboFlag?'🚩 Editar flag':'🚩 Marcar',c:caboFlag?'a':'b',fn:`openFlagEditor('cabo','${String(c.id).replace(/'/g,"\\'")}')`},
+    {l:'🧬 Diagrama',c:'b',fn:`abrirDiagramaOperacional('cabo','${String(c.id).replace(/'/g,"\\'")}')`},
     sessao.perfil!=='leitura'&&{l:'✏ Editar',c:'g',fn:`editarCabo('${c.id}')`},
     {l:'📡 OTDR',c:'a',fn:`abrirOTDR('${c.id}','${esc(c.nome||'').replace(/'/g,"\\'")}',${c.comprimento||0})`},
     sessao.perfil==='admin'&&{l:'🗑 Excluir',c:'r',fn:`del('cabos','${c.id}')`},
@@ -4205,6 +4222,551 @@ function showPan(t,rows,acts){
   $('pan').style.display='block';
 }
 function closePan(){$('pan').style.display='none';}
+
+function openFileInteropHub(){
+  const exportable=collectExportFeatures();
+  const dwgStatus = !lastDwgUploadMeta
+    ? 'envio para stage via API local'
+    : [
+        lastDwgUploadMeta.file_name,
+        lastDwgUploadMeta.size_bytes ? `${lastDwgUploadMeta.size_bytes.toLocaleString('pt-BR')} bytes` : '',
+        lastDwgUploadMeta.conversion?.ok
+          ? `convertido (${lastDwgUploadMeta.conversion.feature_count||0} feição(ões))`
+          : (lastDwgUploadMeta.conversion?.error || lastDwgUploadMeta.processing_status || 'armazenado em stage')
+      ].filter(Boolean).join(' • ');
+  const rows=[
+    ['KMZ/KML importados', importedGeoSources.length?`${importedGeoSources.length} arquivo(s) • ${importedGeoFeatures.length} feição(ões)`:'nenhum'],
+    ['Exportação pronta', exportable.features.length?`${exportable.features.length} feição(ões) visíveis`:'sem dados visíveis'],
+    ['DWG', dwgStatus],
+  ];
+  const acts=[
+    {l:'📥 KMZ/KML',fn:'openGeoImportInput()',c:'b'},
+    {l:'🏗 DWG',fn:'openDwgImportInput()'},
+    {l:'📤 KML',fn:'exportVisibleMapAsKml()'},
+    {l:'🗜 KMZ',fn:'exportVisibleMapAsKmz()',c:'g'},
+  ];
+  if(lastDwgUploadMeta?.conversion?.geojson_url){
+    acts.push({l:'🛰 Carregar DWG',fn:'loadLastDwgGeoJson()'});
+  }
+  if(lastDwgUploadMeta?.conversion?.dxf_url){
+    acts.push({l:'📦 Baixar DXF',fn:'downloadLastDwgDxf()'});
+  }
+  if(importedGeoFeatures.length){
+    acts.push({l:'🧹 Limpar importados',fn:'clearImportedGeoFiles()',c:'r'});
+  }
+  showPan('Arquivos geoespaciais',rows,acts);
+}
+function openGeoImportInput(){
+  const input=$('geo-file-input');
+  if(!input)return;
+  input.value='';
+  input.click();
+}
+function openDwgImportInput(){
+  const input=$('dwg-file-input');
+  if(!input)return;
+  input.value='';
+  input.click();
+}
+async function handleGeoImport(event){
+  const file=event?.target?.files?.[0];
+  if(event?.target)event.target.value='';
+  if(!file)return;
+  try{
+    const lower=String(file.name||'').toLowerCase();
+    if(lower.endsWith('.kmz')) return await importKmzFile(file);
+    if(lower.endsWith('.kml')) return await importKmlFile(file);
+    toast('Use um arquivo KML ou KMZ.','wn');
+  }catch(err){
+    console.error('Falha ao importar KML/KMZ',err);
+    toast(`Falha ao importar arquivo: ${err.message||err}`,'er');
+  }
+}
+async function handleDwgImport(event){
+  const file=event?.target?.files?.[0];
+  if(event?.target)event.target.value='';
+  if(!file)return;
+  try{
+    await uploadDwgToLocalStage(file);
+  }catch(err){
+    console.error('Falha ao enviar DWG',err);
+    toast(`Falha ao enviar DWG: ${err.message||err}`,'er');
+  }
+}
+async function importKmlFile(file){
+  toast(`Importando ${file.name}...`,'in');
+  const text=await file.text();
+  const featureCollection=parseKmlText(text,file.name);
+  registerImportedFeatureCollection(featureCollection,{name:file.name,format:'kml'});
+}
+async function importKmzFile(file){
+  if(typeof window.JSZip==='undefined'){
+    throw new Error('JSZip indisponível. O KMZ depende dessa biblioteca.');
+  }
+  toast(`Importando ${file.name}...`,'in');
+  const zip=await window.JSZip.loadAsync(await file.arrayBuffer());
+  const entry=Object.values(zip.files).find(item=>!item.dir&&/\.kml$/i.test(item.name));
+  if(!entry){
+    throw new Error('KMZ sem arquivo KML interno.');
+  }
+  const text=await entry.async('string');
+  const featureCollection=parseKmlText(text,file.name);
+  registerImportedFeatureCollection(featureCollection,{name:file.name,format:'kmz'});
+}
+function parseKmlText(kmlText,sourceName='arquivo.kml'){
+  const xml=new DOMParser().parseFromString(kmlText,'application/xml');
+  if(xml.querySelector('parsererror')){
+    throw new Error(`KML inválido em ${sourceName}.`);
+  }
+  const placemarks=Array.from(xml.getElementsByTagNameNS('*','Placemark'));
+  const features=[];
+  placemarks.forEach((placemark,index)=>{
+    const baseProps={
+      name:getKmlText(placemark,'name')||`Feição ${index+1}`,
+      description:getKmlText(placemark,'description'),
+      import_source:sourceName
+    };
+    getKmlGeometryNodes(placemark).forEach(node=>{
+      const geometry=kmlGeometryNodeToGeoJson(node);
+      if(geometry){
+        features.push({type:'Feature',properties:{...baseProps,geometry_type:geometry.type},geometry});
+      }
+    });
+  });
+  if(!features.length){
+    throw new Error('Nenhuma geometria suportada foi encontrada no arquivo.');
+  }
+  return {type:'FeatureCollection',features};
+}
+function getKmlText(root,tagName){
+  const node=root.getElementsByTagNameNS('*',tagName)?.[0];
+  return node?.textContent?.trim?.()||'';
+}
+function getKmlGeometryNodes(placemark){
+  return Array.from(placemark.children||[]).filter(node=>{
+    const local=String(node.localName||'');
+    return ['Point','LineString','Polygon','MultiGeometry'].includes(local);
+  });
+}
+function parseKmlCoordinates(raw){
+  return String(raw||'')
+    .trim()
+    .split(/\s+/)
+    .map(chunk=>chunk.split(',').map(Number))
+    .filter(parts=>parts.length>=2&&Number.isFinite(parts[0])&&Number.isFinite(parts[1]))
+    .map(parts=>[Number(parts[0]),Number(parts[1]),Number.isFinite(parts[2])?Number(parts[2]):0]);
+}
+function kmlGeometryNodeToGeoJson(node){
+  if(!node)return null;
+  const local=String(node.localName||'');
+  if(local==='MultiGeometry'){
+    const geometries=Array.from(node.children||[])
+      .map(child=>kmlGeometryNodeToGeoJson(child))
+      .filter(Boolean);
+    if(!geometries.length)return null;
+    if(geometries.length===1)return geometries[0];
+    return {type:'GeometryCollection',geometries};
+  }
+  if(local==='Point'){
+    const coords=parseKmlCoordinates(getKmlText(node,'coordinates'));
+    if(!coords.length)return null;
+    return {type:'Point',coordinates:[coords[0][0],coords[0][1]]};
+  }
+  if(local==='LineString'){
+    const coords=parseKmlCoordinates(getKmlText(node,'coordinates')).map(([lon,lat])=>[lon,lat]);
+    if(coords.length<2)return null;
+    return {type:'LineString',coordinates:coords};
+  }
+  if(local==='Polygon'){
+    const rings=Array.from(node.getElementsByTagNameNS('*','LinearRing'))
+      .map(ring=>parseKmlCoordinates(getKmlText(ring,'coordinates')).map(([lon,lat])=>[lon,lat]))
+      .filter(coords=>coords.length>=4);
+    if(!rings.length)return null;
+    return {type:'Polygon',coordinates:rings};
+  }
+  return null;
+}
+function registerImportedFeatureCollection(featureCollection,meta){
+  const importedAt=new Date().toISOString();
+  importedGeoSources.push({
+    name:meta?.name||'arquivo',
+    format:meta?.format||'kml',
+    imported_at:importedAt,
+    features:featureCollection.features.length
+  });
+  const tagged=featureCollection.features.map(feature=>({
+    ...feature,
+    properties:{
+      ...(feature.properties||{}),
+      import_source:meta?.name||'arquivo',
+      import_format:meta?.format||'kml',
+      imported_at:importedAt
+    }
+  }));
+  importedGeoFeatures=importedGeoFeatures.concat(tagged);
+  redrawImportedGeoLayer();
+  if(OVIS.ov_import===false){
+    OVIS.ov_import=true;
+    renderOverlayRow();
+  }
+  const bounds=fileImportLayer?.getBounds?.();
+  if(bounds?.isValid?.()){
+    map.fitBounds(bounds,{padding:[36,36],maxZoom:16});
+  }
+  toast(`Arquivo importado: ${meta?.name||'KML/KMZ'} (${featureCollection.features.length} feição(ões)).`,'ok');
+  openFileInteropHub();
+}
+function redrawImportedGeoLayer(){
+  if(!fileImportLayer)return;
+  fileImportLayer.clearLayers();
+  if(!importedGeoFeatures.length)return;
+  const importedLayer=L.geoJSON({type:'FeatureCollection',features:importedGeoFeatures},{
+    pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{
+      radius:6,
+      color:'#ffb648',
+      fillColor:'#ffe2a3',
+      fillOpacity:0.88,
+      weight:2
+    }),
+    style:feature=>{
+      const type=feature?.geometry?.type||'';
+      if(type==='Polygon'||type==='MultiPolygon'){
+        return {color:'#2fd4cf',weight:2,opacity:0.95,fillColor:'#2fd4cf',fillOpacity:0.14};
+      }
+      return {color:'#ffb648',weight:3,opacity:0.94};
+    },
+    onEachFeature:(feature,layer)=>{
+      const props=feature.properties||{};
+      const title=props.name||props.import_source||'Feição importada';
+      const details=[props.geometry_type,props.import_source].filter(Boolean).join(' • ');
+      layer.bindPopup(`<b>${esc(title)}</b>${details?`<br>${esc(details)}`:''}`);
+      layer.on('click',()=>showImportedFeaturePan(feature));
+    }
+  });
+  importedLayer.eachLayer(layer=>fileImportLayer.addLayer(layer));
+  applyVis();
+}
+function showImportedFeaturePan(feature){
+  const props=feature?.properties||{};
+  const geom=feature?.geometry?.type||'—';
+  showPan('Feição importada',[
+    ['Nome',props.name||'Feição importada'],
+    ['Tipo',geom],
+    ['Origem',props.import_source||'arquivo externo'],
+    ['Descrição',props.description||'sem descrição']
+  ],[
+    {l:'🗂 Arquivos',fn:'openFileInteropHub()',c:'b'}
+  ]);
+}
+function clearImportedGeoFiles(){
+  importedGeoFeatures=[];
+  importedGeoSources=[];
+  if(fileImportLayer)fileImportLayer.clearLayers();
+  closePan();
+  toast('Camada importada limpa do mapa.','ok');
+}
+function flattenGeometryCoords(node,bag=[]){
+  if(!node)return bag;
+  if(Array.isArray(node)){
+    if(node.length>=2&&Number.isFinite(Number(node[0]))&&Number.isFinite(Number(node[1]))){
+      bag.push([Number(node[0]),Number(node[1])]);
+      return bag;
+    }
+    node.forEach(item=>flattenGeometryCoords(item,bag));
+  }
+  return bag;
+}
+function featureTouchesMapBounds(feature,bounds){
+  if(!feature?.geometry||!bounds)return true;
+  if(feature.geometry.type==='GeometryCollection'){
+    return (feature.geometry.geometries||[]).some(geometry=>featureTouchesMapBounds({geometry},bounds));
+  }
+  const coords=flattenGeometryCoords(feature.geometry.coordinates,[]);
+  return coords.some(([lon,lat])=>bounds.contains(L.latLng(lat,lon)));
+}
+function makePointFeature(lat,lng,properties){
+  if(!Number.isFinite(Number(lat))||!Number.isFinite(Number(lng)))return null;
+  return {
+    type:'Feature',
+    properties:{...(properties||{})},
+    geometry:{type:'Point',coordinates:[Number(lng),Number(lat)]}
+  };
+}
+function makeLineFeature(points,properties){
+  if(!Array.isArray(points)||points.length<2)return null;
+  const coordinates=points
+    .map(point=>Array.isArray(point)&&point.length>=2?[Number(point[1]),Number(point[0])]:null)
+    .filter(point=>point&&Number.isFinite(point[0])&&Number.isFinite(point[1]));
+  if(coordinates.length<2)return null;
+  return {
+    type:'Feature',
+    properties:{...(properties||{})},
+    geometry:{type:'LineString',coordinates}
+  };
+}
+function collectExportFeatures(){
+  const features=[];
+  const bounds=map?.getBounds?.()||null;
+  allS.forEach(site=>{
+    const cv=camVis(site.camada,site.tipo);
+    const layerId=getSiteLayer(cv);
+    if(VIS[layerId]===false||!isSiteVisible(site.id))return;
+    const pt=PP(site.localizacao);
+    if(!pt)return;
+    if(bounds&&!bounds.contains(L.latLng(pt[0],pt[1])))return;
+    const feature=makePointFeature(pt[0],pt[1],{
+      name:site.nome||site.codigo||'Site',
+      kind:'site',
+      codigo:site.codigo||'',
+      camada:site.camada||'',
+      tipo:site.tipo||'',
+      status:site.status||'',
+      source:'site_mapa'
+    });
+    if(feature)features.push(feature);
+  });
+  allC.forEach(cabo=>{
+    const pts=PL(cabo.trajeto);
+    if(!pts||pts.length<2)return;
+    const layerId=cabo.tipo==='backbone'?'cab_bb':cabo.tipo==='drop'?'cab_drop':'cab_dist';
+    if(VIS[layerId]===false)return;
+    if(bounds&&!pts.some(pt=>bounds.contains(L.latLng(pt[0],pt[1]))))return;
+    const feature=makeLineFeature(pts,{
+      name:cabo.nome||'Cabo',
+      kind:'cabo',
+      tipo:cabo.tipo||'distribuicao',
+      comprimento:cabo.comprimento||'',
+      source:'cabo_mapa'
+    });
+    if(feature)features.push(feature);
+  });
+  if(OVIS.ov_draft!==false){
+    officialCaixas.forEach(cx=>{
+      const pt=cx?._pt;
+      if(!pt)return;
+      if(bounds&&!bounds.contains(L.latLng(pt[0],pt[1])))return;
+      const feature=makePointFeature(pt[0],pt[1],{
+        name:cx.nome||cx.codigo||'Caixa oficial',
+        kind:'caixa_oficial',
+        codigo:cx.codigo||'',
+        status:cx.status||'',
+        source:'caixa_oficial'
+      });
+      if(feature)features.push(feature);
+    });
+    officialSegmentos.forEach(seg=>{
+      const pts=Array.isArray(seg.geometria_pts)&&seg.geometria_pts.length>=2?seg.geometria_pts:PL(seg.trajeto||seg.geometria||seg.geom);
+      if(!pts||pts.length<2)return;
+      if(bounds&&!pts.some(pt=>bounds.contains(L.latLng(pt[0],pt[1]))))return;
+      const feature=makeLineFeature(pts,{
+        name:seg.cabo||'Segmento oficial',
+        kind:'segmento_oficial',
+        tipo:seg.tipo_lancamento||'',
+        status:seg.status||'',
+        source:'segmento_oficial'
+      });
+      if(feature)features.push(feature);
+    });
+    const store=typeof getInvStore==='function'?getInvStore():null;
+    store?.caixas?.forEach(cx=>{
+      const feature=makePointFeature(cx.lat,cx.lng,{
+        name:cx.nome||cx.codigo||'Caixa rascunho',
+        kind:'caixa_rascunho',
+        codigo:cx.codigo||'',
+        status:cx.status||'',
+        source:'rascunho_local'
+      });
+      if(feature&&(!bounds||featureTouchesMapBounds(feature,bounds)))features.push(feature);
+    });
+    store?.segmentos?.forEach(seg=>{
+      const feature=makeLineFeature(seg.geometria_pts,{
+        name:seg.cabo||'Segmento rascunho',
+        kind:'segmento_rascunho',
+        tipo:seg.tipo_lancamento||'',
+        status:seg.status||'rascunho',
+        source:'rascunho_local'
+      });
+      if(feature&&(!bounds||featureTouchesMapBounds(feature,bounds)))features.push(feature);
+    });
+  }
+  if(OVIS.ov_romp!==false){
+    officialRupturas.forEach(rp=>{
+      const pt=rp?._pt;
+      if(!pt)return;
+      if(bounds&&!bounds.contains(L.latLng(pt[0],pt[1])))return;
+      const feature=makePointFeature(pt[0],pt[1],{
+        name:rp.cabo_segmento||'Ruptura oficial',
+        kind:'ruptura_oficial',
+        tipo:rp.tipo_reparo||'',
+        status:rp.status||'',
+        source:'ruptura_oficial'
+      });
+      if(feature)features.push(feature);
+    });
+  }
+  if(OVIS.ov_import!==false){
+    importedGeoFeatures.forEach(feature=>{
+      if(!bounds||featureTouchesMapBounds(feature,bounds))features.push(feature);
+    });
+  }
+  return {type:'FeatureCollection',features};
+}
+function escapeXml(value){
+  return String(value??'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&apos;');
+}
+function kmlCoordinate(coord){
+  return `${Number(coord[0]).toFixed(6)},${Number(coord[1]).toFixed(6)},0`;
+}
+function geometryToKml(geometry){
+  if(!geometry)return '';
+  if(geometry.type==='Point'){
+    return `<Point><coordinates>${kmlCoordinate(geometry.coordinates)}</coordinates></Point>`;
+  }
+  if(geometry.type==='LineString'){
+    return `<LineString><tessellate>1</tessellate><coordinates>${geometry.coordinates.map(kmlCoordinate).join(' ')}</coordinates></LineString>`;
+  }
+  if(geometry.type==='Polygon'){
+    const rings=(geometry.coordinates||[]).map(ring=>`<LinearRing><coordinates>${ring.map(kmlCoordinate).join(' ')}</coordinates></LinearRing>`);
+    if(!rings.length)return '';
+    const [outer,...inners]=rings;
+    return `<Polygon><outerBoundaryIs>${outer}</outerBoundaryIs>${inners.map(r=>`<innerBoundaryIs>${r}</innerBoundaryIs>`).join('')}</Polygon>`;
+  }
+  if(geometry.type==='GeometryCollection'){
+    const inner=(geometry.geometries||[]).map(geometryToKml).filter(Boolean).join('');
+    return inner?`<MultiGeometry>${inner}</MultiGeometry>`:'';
+  }
+  return '';
+}
+function featureToKmlPlacemark(feature){
+  const geometryXml=geometryToKml(feature?.geometry);
+  if(!geometryXml)return '';
+  const props=feature.properties||{};
+  const title=props.name||props.codigo||props.kind||'Feição';
+  const description=Object.entries(props)
+    .filter(([key,value])=>value!==null&&value!==undefined&&value!==''&&key!=='name')
+    .slice(0,12)
+    .map(([key,value])=>`${key}: ${String(value)}`)
+    .join(' | ');
+  return `<Placemark><name>${escapeXml(title)}</name>${description?`<description>${escapeXml(description)}</description>`:''}${geometryXml}</Placemark>`;
+}
+function buildKmlDocument(featureCollection){
+  const placemarks=(featureCollection.features||[]).map(featureToKmlPlacemark).filter(Boolean).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Rede Optica MG</name>
+    ${placemarks}
+  </Document>
+</kml>`;
+}
+function downloadBlob(blob,fileName){
+  const url=URL.createObjectURL(blob);
+  const anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download=fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1200);
+}
+function buildExportFileName(ext){
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  return `rede-optica-visivel-${stamp}.${ext}`;
+}
+function exportVisibleMapAsKml(){
+  const featureCollection=collectExportFeatures();
+  if(!featureCollection.features.length){
+    toast('Sem dados visíveis para exportar em KML.','wn');
+    return;
+  }
+  const kmlText=buildKmlDocument(featureCollection);
+  downloadBlob(new Blob([kmlText],{type:'application/vnd.google-earth.kml+xml;charset=utf-8'}),buildExportFileName('kml'));
+  toast(`KML exportado com ${featureCollection.features.length} feição(ões).`,'ok');
+}
+async function exportVisibleMapAsKmz(){
+  const featureCollection=collectExportFeatures();
+  if(!featureCollection.features.length){
+    toast('Sem dados visíveis para exportar em KMZ.','wn');
+    return;
+  }
+  if(typeof window.JSZip==='undefined'){
+    toast('JSZip indisponível. Exporte em KML nesta sessão.','wn');
+    return;
+  }
+  const zip=new window.JSZip();
+  zip.file('doc.kml',buildKmlDocument(featureCollection));
+  const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  downloadBlob(blob,buildExportFileName('kmz'));
+  toast(`KMZ exportado com ${featureCollection.features.length} feição(ões).`,'ok');
+}
+async function uploadDwgToLocalStage(file){
+  const lower=String(file.name||'').toLowerCase();
+  if(!lower.endsWith('.dwg')){
+    throw new Error('Selecione um arquivo DWG.');
+  }
+  toast(`Enviando ${file.name} para stage local...`,'in');
+  const response=await fetch('/api/dwg/upload',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/octet-stream',
+      'x-file-name':encodeURIComponent(file.name)
+    },
+    body:file
+  });
+  const payload=await response.json().catch(()=>({ok:false,error:'Resposta inválida da API local.'}));
+  if(!response.ok||payload.ok===false){
+    const fallback='DWG direto requer a API local /api/dwg/upload. No site estático, só KMZ/KML funciona 100% no navegador.';
+    throw new Error(payload.error||fallback);
+  }
+  lastDwgUploadMeta=payload.entry||null;
+  if(payload.feature_collection?.features?.length){
+    registerImportedFeatureCollection(payload.feature_collection,{name:file.name,format:'dwg'});
+    return;
+  }
+  if(payload.conversion?.ok){
+    toast(`DWG convertido em stage: ${file.name}`,'ok');
+  }else{
+    toast(`DWG enviado para stage: ${file.name}`,'ok');
+  }
+  openFileInteropHub();
+}
+async function loadLastDwgGeoJson(){
+  const url=lastDwgUploadMeta?.conversion?.geojson_url;
+  if(!url){
+    toast('Nenhum GeoJSON convertido disponível para o último DWG.','wn');
+    return;
+  }
+  try{
+    toast('Carregando GeoJSON do último DWG...','in');
+    const response=await fetch(url);
+    if(!response.ok){
+      throw new Error(`Falha ao buscar GeoJSON (${response.status})`);
+    }
+    const featureCollection=await response.json();
+    registerImportedFeatureCollection(featureCollection,{name:lastDwgUploadMeta.file_name||'DWG convertido',format:'dwg'});
+  }catch(err){
+    console.error('Falha ao carregar GeoJSON do último DWG',err);
+    toast(`Falha ao carregar DWG convertido: ${err.message||err}`,'er');
+  }
+}
+function downloadLastDwgDxf(){
+  const url=lastDwgUploadMeta?.conversion?.dxf_url;
+  if(!url){
+    toast('Nenhum DXF convertido disponível para download.','wn');
+    return;
+  }
+  const anchor=document.createElement('a');
+  anchor.href=url;
+  anchor.download=(lastDwgUploadMeta.file_name||'dwg-convertido').replace(/\.dwg$/i,'.dxf');
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}
 
 // FERRAMENTAS
 function goLoc(){navigator.geolocation.getCurrentPosition(p=>{if(locMk)map.removeLayer(locMk);locMk=L.marker([p.coords.latitude,p.coords.longitude],{icon:mkLoc(),zIndexOffset:3000}).addTo(map);map.setView([p.coords.latitude,p.coords.longitude],17);toast('Localização atual','in');},()=>toast('GPS indisponível','er'),{enableHighAccuracy:true,timeout:12000});}
@@ -5100,6 +5662,39 @@ function abrirFilaAuditoria(){
   goTab('auditoria',document.querySelector('.nt[onclick*="auditoria"]'));
   toast('Fila de implementação aberta.','in');
 }
+
+async function abrirStatus7Grupos(){
+  const status7 = [
+    {id:1, nome: "SEGURANÇA & AUTH", icon: "🛡", status: "Pendente", cor: "var(--rd)", meta: "MIG_0001"},
+    {id:2, nome: "AUDITORIA & LOGS", icon: "📝", status: "Meio Caminho", cor: "var(--am)", meta: "Append-only"},
+    {id:3, nome: "INVENTÁRIO TÉCNICO", icon: "🔧", status: "Em Evolução", cor: "var(--bl)", meta: "DGO/Caixas"},
+    {id:4, nome: "GEO & GRAFO", icon: "🌍", status: "Operacional", cor: "var(--gr)", meta: "Tracer BFS"},
+    {id:5, nome: "AUTOMAÇÃO & AGENTES", icon: "🤖", status: "Consolidando", cor: "var(--pu)", meta: "Agente Mestre"},
+    {id:6, nome: "QUALIDADE & AMBIENTE", icon: "✅", status: "Parcial", cor: "var(--cy)", meta: "Validação"},
+    {id:7, nome: "PIPELINE & RELEASE", icon: "🚀", status: "Safe Update", cor: "var(--gr)", meta: "Auto-Update"}
+  ];
+
+  const html = `
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;padding:5px">
+      <div style="font-size:11px;color:var(--t3);margin-bottom:5px">Painel de implementação profissional — Rede Óptica MG</div>
+      ${status7.map(g => `
+        <div style="background:var(--bg3);border:1px solid var(--bd2);border-radius:10px;padding:12px;display:flex;align-items:center;gap:15px">
+          <div style="font-size:24px">${g.icon}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700">${g.id}. ${g.nome}</div>
+            <div style="font-size:10px;color:var(--t3)">Foco: ${g.meta}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="tag" style="background:${g.cor}20;color:${g.cor};border:1px solid ${g.cor}40">${g.status}</div>
+          </div>
+        </div>
+      `).join('')}
+      <button class="btn b" style="width:100%;margin-top:10px" onclick="rodarAuditoriaIA()">🔄 Atualizar Auditoria</button>
+    </div>
+  `;
+  
+  openM('Status dos 7 Grupos de Implementação', html);
+}
 // SALVAR FORMS INLINE
 const gv=id=>$(id)?.value?.trim()||null;
 const gf=id=>{const n=parseFloat($(id)?.value);return isNaN(n)?null:n};
@@ -5204,13 +5799,63 @@ function saveInvStore(store){
   updateSyncQueueBadge();
   refreshGlobalSearchResults();
 }
-function addInvItem(tipo,item){const store=getInvStore();store[tipo].push({id:`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,...item,criado_em:new Date().toISOString()});saveInvStore(store);}
-function updateInvItem(tipo,id,patch){
+async function cloudSyncItem(tipo, payload, msgId){
+  const tableMap = {
+    'caixas': 'caixa_emenda',
+    'dgos': 'dgo',
+    'segmentos': 'segmento_cabo',
+    'rupturas': 'evento_ruptura'
+  };
+  const tbl = tableMap[tipo];
+  if(!tbl) return true;
+  
+  try {
+    const r = await fetch(`${SU}/rest/v1/${tbl}`, {
+      method: 'POST',
+      headers: {...WH, 'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    
+    if([200, 201].includes(r.status)) {
+      if(msgId) msgField(msgId, '✓ Salvo na nuvem.', 'ok');
+      return true;
+    } else {
+      const err = await r.json().catch(()=>({}));
+      if(isRetryableSyncFailure(r.status, err.code)){
+        addToSyncQueue({table: tbl, payload});
+        if(msgId) msgField(msgId, '⚠ Offline. Item na fila.');
+      } else {
+        console.warn(`[CloudSync] Erro permanente em ${tbl}: ${r.status}`, err);
+        if(msgId) msgField(msgId, '❌ Erro de validação no banco.');
+      }
+      return false;
+    }
+  } catch (e) {
+    addToSyncQueue({table: tbl, payload});
+    if(msgId) msgField(msgId, '⚠ Rede instável. Item na fila.');
+    return false;
+  }
+}
+
+function addInvItem(tipo,item,msgId){
+  const store=getInvStore();
+  const id=`${tipo}_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  const newItem={id, ...item, criado_em:new Date().toISOString()};
+  store[tipo].push(newItem);
+  saveInvStore(store);
+  cloudSyncItem(tipo, item, msgId);
+}
+
+function updateInvItem(tipo,id,patch,msgId){
   const store=getInvStore();
   const idx=store[tipo].findIndex(x=>x.id===id);
   if(idx<0)return false;
-  store[tipo][idx]={...store[tipo][idx],...patch,atualizado_em:new Date().toISOString()};
+  const updatedItem={...store[tipo][idx],...patch,atualizado_em:new Date().toISOString()};
+  store[tipo][idx]=updatedItem;
   saveInvStore(store);
+  // Nota: O Supabase PATCH exigiria a cláusula WHERE id. Por simplicidade no MVP, 
+  // o sync queue atual faz POST. No futuro, implementar PATCH por ID real do banco.
+  cloudSyncItem(tipo, patch, msgId); 
   return true;
 }
 function renderInventarioResumo(){
@@ -5348,7 +5993,7 @@ function showPanDgoOficial(dg){
     ${buildRefLinksHtml(dg.codigo||dg.nome||dg.site_codigo||'')}
     ${dg.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(dg.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('DGO oficial carregado do banco','ok')">✓ Oficial</button>`;
+  $('pa').innerHTML=`<button class="pac ${dgoFlag?'a':'b'}" onclick="openFlagEditor('dgo','${String(dg.id).replace(/'/g,"\\'")}')">${dgoFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="abrirDiagramaOperacional('dgo','${String(dg.id).replace(/'/g,"\\'")}')">🧬 Diagrama</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(dg.codigo||dg.site_codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('DGO oficial carregado do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function getNearbyCabos(lat,lng,maxDist=35){
@@ -6107,7 +6752,7 @@ function showPanCaixaOficial(cx){
     ${buildRefLinksHtml(cx.codigo||cx.nome||'')}
     ${cx.observacao?`<div style="margin-top:10px;font-size:11px;color:var(--t2);line-height:1.6">${esc(cx.observacao)}</div>`:''}
   `;
-  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
+  $('pa').innerHTML=`<button class="pac ${caixaFlag?'a':'b'}" onclick="openFlagEditor('caixa','${String(cx.id).replace(/'/g,"\\'")}')">${caixaFlag?'🚩 Editar flag':'🚩 Marcar'}</button><button class="pac b" onclick="abrirDiagramaOperacional('caixa','${String(cx.id).replace(/'/g,"\\'")}')">🧬 Diagrama</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-a')">Ponto A</button><button class="pac b" onclick="usarComoPontoSegmento('${(cx.codigo||'').replace(/'/g,"\\'")}','sg-b')">Ponto B</button><button class="pac a" onclick="abrirAuditoriaRef('${(cx.codigo||'').replace(/'/g,"\\'")}')">🤖 Auditoria</button><button class="pac g" onclick="toast('Caixa oficial carregada do banco','ok')">✓ Oficial</button>`;
   $('pan').style.display='block';
 }
 function showPanSegmentoDraft(seg){
@@ -7476,7 +8121,7 @@ window.addEventListener('resize',()=>{
     if(map)map.invalidateSize(false);
   },120);
 });
-const APP_BUILD='2026.04.11.3';
+const APP_BUILD='2026.04.11.4';
 if('serviceWorker' in navigator){
   let swReloading=false;
   window.addEventListener('load',()=>{
@@ -7512,6 +8157,51 @@ if('serviceWorker' in navigator){
     }).catch(err=>console.log('SW falhou',err));
   });
 }
+</script>
+
+<!-- FUNDAÇÃO OPERACIONAL E MÓDULOS AUXILIARES -->
+<script src="js/core/operational-foundation.js"></script>
+<script src="js/auth/auth-runtime.js"></script>
+<script src="js/inventory/inventory-runtime.js"></script>
+<script src="js/incidents/incidents-runtime.js"></script>
+<script src="sync_robusto_retry.js"></script>
+<script src="js/sync/sync-runtime.js"></script>
+<script src="tratamento_erros_profissional.js"></script>
+<script src="js/observability/observability-runtime.js"></script>
+<script src="otimizacao_ux_mobile.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const foundation = window.AppFoundation || null;
+  const init = (name, fn) => {
+    if (foundation && typeof foundation.guardedInit === 'function') {
+      return foundation.guardedInit(name, fn);
+    }
+    try { return fn(); } catch (error) { console.error(`[APP:init:${name}]`, error); return null; }
+  };
+
+  init('error-manager', () => inicializarTratamentoErros());
+  init('auth-runtime', () => initAuthRuntime());
+  init('inventory-runtime', () => initInventoryRuntime());
+  init('incidents-runtime', () => initIncidentsRuntime());
+  init('sync', () => {
+    const syncConfig = foundation && typeof foundation.resolveSupabaseConfig === 'function'
+      ? foundation.resolveSupabaseConfig()
+      : { url: SU, headers: (typeof WH !== 'undefined' && WH) ? WH : RH, source: (typeof WH !== 'undefined' && WH) ? 'WH' : 'RH' };
+    return inicializarSincronizador(syncConfig);
+  });
+  init('sync-runtime', () => initSyncRuntime());
+  init('observability-runtime', () => initObservabilityRuntime());
+  init('mobile-ux', () => inicializarOtimizacoesUXMobile());
+
+  if (localStorage.getItem('_ro_modo_campo') === 'true') {
+    ativarModoCampo();
+  }
+  if (foundation && typeof foundation.runHealthChecks === 'function') {
+    foundation.runHealthChecks();
+  }
+  console.log('[APP] Runtime operacional inicializado');
+});
 </script>
 </body>
 </html>

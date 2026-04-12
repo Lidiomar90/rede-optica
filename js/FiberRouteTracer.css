@@ -1,0 +1,405 @@
+/**
+ * FiberRouteTracer.css - Estilos para o componente de tracer de rotas
+ * 
+ * Estilos para:
+ * - Painel de rota lateral
+ * - Métricas de rota
+ * - Segmentos de rota
+ * - Conexões e perdas
+ * - Destaque de rota no mapa
+ */
+
+/* Painel de rota */
+#route-panel {
+  background: #0e1a2b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.route-panel {
+  width: 100%;
+}
+
+.route-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.route-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #48a8ff;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #e7f0ff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+/* Resumo da rota */
+.route-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.route-metric {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(231, 240, 255, 0.6);
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #48a8ff;
+}
+
+/* Pontos de origem e destino */
+.route-endpoints {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.endpoint {
+  background: rgba(72, 168, 255, 0.1);
+  border: 1px solid rgba(72, 168, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.endpoint.start {
+  background: rgba(69, 208, 140, 0.1);
+  border-color: rgba(69, 208, 140, 0.2);
+}
+
+.endpoint.end {
+  background: rgba(255, 90, 104, 0.1);
+  border-color: rgba(255, 90, 104, 0.2);
+}
+
+.endpoint-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(231, 240, 255, 0.6);
+}
+
+.endpoint-cable {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e7f0ff;
+}
+
+.endpoint-fiber {
+  font-size: 12px;
+  color: rgba(231, 240, 255, 0.8);
+}
+
+/* Caminho da rota */
+.route-path {
+  margin-top: 20px;
+}
+
+.route-path h4 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(231, 240, 255, 0.6);
+  margin-bottom: 15px;
+}
+
+.route-empty {
+  text-align: center;
+  padding: 20px;
+  color: rgba(231, 240, 255, 0.5);
+  font-size: 14px;
+}
+
+/* Segmentos da rota */
+.route-segment {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.route-segment:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(72, 168, 255, 0.3);
+  transform: translateX(2px);
+}
+
+.route-segment.first {
+  border-left: 3px solid #45d08c;
+}
+
+.route-segment.has-connection {
+  border-left: 3px solid #ffb648;
+}
+
+.segment-marker {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: rgba(72, 168, 255, 0.2);
+  border: 2px solid #48a8ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #48a8ff;
+}
+
+.segment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.segment-cable {
+  font-size: 13px;
+  color: #e7f0ff;
+}
+
+.segment-cable strong {
+  font-weight: 700;
+}
+
+.segment-fiber {
+  font-size: 12px;
+  color: rgba(231, 240, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.color-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #000;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.color-badge[style*="background: #FFFFFF"],
+.color-badge[style*="background: #FFCC00"] {
+  color: #000;
+}
+
+/* Conexões */
+.segment-connection {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(255, 182, 72, 0.1);
+  border: 1px solid rgba(255, 182, 72, 0.2);
+  border-radius: 8px;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.connection-icon {
+  font-size: 14px;
+  color: #ffb648;
+}
+
+.connection-type {
+  font-weight: 600;
+  color: #ffb648;
+}
+
+.connection-loss {
+  padding: 2px 6px;
+  background: rgba(255, 90, 104, 0.2);
+  border-radius: 4px;
+  font-weight: 700;
+  color: #ff5a68;
+}
+
+.connection-location {
+  color: rgba(231, 240, 255, 0.6);
+  font-style: italic;
+}
+
+/* Perda do segmento */
+.segment-loss {
+  font-size: 11px;
+  color: rgba(231, 240, 255, 0.6);
+}
+
+.segment-loss strong {
+  color: #48a8ff;
+  font-weight: 700;
+}
+
+/* Destaque de rota no mapa Leaflet */
+.trace-line {
+  stroke: #48a8ff !important;
+  stroke-width: 4px !important;
+  stroke-opacity: 0.8 !important;
+  fill: none !important;
+  animation: trace-pulse 2s ease-in-out infinite;
+}
+
+@keyframes trace-pulse {
+  0%, 100% {
+    stroke-opacity: 0.8;
+  }
+  50% {
+    stroke-opacity: 1;
+  }
+}
+
+/* Responsividade mobile */
+@media (max-width: 768px) {
+  #route-panel {
+    position: fixed;
+    right: 10px;
+    left: 10px;
+    top: auto;
+    bottom: 10px;
+    width: auto;
+    max-height: 50vh;
+  }
+  
+  .route-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .route-metric {
+    padding: 10px;
+  }
+  
+  .metric-value {
+    font-size: 16px;
+  }
+  
+  .segment-marker {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+  
+  .segment-cable {
+    font-size: 12px;
+  }
+  
+  .segment-fiber {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .route-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .route-endpoints {
+    gap: 8px;
+  }
+  
+  .endpoint {
+    padding: 10px;
+  }
+}
+
+/* Modo campo - botões maiores e alto contraste */
+body.field-mode #route-panel {
+  border-width: 2px;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+body.field-mode .close-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+}
+
+body.field-mode .route-segment {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+body.field-mode .segment-marker {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+
+body.field-mode .segment-cable {
+  font-size: 15px;
+}
+
+body.field-mode .segment-fiber {
+  font-size: 13px;
+}
+
+/* Animação de entrada do painel */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+#route-panel[style*="display: block"] {
+  animation: slideInRight 0.3s ease-out;
+}

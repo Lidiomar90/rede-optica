@@ -1,0 +1,458 @@
+/**
+ * CableDiagramComponent Styles
+ * Estilos para visualização ABNT de diagramas de cabos ópticos
+ */
+
+/* Wrapper principal do diagrama */
+.diagram-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header do diagrama */
+.diagram-header {
+  margin-bottom: 20px;
+}
+
+.diagram-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.diagram-title h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #48a8ff;
+  margin: 0;
+}
+
+.diagram-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.meta-item {
+  font-size: 14px;
+  color: #b8c9e0;
+}
+
+.meta-item strong {
+  color: #e7f0ff;
+  margin-right: 5px;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-ativo {
+  background: rgba(69, 208, 140, 0.2);
+  color: #45d08c;
+}
+
+.status-inativo {
+  background: rgba(255, 90, 104, 0.2);
+  color: #ff5a68;
+}
+
+.status-em_manutencao {
+  background: rgba(255, 182, 72, 0.2);
+  color: #ffb648;
+}
+
+/* Estatísticas de fibras */
+.diagram-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-livre .stat-icon { color: #45d08c; }
+.stat-ativa .stat-icon { color: #48a8ff; }
+.stat-reserva .stat-icon { color: #ffb648; }
+.stat-danificada .stat-icon { color: #ff5a68; }
+.stat-em_teste .stat-icon { color: #8d6bff; }
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #e7f0ff;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #b8c9e0;
+  margin-top: 4px;
+}
+
+/* Legenda */
+.diagram-legend {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.legend-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+}
+
+.legend-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e7f0ff;
+  margin-right: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #b8c9e0;
+}
+
+.legend-icon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.legend-text {
+  font-size: 13px;
+}
+
+/* Container de tubos */
+.tubes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Tubo loose */
+.tube {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.tube:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tube.inactive {
+  opacity: 0.6;
+}
+
+.tube.collapsed .fibers-grid {
+  display: none;
+}
+
+/* Header do tubo */
+.tube-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.tube-header:hover {
+  filter: brightness(1.1);
+}
+
+.tube-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tube-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tube-color {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: capitalize;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.tube-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tube-fiber-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tube-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.tube-toggle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.3s;
+}
+
+.tube.collapsed .tube-toggle {
+  transform: rotate(-90deg);
+}
+
+/* Grid de fibras */
+.fibers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.no-fibers {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 30px;
+  color: #b8c9e0;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Fibra individual */
+.fiber {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.fiber:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.fiber.selected {
+  background: rgba(72, 168, 255, 0.2);
+  border-color: #48a8ff;
+  box-shadow: 0 0 0 2px rgba(72, 168, 255, 0.3);
+}
+
+/* Círculo da fibra */
+.fiber-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.fiber:hover .fiber-circle {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.fiber-number {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000000;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+/* Número da fibra em cores claras precisa de contraste */
+.fiber[data-status="livre"] .fiber-number,
+.fiber[data-status="reserva"] .fiber-number {
+  color: #000000;
+}
+
+/* Ícone de status da fibra */
+.fiber-status-icon {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Label da cor da fibra */
+.fiber-color-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b8c9e0;
+  text-transform: capitalize;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .diagram-meta {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .diagram-stats {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+  
+  .fibers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .fiber-circle {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .fiber-number {
+    font-size: 13px;
+  }
+  
+  .tube-header {
+    padding: 12px 15px;
+  }
+  
+  .tube-number {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .diagram-title h2 {
+    font-size: 20px;
+  }
+  
+  .diagram-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .fibers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .fiber {
+    padding: 8px;
+  }
+  
+  .fiber-circle {
+    width: 32px;
+    height: 32px;
+    border-width: 2px;
+  }
+  
+  .fiber-number {
+    font-size: 12px;
+  }
+  
+  .fiber-status-icon {
+    font-size: 16px;
+  }
+  
+  .fiber-color-label {
+    font-size: 10px;
+  }
+}
+
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tube {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.tube:nth-child(1) { animation-delay: 0.05s; }
+.tube:nth-child(2) { animation-delay: 0.1s; }
+.tube:nth-child(3) { animation-delay: 0.15s; }
+.tube:nth-child(4) { animation-delay: 0.2s; }
+.tube:nth-child(5) { animation-delay: 0.25s; }
+.tube:nth-child(6) { animation-delay: 0.3s; }
+.tube:nth-child(7) { animation-delay: 0.35s; }
+.tube:nth-child(8) { animation-delay: 0.4s; }
+.tube:nth-child(9) { animation-delay: 0.45s; }
+.tube:nth-child(10) { animation-delay: 0.5s; }
+.tube:nth-child(11) { animation-delay: 0.55s; }
+.tube:nth-child(12) { animation-delay: 0.6s; }

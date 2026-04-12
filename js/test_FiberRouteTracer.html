@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste FiberRouteTracer</title>
+  <link rel="stylesheet" href="FiberRouteTracer.css">
+  <style>
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #07111f;
+      color: #e7f0ff;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #48a8ff;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: #48a8ff;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background: #3a96e6;
+    }
+    
+    #status {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    #status pre {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Teste FiberRouteTracer</h1>
+  
+  <div>
+    <button onclick="testRenderPanel()">Testar Renderização de Painel</button>
+    <button onclick="testEmptyRoute()">Testar Rota Vazia</button>
+    <button onclick="testColorMapping()">Testar Mapeamento de Cores</button>
+    <button onclick="testFormatting()">Testar Formatação</button>
+  </div>
+  
+  <div id="status">
+    <h2>Status</h2>
+    <pre id="status-content">Aguardando teste...</pre>
+  </div>
+  
+  <div id="route-panel" style="display: none;"></div>
+  
+  <script src="FiberRouteTracer.js"></script>
+  <script>
+    const tracer = new FiberRouteTracer({
+      supabaseUrl: 'https://xmqxhzmjxprhvyqwlqvz.supabase.co',
+      supabaseKey: 'test-key'
+    });
+    
+    function updateStatus(message) {
+      document.getElementById('status-content').textContent = message;
+    }
+    
+    function generateTestRoute() {
+      const segments = [
+        {
+          nivel: 0,
+          fibra_id: 'fiber-1',
+          fibra_numero: 1,
+          fibra_cor: 'azul',
+          tubo_numero: 1,
+          tubo_cor: 'azul',
+          cabo_nome: 'CABO-BACKBONE-001',
+          conexao_tipo: null,
+          perda_conexao_db: null,
+          perda_acumulada_db: 0.5,
+          local_conexao_nome: null,
+          local_conexao_geom: null,
+          comprimento_metros: 1500
+        },
+        {
+          nivel: 1,
+          fibra_id: 'fiber-2',
+          fibra_numero: 2,
+          fibra_cor: 'laranja',
+          tubo_numero: 1,
+          tubo_cor: 'azul',
+          cabo_nome: 'CABO-DISTRIBUICAO-002',
+          conexao_tipo: 'fusao',
+          perda_conexao_db: 0.15,
+          perda_acumulada_db: 0.65,
+          local_conexao_nome: 'CEO-CENTRO',
+          local_conexao_geom: null,
+          comprimento_metros: 800
+        },
+        {
+          nivel: 2,
+          fibra_id: 'fiber-3',
+          fibra_numero: 3,
+          fibra_cor: 'verde',
+          tubo_numero: 2,
+          tubo_cor: 'laranja',
+          cabo_nome: 'CABO-ACESSO-003',
+          conexao_tipo: 'conector_sc',
+          perda_conexao_db: 0.25,
+          perda_acumulada_db: 0.90,
+          local_conexao_nome: 'CTO-RUA-A',
+          local_conexao_geom: null,
+          comprimento_metros: 300
+        }
+      ];
+      
+      return {
+        fiberId: 'test-fiber-123',
+        segments: segments,
+        totalLoss: 0.90,
+        totalLength: 2600,
+        connections: 2,
+        startPoint: {
+          cable: 'CABO-BACKBONE-001',
+          tube: 1,
+          tubeColor: 'azul',
+          fiber: 1,
+          fiberColor: 'azul'
+        },
+        endPoint: {
+          cable: 'CABO-ACESSO-003',
+          tube: 2,
+          tubeColor: 'laranja',
+          fiber: 3,
+          fiberColor: 'verde'
+        }
+      };
+    }
+    
+    function testRenderPanel() {
+      try {
+        const route = generateTestRoute();
+        const html = tracer.renderRoutePanel(route);
+        
+        document.getElementById('route-panel').innerHTML = html;
+        document.getElementById('route-panel').style.display = 'block';
+        
+        updateStatus('✅ Painel renderizado com sucesso!\n\n' + 
+                     'Perda total: ' + route.totalLoss + ' dB\n' +
+                     'Comprimento: ' + route.totalLength + ' m\n' +
+                     'Conexões: ' + route.connections + '\n' +
+                     'Segmentos: ' + route.segments.length);
+      } catch (error) {
+        updateStatus('❌ Erro: ' + error.message);
+      }
+    }
+    
+    function testEmptyRoute() {
+      try {
+        const emptyRoute = {
+          fiberId: 'empty-fiber',
+          segments: [],
+          totalLoss: 0,
+          totalLength: 0,
+          connections: 0,
+          startPoint: null,
+          endPoint: null
+        };
+        
+        const html = tracer.renderRoutePanel(emptyRoute);
+        
+        document.getElementById('route-panel').innerHTML = html;
+        document.getElementById('route-panel').style.display = 'block';
+        
+        updateStatus('✅ Rota vazia renderizada corretamente!');
+      } catch (error) {
+        updateStatus('❌ Erro: ' + error.message);
+      }
+    }
+    
+    function testColorMapping() {
+      try {
+        const colors = [
+          'azul', 'laranja', 'verde', 'marrom', 'cinza', 'branco',
+          'vermelho', 'preto', 'amarelo', 'violeta', 'rosa', 'agua'
+        ];
+        
+        let result = 'Mapeamento de Cores ABNT:\n\n';
+        colors.forEach(color => {
+          const hex = tracer.getColorHex(color);
+          result += `${color}: ${hex}\n`;
+        });
+        
+        updateStatus('✅ ' + result);
+      } catch (error) {
+        updateStatus('❌ Erro: ' + error.message);
+      }
+    }
+    
+    function testFormatting() {
+      try {
+        let result = 'Testes de Formatação:\n\n';
+        
+        // Teste formatLength
+        result += 'formatLength(500): ' + tracer.formatLength(500) + '\n';
+        result += 'formatLength(1500): ' + tracer.formatLength(1500) + '\n';
+        result += 'formatLength(5000): ' + tracer.formatLength(5000) + '\n\n';
+        
+        // Teste formatConnectionType
+        result += 'formatConnectionType("fusao"): ' + tracer.formatConnectionType('fusao') + '\n';
+        result += 'formatConnectionType("conector_sc"): ' + tracer.formatConnectionType('conector_sc') + '\n';
+        result += 'formatConnectionType("conector_lc"): ' + tracer.formatConnectionType('conector_lc') + '\n';
+        
+        updateStatus('✅ ' + result);
+      } catch (error) {
+        updateStatus('❌ Erro: ' + error.message);
+      }
+    }
+    
+    function closeRoutePanel() {
+      document.getElementById('route-panel').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

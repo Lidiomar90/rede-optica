@@ -1,0 +1,245 @@
+:root{
+  --bg:#06101b;
+  --bg2:#0c1726;
+  --bg3:#102033;
+  --bg4:#172a40;
+  --bd:#203750;
+  --bd2:#355270;
+  --t:#edf4ff;
+  --t2:#a9bdd9;
+  --t3:#6f86a7;
+  --gr:#3fd48e;
+  --bl:#54aefe;
+  --am:#f6b45e;
+  --rd:#f25c6f;
+  --pu:#7988ff;
+  --cy:#4dd7d0;
+  --glass:rgba(10,23,38,.9);
+}
+
+body{
+  background:
+    radial-gradient(circle at top left,rgba(84,174,254,.13),transparent 24%),
+    radial-gradient(circle at 82% 12%,rgba(77,215,208,.12),transparent 18%),
+    linear-gradient(180deg,#06101b 0%,#081321 38%,#0a1624 100%);
+}
+
+#ls::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg,rgba(84,174,254,.08),transparent 28%),
+    radial-gradient(circle at 80% 24%,rgba(121,136,255,.15),transparent 16%);
+  pointer-events:none;
+}
+
+.lb{
+  max-width:420px;
+  padding:38px 32px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015)),
+    rgba(12,23,38,.92);
+  box-shadow:
+    0 32px 80px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+.ll .ico{
+  width:68px;
+  height:68px;
+  border-radius:22px;
+  box-shadow:0 18px 44px rgba(84,174,254,.22);
+}
+
+.ll h1{
+  font-size:34px;
+  letter-spacing:-.03em;
+}
+
+.ll p{
+  font-size:13px;
+  color:var(--t2);
+}
+
+.lf label{
+  font-size:11px;
+  color:#8fb3de;
+  letter-spacing:.16em;
+}
+
+.lf input{
+  min-height:52px;
+  border-radius:14px;
+  background:rgba(255,255,255,.96);
+  color:#07111f;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+.lf input:focus{
+  border-color:var(--bl);
+  box-shadow:0 0 0 4px rgba(84,174,254,.12);
+}
+
+.lbtn{
+  min-height:56px;
+  border-radius:14px;
+  font-size:17px;
+  font-weight:800;
+  box-shadow:0 20px 34px rgba(63,212,142,.22);
+}
+
+.lerr{
+  margin-top:14px;
+  font-size:12px;
+  font-weight:700;
+}
+
+#top{
+  min-height:72px;
+  padding:0 18px;
+  background:
+    linear-gradient(180deg,rgba(11,21,34,.97),rgba(10,19,31,.95)),
+    linear-gradient(90deg,rgba(84,174,254,.06),transparent 35%);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+
+.brand-mark{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+}
+
+#top h1{
+  font-size:18px;
+}
+
+.opsline{
+  color:#85bdf1;
+}
+
+.sc,.tb,#ubadge,.sbghost,.mchip,.leg-toggle,.mb,.stt,.lc-btn,.preset-chip,.overlay-chip{
+  backdrop-filter:blur(14px);
+}
+
+#nav{
+  padding:0 16px;
+  gap:8px;
+}
+
+.nt{
+  padding:13px 16px;
+  font-size:11px;
+}
+
+#sb{
+  width:318px;
+  background:
+    linear-gradient(180deg,rgba(10,20,33,.96),rgba(10,20,33,.9)),
+    linear-gradient(180deg,rgba(84,174,254,.06),transparent 22%);
+  box-shadow:18px 0 40px rgba(0,0,0,.18);
+}
+
+#sbhero{
+  padding:14px 14px 10px;
+}
+
+#srch input{
+  min-height:46px;
+  border-radius:14px;
+  font-size:13px;
+}
+
+.lg,.lc-sec{
+  border-radius:16px;
+}
+
+#maphead{
+  border-radius:20px;
+  padding:14px 16px;
+  background:
+    linear-gradient(180deg,rgba(9,18,30,.9),rgba(9,18,30,.82)),
+    linear-gradient(90deg,rgba(84,174,254,.08),transparent 44%);
+}
+
+#leg{
+  border-radius:18px;
+}
+
+#pan{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 22px 48px rgba(0,0,0,.26);
+}
+
+.ph{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),
+    var(--bg2);
+}
+
+@media (max-width:680px){
+  .lb{
+    width:min(92vw,420px);
+    padding:34px 24px;
+  }
+
+  .ll h1{
+    font-size:28px;
+  }
+
+  #top{
+    min-height:66px;
+    padding:0 12px;
+  }
+
+  #sb{
+    width:min(88vw,340px);
+  }
+}
+
+.diag-card{
+  margin-top:12px;
+  padding:12px;
+  border-radius:12px;
+  background:rgba(6,16,29,.72);
+  border:1px solid rgba(77,166,255,.14);
+}
+
+.diag-title{
+  font-size:10px;
+  color:#8fb3d9;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+  margin-bottom:8px;
+}
+
+.diag-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.diag-item{
+  padding:9px 10px;
+  border-radius:10px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.05);
+}
+
+.diag-item-title{
+  font-size:11px;
+  font-weight:700;
+  color:#f4f8ff;
+}
+
+.diag-item-meta{
+  margin-top:4px;
+  font-size:10px;
+  line-height:1.55;
+  color:#93a8c7;
+}
